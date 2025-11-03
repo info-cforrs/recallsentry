@@ -13,6 +13,7 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   late int _currentIndex;
+  int _homePageRefreshKey = 0;
 
   @override
   void initState() {
@@ -23,13 +24,21 @@ class _MainNavigationState extends State<MainNavigation> {
   void _changeTab(int index) {
     setState(() {
       _currentIndex = index;
+
+      // Refresh HomePage when navigating to it
+      if (index == 0) {
+        _homePageRefreshKey++;
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> pages = [
-      HomePage(onNavigateToRecalls: () => _changeTab(1)),
+      HomePage(
+        key: ValueKey(_homePageRefreshKey),
+        onNavigateToRecalls: () => _changeTab(1),
+      ),
       const AllRecallsPage(showBottomNavigation: false),
       const SettingsPage(),
     ];
@@ -39,9 +48,7 @@ class _MainNavigationState extends State<MainNavigation> {
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
+          _changeTab(index);
         },
         type: BottomNavigationBarType.fixed,
         backgroundColor: const Color(0xFF2C3E50), // Dark blue-grey background
@@ -56,6 +63,9 @@ class _MainNavigationState extends State<MainNavigation> {
           fontWeight: FontWeight.w500,
         ),
         elevation: 8,
+        selectedFontSize: 12, // Add this
+        unselectedFontSize: 10, // Add this
+        iconSize: 24, // Add this
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Recalls'),
