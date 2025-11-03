@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'main_menu_page.dart';
 import 'advanced_filter_page.dart';
 import 'saved_recalls_page.dart';
+import 'saved_filters_page.dart';
+import 'subscribe_page.dart';
 import 'all_fda_recalls_page.dart';
 import 'all_usda_recalls_page.dart';
 import 'all_recalls_page.dart';
@@ -31,6 +33,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int _usdaRecalls = 0;
   int _filteredRecalls = 0;
   int _savedRecalls = 0;
+  SubscriptionTier _subscriptionTier = SubscriptionTier.guest;
 
   @override
   void initState() {
@@ -134,8 +137,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       final filteredCount = filtered.length;
 
       // Count saved recalls
+      print('🔍 HomePage: Fetching saved recalls...');
       final savedRecalls = await _savedRecallsService.getSavedRecalls();
       final savedCount = savedRecalls.length;
+      print('📊 HomePage: Got ${savedCount} saved recalls');
+      if (savedCount > 0) {
+        print('   First 3 saved:');
+        for (var i = 0; i < (savedCount > 3 ? 3 : savedCount); i++) {
+          print('   - ${savedRecalls[i].id}: ${savedRecalls[i].productName}');
+        }
+      }
 
       if (mounted) {
         setState(() {
@@ -144,6 +155,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           _usdaRecalls = recentUsdaRecalls.length;
           _filteredRecalls = filteredCount;
           _savedRecalls = savedCount;
+          _subscriptionTier = tier;
         });
 
         print(
@@ -187,6 +199,63 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           ),
         ),
       ),
+    );
+  }
+
+  void _showSmartFiltersUpgradeModal() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Row(
+            children: [
+              Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Upgrade Required',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'SmartFilters is a premium feature. Upgrade to SmartFiltering to save up to 10 filters, or RecallMatch for unlimited filters.',
+            style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54, fontSize: 16),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const SubscribePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF64B5F6),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text(
+                'View Plans',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -374,6 +443,61 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                             _totalRecalls,
                           ), // Dynamic total recalls count
                         ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // SmartFilters Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 48,
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            final canAccess = _subscriptionTier == SubscriptionTier.smartFiltering ||
+                                _subscriptionTier == SubscriptionTier.recallMatch;
+
+                            if (canAccess) {
+                              // Navigate to Saved SmartFilters page
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => const SavedFiltersPage(),
+                                ),
+                              );
+                            } else {
+                              // Show upgrade modal for Free/Guest users
+                              _showSmartFiltersUpgradeModal();
+                            }
+                          },
+                          icon: Icon(
+                            Icons.filter_list,
+                            size: 20,
+                            color: _subscriptionTier == SubscriptionTier.guest ||
+                                    _subscriptionTier == SubscriptionTier.free
+                                ? Colors.black
+                                : Colors.white,
+                          ),
+                          label: Text(
+                            'SmartFilters',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: _subscriptionTier == SubscriptionTier.guest ||
+                                      _subscriptionTier == SubscriptionTier.free
+                                  ? Colors.black
+                                  : Colors.white,
+                            ),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: _subscriptionTier == SubscriptionTier.guest ||
+                                    _subscriptionTier == SubscriptionTier.free
+                                ? Colors.grey
+                                : const Color(0xFF42A5F5), // Medium blue for premium users
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 2,
+                          ),
+                        ),
                       ),
 
                       const SizedBox(height: 26), // Increased from 16 to 26

@@ -3,6 +3,7 @@ import 'main_navigation.dart';
 import 'advanced_filter_page.dart';
 import '../services/recall_data_service.dart';
 import '../services/filter_state_service.dart';
+import '../services/subscription_service.dart';
 import '../models/recall_data.dart';
 import '../widgets/usda_recall_card.dart';
 import '../widgets/fda_recall_card.dart';
@@ -70,6 +71,11 @@ class _OnlyAdvancedFilteredRecallsPageState
     }
 
     try {
+      // Get subscription tier to determine cutoff date
+      final subscriptionService = SubscriptionService();
+      final subscriptionInfo = await subscriptionService.getSubscriptionInfo();
+      final tier = subscriptionInfo.tier;
+
       // Fetch FDA and USDA recalls from their dedicated spreadsheets
       final fdaRecalls = await _recallService.getFdaRecalls();
       final usdaRecalls = await _recallService.getUsdaRecalls();
@@ -78,17 +84,28 @@ class _OnlyAdvancedFilteredRecallsPageState
         '🔍 Advanced Filter: Got ${allRecalls.length} total recalls (FDA + USDA)',
       );
 
-      // First, apply 30-day filter (same as All Recalls page)
-      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+      // Apply tier-based date filter
+      final now = DateTime.now();
+      final DateTime cutoff;
+      if (tier == SubscriptionTier.guest || tier == SubscriptionTier.free) {
+        // Last 30 days for Guest/Free users
+        cutoff = now.subtract(const Duration(days: 30));
+      } else {
+        // Since Jan 1 of current year for SmartFiltering/RecallMatch users
+        cutoff = DateTime(now.year, 1, 1);
+      }
+
+      print('🔍 Advanced Filter: Using cutoff date: $cutoff (Tier: $tier)');
+
       final recentRecalls = allRecalls.where((recall) {
-        return recall.dateIssued.isAfter(thirtyDaysAgo);
+        return recall.dateIssued.isAfter(cutoff);
       }).toList();
 
       // Sort by date (most recent first)
       recentRecalls.sort((a, b) => b.dateIssued.compareTo(a.dateIssued));
 
       print(
-        '🔍 Advanced Filter: Found ${recentRecalls.length} recalls within last 30 days',
+        '🔍 Advanced Filter: Found ${recentRecalls.length} recalls after cutoff date',
       );
 
       // Then apply brand/product filters to the 30-day filtered results
@@ -97,12 +114,11 @@ class _OnlyAdvancedFilteredRecallsPageState
       if (_activeBrandFilters.isNotEmpty || _activeProductFilters.isNotEmpty) {
         print('🔍 Advanced Filter: Applying brand/product filters...');
         filtered = recentRecalls.where((recall) {
-          bool matchesBrand = _activeBrandFilters.isEmpty;
-          bool matchesProduct = _activeProductFilters.isEmpty;
+          bool matchesBrand = false;
+          bool matchesProduct = false;
 
           // Check brand filters (OR logic within brand filters)
           if (_activeBrandFilters.isNotEmpty) {
-            matchesBrand = false;
             for (String brandFilter in _activeBrandFilters) {
               if (recall.brandName.toLowerCase().contains(
                 brandFilter.toLowerCase(),
@@ -118,7 +134,6 @@ class _OnlyAdvancedFilteredRecallsPageState
 
           // Check product filters (OR logic within product filters)
           if (_activeProductFilters.isNotEmpty) {
-            matchesProduct = false;
             for (String productFilter in _activeProductFilters) {
               if (recall.productName.toLowerCase().contains(
                 productFilter.toLowerCase(),
@@ -132,7 +147,7 @@ class _OnlyAdvancedFilteredRecallsPageState
             }
           }
 
-          // OR logic between brand and product filters
+          // OR logic between brand and product filters - match if ANY filter matches
           final result = matchesBrand || matchesProduct;
           if (result) {
             print('✅ Recall matched: ${recall.id} - ${recall.productName}');

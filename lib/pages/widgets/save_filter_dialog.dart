@@ -3,7 +3,7 @@ import '../../services/saved_filter_service.dart';
 import '../../services/subscription_service.dart';
 import '../subscribe_page.dart';
 
-/// Save Filter Dialog with full API integration
+/// Save SmartFilter Dialog with full API integration
 /// Allows users to save their current Advanced Filter settings as reusable presets
 
 class SaveFilterDialog extends StatefulWidget {
@@ -82,15 +82,20 @@ class _SaveFilterDialogState extends State<SaveFilterDialog> {
     setState(() => _isSaving = true);
 
     try {
-      await _filterService.createSavedFilter(
+      // Save the filter
+      final savedFilter = await _filterService.createSavedFilter(
         name: _nameController.text.trim(),
         description: _descriptionController.text.trim(),
         brandFilters: widget.brandFilters,
         productFilters: widget.productFilters,
       );
 
+      // Apply the filter to update last_used_at and increment usage counter
+      await _filterService.applySavedFilter(savedFilter.id);
+
       if (mounted) {
-        Navigator.of(context).pop(true); // Return true to indicate success
+        // Return the saved filter object so the parent can navigate to filtered recalls
+        Navigator.of(context).pop(savedFilter);
       }
     } on TierLimitException catch (e) {
       if (mounted) {
@@ -169,7 +174,7 @@ class _SaveFilterDialogState extends State<SaveFilterDialog> {
           Icon(Icons.save_outlined, color: Color(0xFF64B5F6), size: 24),
           SizedBox(width: 8),
           Text(
-            'Save Filter',
+            'Save SmartFilter',
             style: TextStyle(
               color: Colors.white,
               fontSize: 20,
@@ -344,7 +349,7 @@ class _SaveFilterDialogState extends State<SaveFilterDialog> {
                 )
               : const Icon(Icons.save, size: 18, color: Colors.white),
           label: Text(
-            _isSaving ? 'Saving...' : 'Save Filter',
+            _isSaving ? 'Saving...' : 'Save SmartFilter and Show Recalls',
             style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
           ),
           style: ElevatedButton.styleFrom(

@@ -545,8 +545,21 @@ class _MainMenuPageState extends State<MainMenuPage> {
       icon: fallbackIcon,
       count: _categoryCounts[categoryKey] ?? 0,
       onTap: () async {
+        // Get subscription tier to determine cutoff date
+        final subscriptionService = SubscriptionService();
+        final subscriptionInfo = await subscriptionService.getSubscriptionInfo();
+        final tier = subscriptionInfo.tier;
+
         final now = DateTime.now();
-        final cutoff = now.subtract(const Duration(days: 30));
+        final DateTime cutoff;
+        if (tier == SubscriptionTier.guest || tier == SubscriptionTier.free) {
+          // Last 30 days for Guest/Free users
+          cutoff = now.subtract(const Duration(days: 30));
+        } else {
+          // Since Jan 1 of current year for SmartFiltering/RecallMatch users
+          cutoff = DateTime(now.year, 1, 1);
+        }
+
         final recallService = RecallDataService();
 
         // Use working FDA and USDA endpoints
@@ -555,8 +568,9 @@ class _MainMenuPageState extends State<MainMenuPage> {
 
         print('🟢 Total FDA recalls: ${fdaRecalls.length}');
         print('🟢 Total USDA recalls: ${usdaRecalls.length}');
+        print('🟢 Using cutoff date: $cutoff (Tier: $tier)');
 
-        // Filter to last 30 days and matching categories
+        // Filter by cutoff date and matching categories
         final recentFda = fdaRecalls.where((recall) {
           if (!recall.dateIssued.isAfter(cutoff)) return false;
           final cat = recall.category.toLowerCase();
@@ -569,8 +583,8 @@ class _MainMenuPageState extends State<MainMenuPage> {
           return categories.any((c) => cat.contains(c.toLowerCase()));
         }).toList();
 
-        print('🟢 FDA $title recalls (last 30 days): ${recentFda.length}');
-        print('🟢 USDA $title recalls (last 30 days): ${recentUsda.length}');
+        print('🟢 FDA $title recalls (after cutoff): ${recentFda.length}');
+        print('🟢 USDA $title recalls (after cutoff): ${recentUsda.length}');
 
         final filtered = [...recentFda, ...recentUsda];
         print('🟢 Total filtered recalls to show: ${filtered.length}');

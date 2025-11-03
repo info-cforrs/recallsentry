@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
 import '../services/recall_data_service.dart';
+import '../services/article_service.dart';
 import '../models/recall_data.dart';
+import '../models/article.dart';
 import '../widgets/fda_recall_card.dart';
+import '../widgets/article_card.dart';
 import '../pages/fda_recall_details_page.dart';
 
 class AllFDARecallsPage extends StatefulWidget {
@@ -14,9 +17,11 @@ class AllFDARecallsPage extends StatefulWidget {
 
 class _AllFDARecallsPageState extends State<AllFDARecallsPage> {
   final RecallDataService _recallService = RecallDataService();
+  final ArticleService _articleService = ArticleService();
   final TextEditingController _searchController = TextEditingController();
   List<RecallData> _fdaRecalls = [];
   List<RecallData> _filteredRecalls = [];
+  List<Article> _fdaArticles = [];
   bool _isLoading = true;
   String _errorMessage = '';
   final int _currentIndex = 1; // Recalls tab
@@ -42,11 +47,21 @@ class _AllFDARecallsPageState extends State<AllFDARecallsPage> {
     });
 
     try {
-      print('🔍 FDA Page: Starting to load recalls...');
-      final allRecalls = await _recallService.getFilteredRecalls(agency: 'FDA');
+      print('🔍 FDA Page: Starting to load recalls and articles...');
+
+      // Load both recalls and articles in parallel
+      final results = await Future.wait([
+        _recallService.getFilteredRecalls(agency: 'FDA'),
+        _articleService.getFdaArticles(),
+      ]);
+
+      final allRecalls = results[0] as List<RecallData>;
+      final articles = results[1] as List<Article>;
+
       print(
         '✅ FDA Page: Received ${allRecalls.length} total FDA recalls from service',
       );
+      print('✅ FDA Page: Received ${articles.length} FDA articles');
 
       // Filter recalls to last 30 days
       final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
@@ -69,6 +84,7 @@ class _AllFDARecallsPageState extends State<AllFDARecallsPage> {
       setState(() {
         if (recentRecalls.isNotEmpty) {
           _fdaRecalls = recentRecalls;
+          _fdaArticles = articles;
           _applyFiltersAndSort();
           print(
             '✅ Using ${recentRecalls.length} real FDA recalls from last 30 days from Google Sheets',
@@ -76,6 +92,7 @@ class _AllFDARecallsPageState extends State<AllFDARecallsPage> {
         } else {
           print('⚠️ No recent FDA recalls found');
           _fdaRecalls = [];
+          _fdaArticles = articles;
           _filteredRecalls = [];
         }
         _isLoading = false;
@@ -400,6 +417,42 @@ class _AllFDARecallsPageState extends State<AllFDARecallsPage> {
     );
   }
 
+  /// Build interleaved list with recalls and articles
+  /// Inserts an article card after every 3rd recall card
+  List<Widget> _buildInterleavedList() {
+    List<Widget> widgets = [];
+    int articleIndex = 0;
+
+    for (int i = 0; i < _filteredRecalls.length; i++) {
+      final recall = _filteredRecalls[i];
+
+      // Add recall card
+      widgets.add(
+        GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => FdaRecallDetailsPage(recall: recall),
+              ),
+            );
+          },
+          child: FdaRecallCard(recall: recall),
+        ),
+      );
+
+      // Insert article card after every 3rd recall
+      if ((i + 1) % 3 == 0 &&
+          articleIndex < _fdaArticles.length &&
+          _fdaArticles.isNotEmpty) {
+        widgets.add(ArticleCard(article: _fdaArticles[articleIndex]));
+        articleIndex++;
+      }
+    }
+
+    return widgets;
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -609,7 +662,7 @@ class _AllFDARecallsPageState extends State<AllFDARecallsPage> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // Recalls list
+                    // Recalls list with interleaved articles
                     Expanded(
                       child: _isLoading
                           ? const Center(
@@ -618,25 +671,8 @@ class _AllFDARecallsPageState extends State<AllFDARecallsPage> {
                               ),
                             )
                           : _filteredRecalls.isNotEmpty
-                          ? ListView.builder(
-                              itemCount: _filteredRecalls.length,
-                              itemBuilder: (context, index) {
-                                final recall = _filteredRecalls[index];
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            FdaRecallDetailsPage(
-                                              recall: recall,
-                                            ),
-                                      ),
-                                    );
-                                  },
-                                  child: FdaRecallCard(recall: recall),
-                                );
-                              },
+                          ? ListView(
+                              children: _buildInterleavedList(),
                             )
                           : Center(
                               child: Column(

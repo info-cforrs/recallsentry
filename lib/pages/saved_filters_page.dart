@@ -8,7 +8,7 @@ import '../models/saved_filter.dart';
 import '../services/saved_filter_service.dart';
 import '../services/subscription_service.dart';
 
-/// Saved Filters Page - Cloud-synced filter presets
+/// Saved SmartFilters Page - Cloud-synced filter presets
 /// Premium feature with tier limits: Free (0), SmartFiltering (10), RecallMatch (unlimited)
 class SavedFiltersPage extends StatefulWidget {
   const SavedFiltersPage({super.key});
@@ -76,20 +76,42 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
   /// Apply a saved filter - marks as used and navigates to filtered recalls
   Future<void> _applyFilter(SavedFilter filter) async {
     try {
+      print('🔍 _applyFilter called for: ${filter.name}');
+      print('🔍 Brand filters: ${filter.brandFilters}');
+      print('🔍 Product filters: ${filter.productFilters}');
+
       // Update last_used_at via API
-      await _filterService.applySavedFilter(filter.id);
+      final updatedFilter = await _filterService.applySavedFilter(filter.id);
+
+      print('🔍 Updated filter brand filters: ${updatedFilter.brandFilters}');
+      print('🔍 Updated filter product filters: ${updatedFilter.productFilters}');
+
+      // Update the filter in the local list
+      if (mounted) {
+        setState(() {
+          final index = _filters.indexWhere((f) => f.id == filter.id);
+          if (index != -1) {
+            _filters[index] = updatedFilter;
+          }
+        });
+      }
 
       // Navigate to filtered recalls page
       if (mounted) {
-        Navigator.push(
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => OnlyAdvancedFilteredRecallsPage(
-              brandFilters: filter.brandFilters,
-              productFilters: filter.productFilters,
+              brandFilters: updatedFilter.brandFilters,
+              productFilters: updatedFilter.productFilters,
             ),
           ),
         );
+
+        // Reload filters when returning to ensure we have latest data
+        if (mounted) {
+          _loadData();
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -105,6 +127,11 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
 
   /// Navigate to edit page for a filter
   Future<void> _editFilter(SavedFilter filter) async {
+    print('🔍 _editFilter called for: ${filter.name}');
+    print('🔍 Filter ID: ${filter.id}');
+    print('🔍 Brand filters: ${filter.brandFilters}');
+    print('🔍 Product filters: ${filter.productFilters}');
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -164,7 +191,9 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => const AdvancedFilterPage(),
+        builder: (context) => const AdvancedFilterPage(
+          clearFiltersOnInit: true,
+        ),
       ),
     ).then((_) {
       // Reload filters when returning from Advanced Filters
@@ -175,7 +204,7 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
   void _showUpgradeDialog() {
     String message = _subscription?.tier == SubscriptionTier.free ||
             _subscription?.tier == SubscriptionTier.guest
-        ? 'Saved Filters is a premium feature. Upgrade to SmartFiltering to save up to 10 filters, or RecallMatch for unlimited filters.'
+        ? 'Saved SmartFilters is a premium feature. Upgrade to SmartFiltering to save up to 10 filters, or RecallMatch for unlimited filters.'
         : 'You\'ve reached the maximum of $_maxFiltersForTier saved filters for $_tierDisplayName. Upgrade to RecallMatch for unlimited filters.';
 
     showDialog(
@@ -258,7 +287,7 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
                   const SizedBox(width: 16),
                   const Expanded(
                     child: Text(
-                      'Saved Filters',
+                      'Saved SmartFilters',
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -312,7 +341,7 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
                       child: Text(
                         _subscription!.tier == SubscriptionTier.free ||
                                 _subscription!.tier == SubscriptionTier.guest
-                            ? 'Saved Filters is a premium feature. Upgrade to save filters.'
+                            ? 'Saved SmartFilters is a premium feature. Upgrade to save filters.'
                             : '$_tierDisplayName: ${_filters.length}/${_maxFiltersForTier == 999 ? '∞' : _maxFiltersForTier} saved filters',
                         style: const TextStyle(color: Colors.white70, fontSize: 14),
                       ),
@@ -351,7 +380,7 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
               backgroundColor: const Color(0xFF64B5F6),
               icon: const Icon(Icons.add, color: Colors.white),
               label: const Text(
-                'New Filter',
+                'New SmartFilter',
                 style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
               ),
             )
@@ -461,7 +490,7 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'No Saved Filters',
+              'No Saved SmartFilters',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 22,
@@ -648,7 +677,7 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
                     onPressed: () => _applyFilter(filter),
                     icon: const Icon(Icons.search, size: 18, color: Colors.white),
                     label: const Text(
-                      'Apply Filter',
+                      'See Recalls',
                       style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                     ),
                     style: ElevatedButton.styleFrom(

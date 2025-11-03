@@ -29,15 +29,31 @@ class SavedFilter {
 
   /// Create SavedFilter from API JSON response
   factory SavedFilter.fromJson(Map<String, dynamic> json) {
+    print('🔍 SavedFilter.fromJson called');
+    print('🔍 JSON: $json');
+
     final filterData = json['filter_data'] as Map<String, dynamic>? ?? {};
-    final brandFilters = (filterData['brand_filters'] as List?)
+    print('🔍 filter_data: $filterData');
+
+    // Try to parse from top-level fields first (backend sends these)
+    // Fall back to filter_data if not present
+    final brandFilters = (json['brand_filters'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        (filterData['brand_filters'] as List?)
             ?.map((e) => e.toString())
             .toList() ??
         [];
-    final productFilters = (filterData['product_filters'] as List?)
+    final productFilters = (json['product_filters'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        (filterData['product_filters'] as List?)
             ?.map((e) => e.toString())
             .toList() ??
         [];
+
+    print('🔍 Parsed brandFilters: $brandFilters');
+    print('🔍 Parsed productFilters: $productFilters');
 
     return SavedFilter(
       id: json['id'] as int,

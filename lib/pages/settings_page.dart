@@ -463,13 +463,13 @@ class _SettingsPageState extends State<SettingsPage> {
                       color: _canAccessSavedFilters ? Colors.white70 : Colors.black54,
                     ),
                     title: Text(
-                      'Saved Filters',
+                      'SmartFilters',
                       style: TextStyle(
                         color: _canAccessSavedFilters ? Colors.white : Colors.black,
                       ),
                     ),
                     subtitle: Text(
-                      'Manage your saved filter presets',
+                      'Manage your SmartFilter presets',
                       style: TextStyle(
                         color: _canAccessSavedFilters ? Colors.white70 : Colors.black54,
                       ),
@@ -488,7 +488,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           ),
                         );
                       } else {
-                        _showUpgradeModal(context, 'Saved Filters');
+                        _showUpgradeModal(context, 'SmartFilters');
                       }
                     },
                   ),

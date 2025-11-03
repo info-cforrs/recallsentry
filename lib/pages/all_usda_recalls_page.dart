@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
 import '../services/recall_data_service.dart';
+import '../services/article_service.dart';
 import '../models/recall_data.dart';
+import '../models/article.dart';
 import '../widgets/usda_recall_card.dart';
+import '../widgets/article_card.dart';
 
 class AllUSDARecallsPage extends StatefulWidget {
   const AllUSDARecallsPage({super.key});
@@ -13,9 +16,11 @@ class AllUSDARecallsPage extends StatefulWidget {
 
 class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
   final RecallDataService _recallService = RecallDataService();
+  final ArticleService _articleService = ArticleService();
   final TextEditingController _searchController = TextEditingController();
   List<RecallData> _usdaRecalls = [];
   List<RecallData> _filteredRecalls = [];
+  List<Article> _usdaArticles = [];
   bool _isLoading = true;
   String _errorMessage = '';
   final int _currentIndex = 1; // Recalls tab
@@ -48,13 +53,21 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
     });
 
     try {
-      print('🔍 USDA Page: Starting to load recalls...');
-      final allRecalls = await _recallService.getFilteredRecalls(
-        agency: 'USDA',
-      );
+      print('🔍 USDA Page: Starting to load recalls and articles...');
+
+      // Load both recalls and articles in parallel
+      final results = await Future.wait([
+        _recallService.getFilteredRecalls(agency: 'USDA'),
+        _articleService.getUsdaArticles(),
+      ]);
+
+      final allRecalls = results[0] as List<RecallData>;
+      final articles = results[1] as List<Article>;
+
       print(
         '✅ USDA Page: Received ${allRecalls.length} total USDA recalls from service',
       );
+      print('✅ USDA Page: Received ${articles.length} USDA articles');
 
       // Filter recalls to last 30 days
       final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
@@ -77,6 +90,7 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
       setState(() {
         if (recentRecalls.isNotEmpty) {
           _usdaRecalls = recentRecalls;
+          _usdaArticles = articles;
           _applyFiltersAndSort();
           print(
             '✅ Using ${recentRecalls.length} real USDA recalls from last 30 days from Google Sheets',
@@ -84,6 +98,7 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
         } else {
           print('⚠️ No recent USDA recalls found');
           _usdaRecalls = [];
+          _usdaArticles = articles;
           _filteredRecalls = [];
         }
         _isLoading = false;
@@ -498,6 +513,30 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
     );
   }
 
+  /// Build interleaved list with recalls and articles
+  /// Inserts an article card after every 3rd recall card
+  List<Widget> _buildInterleavedList() {
+    List<Widget> widgets = [];
+    int articleIndex = 0;
+
+    for (int i = 0; i < _filteredRecalls.length; i++) {
+      final recall = _filteredRecalls[i];
+
+      // Add recall card
+      widgets.add(UsdaRecallCard(recall: recall));
+
+      // Insert article card after every 3rd recall
+      if ((i + 1) % 3 == 0 &&
+          articleIndex < _usdaArticles.length &&
+          _usdaArticles.isNotEmpty) {
+        widgets.add(ArticleCard(article: _usdaArticles[articleIndex]));
+        articleIndex++;
+      }
+    }
+
+    return widgets;
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -711,7 +750,7 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    // Recalls list
+                    // Recalls list with interleaved articles
                     Expanded(
                       child: _isLoading
                           ? const Center(
@@ -720,12 +759,8 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                               ),
                             )
                           : _filteredRecalls.isNotEmpty
-                          ? ListView.builder(
-                              itemCount: _filteredRecalls.length,
-                              itemBuilder: (context, index) {
-                                final recall = _filteredRecalls[index];
-                                return UsdaRecallCard(recall: recall);
-                              },
+                          ? ListView(
+                              children: _buildInterleavedList(),
                             )
                           : Center(
                               child: Column(

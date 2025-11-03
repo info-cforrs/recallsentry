@@ -15,32 +15,45 @@ class SavedRecallsService {
   Future<List<RecallData>> getSavedRecalls() async {
     try {
       // Check if user is logged in
+      print('🔍 SavedRecallsService.getSavedRecalls() called');
       final isLoggedIn = await _authService.isLoggedIn();
+      print('   isLoggedIn: $isLoggedIn');
 
       if (!isLoggedIn) {
         // Fall back to local storage if not logged in
+        print('   ⚠️ User not logged in, using local storage');
         return _getLocalSavedRecalls();
       }
 
       // Fetch from API
+      print('   📡 Fetching from API: /saved-recalls/');
       final response = await _authService.authenticatedRequest(
         'GET',
         '/saved-recalls/',
       );
+      print('   API Response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
+        print('   Response data type: ${responseData.runtimeType}');
+
         // Handle paginated response
         final List<dynamic> jsonList = responseData is List
             ? responseData
             : (responseData['results'] ?? []);
-        return jsonList.map((json) {
+        print('   📊 Got ${jsonList.length} saved recalls from API');
+
+        final recalls = jsonList.map((json) {
           // The API returns the recall data nested in 'recall' field
           final recallJson = json['recall'];
           return RecallData.fromJson(recallJson);
         }).toList();
+
+        print('   ✅ Returning ${recalls.length} saved recalls');
+        return recalls;
       } else {
         print('❌ Failed to fetch saved recalls from API: ${response.statusCode}');
+        print('   Response body: ${response.body}');
         return _getLocalSavedRecalls();
       }
     } catch (e) {

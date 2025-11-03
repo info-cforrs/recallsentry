@@ -4,10 +4,16 @@ import 'only_advanced_filtered_recalls_page.dart';
 import 'subscribe_page.dart';
 import '../services/filter_state_service.dart';
 import '../services/subscription_service.dart';
+import '../models/saved_filter.dart';
 import 'widgets/save_filter_dialog.dart';
 
 class AdvancedFilterPage extends StatefulWidget {
-  const AdvancedFilterPage({super.key});
+  final bool clearFiltersOnInit;
+
+  const AdvancedFilterPage({
+    super.key,
+    this.clearFiltersOnInit = false,
+  });
 
   @override
   State<AdvancedFilterPage> createState() => _AdvancedFilterPageState();
@@ -49,6 +55,17 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
 
   // Load previously saved filters
   Future<void> _loadSavedFilters() async {
+    // If clearFiltersOnInit is true, clear saved state and start fresh
+    if (widget.clearFiltersOnInit) {
+      await _filterStateService.clearAllFilters();
+      setState(() {
+        _selectedBrands.clear();
+        _selectedProductNames.clear();
+      });
+      return;
+    }
+
+    // Otherwise, load previously saved filters
     final filterState = await _filterStateService.loadFilterState();
     setState(() {
       _selectedBrands.clear();
@@ -473,7 +490,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                               return;
                             }
 
-                            final result = await showDialog<bool>(
+                            final result = await showDialog<SavedFilter>(
                               context: context,
                               builder: (BuildContext context) {
                                 return SaveFilterDialog(
@@ -483,13 +500,14 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                               },
                             );
 
-                            // Show success message if filter was saved
-                            if (result == true && mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Filter saved successfully!'),
-                                  backgroundColor: Color(0xFF4CAF50),
-                                  duration: Duration(seconds: 2),
+                            // Navigate to filtered recalls page if filter was saved
+                            if (result != null && mounted) {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (context) => OnlyAdvancedFilteredRecallsPage(
+                                    brandFilters: result.brandFilters,
+                                    productFilters: result.productFilters,
+                                  ),
                                 ),
                               );
                             }
