@@ -46,6 +46,8 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
   }
 
   Future<void> _loadAllRecalls() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -80,6 +82,8 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
         );
       }
 
+      if (!mounted) return;
+
       setState(() {
         if (recentRecalls.isNotEmpty) {
           _allRecalls = recentRecalls;
@@ -102,6 +106,8 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
       });
     } catch (e) {
       print('❌ All Recalls Page Error: $e');
+      if (!mounted) return;
+
       setState(() {
         _errorMessage = 'Error loading recalls: $e';
         _isLoading = false;
@@ -209,10 +215,6 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
       }).toList();
     }
 
-    // Update available filter options based on current filtered results
-    // This provides real-time filter options based on current search/filter context
-    _updateAvailableFilterOptionsForFiltered(filtered);
-
     // Apply sorting
     switch (_sortOption) {
       case 'brand_az':
@@ -233,246 +235,79 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
         break;
     }
 
+    if (!mounted) return;
+
     setState(() {
       _filteredRecalls = filtered;
     });
   }
 
-  void _updateAvailableFilterOptionsForFiltered(List<RecallData> filtered) {
-    // Update filter options based on currently filtered results for real-time updates
-    Set<String> riskLevels = {};
-    Set<String> categories = {};
-    Set<String> agencies = {};
-
-    for (var recall in filtered) {
-      if (recall.riskLevel.trim().isNotEmpty) {
-        riskLevels.add(recall.riskLevel.toUpperCase().trim());
-      }
-      if (recall.category.trim().isNotEmpty) {
-        categories.add(recall.category.toLowerCase().trim());
-      }
-      if (recall.agency.trim().isNotEmpty) {
-        agencies.add(recall.agency.toUpperCase().trim());
-      }
-    }
-
-    // Only update if we're in a search context, otherwise keep original full dataset options
-    if (_searchQuery.isNotEmpty) {
-      _availableRiskLevels = riskLevels.toList()..sort();
-      _availableCategories = categories.toList()..sort();
-      _availableAgencies = agencies.toList()..sort();
-      print(
-        '🔄 Updated filter options for search context: Risk levels: $_availableRiskLevels, Categories: $_availableCategories, Agencies: $_availableAgencies',
-      );
-    }
-  }
-
-  void _onSearchChanged(String query) {
-    setState(() {
-      _searchQuery = query;
-    });
-    _applyFiltersAndSort();
-  }
-
-  void _showSortDialog() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Sort Options'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ListTile(
-                    title: const Text('Date (Newest First)'),
-                    leading: Radio<String>(
-                      value: 'date',
-                      groupValue: _sortOption,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _sortOption = value!;
-                        });
-                        _applyFiltersAndSort();
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    title: const Text('Brand Name (A-Z)'),
-                    leading: Radio<String>(
-                      value: 'brand_az',
-                      groupValue: _sortOption,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _sortOption = value!;
-                        });
-                        _applyFiltersAndSort();
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    title: const Text('Brand Name (Z-A)'),
-                    leading: Radio<String>(
-                      value: 'brand_za',
-                      groupValue: _sortOption,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _sortOption = value!;
-                        });
-                        _applyFiltersAndSort();
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            _errorMessage.isNotEmpty
+                ? Icons.error_outline
+                : Icons.info_outline,
+            size: 80,
+            color: _errorMessage.isNotEmpty ? Colors.red : Colors.white54,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage.isNotEmpty
+                ? 'Error Loading Recalls'
+                : 'No Recalls Found',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _errorMessage.isNotEmpty
+                ? _errorMessage
+                : 'No recalls found in the last 30 days.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, color: Colors.white70),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadAllRecalls,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF64B5F6),
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
     );
   }
 
-  void _showFilterDialog() {
-    String tempRiskLevel = _selectedRiskLevel;
-    String tempCategory = _selectedCategory;
-    String tempAgency = _selectedAgency;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            // Build dynamic filter options
-            List<String> riskOptions = ['all', ..._availableRiskLevels];
-            List<String> categoryOptions = ['all', ..._availableCategories];
-            List<String> agencyOptions = ['all', ..._availableAgencies];
-
-            return AlertDialog(
-              title: const Text('Filter Options'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Agency:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    if (agencyOptions.isEmpty ||
-                        (agencyOptions.length == 1 &&
-                            agencyOptions[0] == 'all'))
-                      const Text(
-                        'No agencies found in current data',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      )
-                    else
-                      ...agencyOptions.map(
-                        (agency) => ListTile(
-                          title: Text(
-                            agency == 'all' ? 'All Agencies' : agency,
-                          ),
-                          leading: Radio<String>(
-                            value: agency,
-                            groupValue: tempAgency,
-                            onChanged: (String? value) {
-                              setDialogState(() {
-                                tempAgency = value!;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Risk Level:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    if (riskOptions.isEmpty ||
-                        (riskOptions.length == 1 && riskOptions[0] == 'all'))
-                      const Text(
-                        'No risk levels found in current data',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      )
-                    else
-                      ...riskOptions.map(
-                        (level) => ListTile(
-                          title: Text(
-                            level == 'all' ? 'All Risk Levels' : level,
-                          ),
-                          leading: Radio<String>(
-                            value: level,
-                            groupValue: tempRiskLevel,
-                            onChanged: (String? value) {
-                              setDialogState(() {
-                                tempRiskLevel = value!;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Category:',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    if (categoryOptions.isEmpty ||
-                        (categoryOptions.length == 1 &&
-                            categoryOptions[0] == 'all'))
-                      const Text(
-                        'No categories found in current data',
-                        style: TextStyle(color: Colors.grey, fontSize: 12),
-                      )
-                    else
-                      ...categoryOptions.map(
-                        (category) => ListTile(
-                          title: Text(
-                            category == 'all'
-                                ? 'All Categories'
-                                : category.toUpperCase(),
-                          ),
-                          leading: Radio<String>(
-                            value: category,
-                            groupValue: tempCategory,
-                            onChanged: (String? value) {
-                              setDialogState(() {
-                                tempCategory = value!;
-                              });
-                            },
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {
-                      _selectedRiskLevel = tempRiskLevel;
-                      _selectedCategory = tempCategory;
-                      _selectedAgency = tempAgency;
-                    });
-                    _applyFiltersAndSort();
-                    Navigator.of(context).pop();
-                  },
-                  child: const Text('Apply'),
-                ),
-              ],
+  Widget _buildRecallsList() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: _filteredRecalls.length,
+        itemBuilder: (context, index) {
+          final recall = _filteredRecalls[index];
+          if (recall.agency == 'USDA') {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: UsdaRecallCard(recall: recall),
             );
-          },
-        );
-      },
+          } else {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: FdaRecallCard(recall: recall),
+            );
+          }
+        },
+      ),
     );
   }
 
@@ -506,7 +341,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/app_icon.png',
+                        'assets/images/shield_logo3.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -555,197 +390,19 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
                 ],
               ),
             ),
-            // Content area
+            const SizedBox(height: 16),
+
+            // Main Content Area
             Expanded(
-              child: Container(
-                margin: const EdgeInsets.all(16.0),
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A4A5C),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Search Bar
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1D3547),
-                        borderRadius: BorderRadius.circular(8),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF64B5F6),
                       ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: _onSearchChanged,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Atlanta',
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: 'Search all recalls...',
-                          hintStyle: TextStyle(
-                            color: Colors.white54,
-                            fontFamily: 'Atlanta',
-                          ),
-                          prefixIcon: Icon(Icons.search, color: Colors.white54),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    // Filter and sort options
-                    Row(
-                      children: [
-                  const CustomBackButton(),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                          onTap: _showFilterDialog,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1D3547),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.filter_list,
-                                  color:
-                                      (_selectedRiskLevel != 'all' ||
-                                          _selectedCategory != 'all' ||
-                                          _selectedAgency != 'all')
-                                      ? const Color(0xFF4A90E2)
-                                      : Colors.white54,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Filter',
-                                  style: TextStyle(
-                                    color:
-                                        (_selectedRiskLevel != 'all' ||
-                                            _selectedCategory != 'all' ||
-                                            _selectedAgency != 'all')
-                                        ? const Color(0xFF4A90E2)
-                                        : Colors.white54,
-                                    fontSize: 12,
-                                    fontFamily: 'Atlanta',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        GestureDetector(
-                          onTap: _showSortDialog,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1D3547),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.sort,
-                                  color: Colors.white54,
-                                  size: 16,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Sort',
-                                  style: TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 12,
-                                    fontFamily: 'Atlanta',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${_filteredRecalls.length} recalls found',
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 12,
-                            fontFamily: 'Atlanta',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    // Recalls list
-                    Expanded(
-                      child: _isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFF4A90E2),
-                              ),
-                            )
-                          : _filteredRecalls.isNotEmpty
-                          ? ListView.builder(
-                              itemCount: _filteredRecalls.length,
-                              itemBuilder: (context, index) {
-                                final recall = _filteredRecalls[index];
-                                if (recall.agency == 'USDA') {
-                                  return UsdaRecallCard(recall: recall);
-                                } else {
-                                  return FdaRecallCard(recall: recall);
-                                }
-                              },
-                            )
-                          : Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.info_outline,
-                                    color: Colors.orange,
-                                    size: 48,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    _errorMessage.isNotEmpty
-                                        ? _errorMessage
-                                        : _searchController.text.isNotEmpty
-                                        ? 'No recalls found matching "${_searchController.text}"'
-                                        : 'No recalls found in the last 30 days.',
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      _searchController.clear();
-                                      _loadAllRecalls();
-                                    },
-                                    child: Text(
-                                      _searchController.text.isNotEmpty
-                                          ? 'Clear Search'
-                                          : 'Retry',
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
-              ),
+                    )
+                  : _filteredRecalls.isEmpty
+                  ? _buildEmptyState()
+                  : _buildRecallsList(),
             ),
           ],
         ),

@@ -220,7 +220,7 @@ class _OnlyAdvancedFilteredRecallsPageState
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/app_icon.png',
+                        'assets/images/shield_logo3.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,

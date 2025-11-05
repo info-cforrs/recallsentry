@@ -280,7 +280,7 @@ class _InfoPageState extends State<InfoPage> {
                           width: 40,
                           height: 40,
                           child: Image.asset(
-                            'assets/images/app_icon.png',
+                            'assets/images/shield_logo3.png',
                             width: 40,
                             height: 40,
                             fit: BoxFit.contain,
@@ -495,6 +495,12 @@ class _InfoPageState extends State<InfoPage> {
                                 _subscriptionTier == SubscriptionTier.recallMatch
                             ? null
                             : const Color(0xFFD1D1D1),
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.only(
+                            bottomLeft: Radius.circular(8),
+                            bottomRight: Radius.circular(8),
+                          ),
+                        ),
                         onTap: () {
                           if (_subscriptionTier == SubscriptionTier.smartFiltering ||
                               _subscriptionTier == SubscriptionTier.recallMatch) {

@@ -206,7 +206,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/app_icon.png',
+                        'assets/images/shield_logo3.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -312,10 +312,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Subscriptions',
                       style: TextStyle(color: Colors.white),
                     ),
-                    subtitle: const Text(
-                      'Get access to more recall information',
-                      style: TextStyle(color: Colors.white70),
-                    ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
@@ -336,10 +332,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Log In',
                       style: TextStyle(color: Colors.white),
                     ),
-                    subtitle: const Text(
-                      'Sign in to your account',
-                      style: TextStyle(color: Colors.white70),
-                    ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
@@ -359,10 +351,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: const Text(
                       'Sign Up',
                       style: TextStyle(color: Colors.white),
-                    ),
-                    subtitle: const Text(
-                      'Create a new account',
-                      style: TextStyle(color: Colors.white70),
                     ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
@@ -387,12 +375,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       'App Usage',
                       style: TextStyle(
                         color: _isLoggedIn ? Colors.white : Colors.black,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Know how much value you\'re getting out of the App with Saves, Searches and Filters.',
-                      style: TextStyle(
-                        color: _isLoggedIn ? Colors.white70 : Colors.black54,
                       ),
                     ),
                     trailing: Icon(
@@ -420,10 +402,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Report Illness',
                       style: TextStyle(color: Colors.white),
                     ),
-                    subtitle: const Text(
-                      'Let the regulatory body know about your health and safety',
-                      style: TextStyle(color: Colors.white70),
-                    ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
@@ -443,10 +421,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: const Text(
                       'Sign Out',
                       style: TextStyle(color: Colors.white),
-                    ),
-                    subtitle: const Text(
-                      'Log out of your account',
-                      style: TextStyle(color: Colors.white70),
                     ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
@@ -483,10 +457,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Push Notifications',
                       style: TextStyle(color: Colors.white),
                     ),
-                    subtitle: const Text(
-                      'Receive alerts and updates',
-                      style: TextStyle(color: Colors.white70),
-                    ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
@@ -510,10 +480,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Email Notifications',
                       style: TextStyle(color: Colors.white),
                     ),
-                    subtitle: const Text(
-                      'Receive email alerts and updates',
-                      style: TextStyle(color: Colors.white70),
-                    ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
@@ -532,10 +498,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: const Text(
                       'Location Services',
                       style: TextStyle(color: Colors.white),
-                    ),
-                    subtitle: const Text(
-                      'Allow location access',
-                      style: TextStyle(color: Colors.white70),
                     ),
                     value: _locationEnabled,
                     onChanged: (value) {
@@ -576,10 +538,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Privacy Policy',
                       style: TextStyle(color: Colors.white),
                     ),
-                    subtitle: const Text(
-                      'Our Privacy Policy',
-                      style: TextStyle(color: Colors.white70),
-                    ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
@@ -603,10 +561,6 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Terms of Service',
                       style: TextStyle(color: Colors.white),
                     ),
-                    subtitle: const Text(
-                      'Our Terms of Service',
-                      style: TextStyle(color: Colors.white70),
-                    ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
@@ -625,10 +579,6 @@ class _SettingsPageState extends State<SettingsPage> {
                     title: const Text(
                       'Share App',
                       style: TextStyle(color: Colors.white),
-                    ),
-                    subtitle: const Text(
-                      'Tell your friends and family',
-                      style: TextStyle(color: Colors.white70),
                     ),
                     trailing: const Icon(
                       Icons.arrow_forward_ios,

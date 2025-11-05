@@ -50,7 +50,7 @@ class IntroPage3 extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 80),
+              const SizedBox(height: 50),
 
               // Title
               const Text(

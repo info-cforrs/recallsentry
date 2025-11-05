@@ -251,6 +251,8 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
         ),
         const SizedBox(height: 10),
       ],
@@ -519,15 +521,15 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
   // Helper for checkboxes
   Widget _buildRemedyCheckbox(String label, String value) {
     bool isChecked = value.toUpperCase() == 'Y';
-    return Row(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Icon(
           isChecked ? Icons.check_box : Icons.check_box_outline_blank,
           color: Colors.black,
-          size: 14,
+          size: 20,
         ),
-        const SizedBox(width: 6),
+        const SizedBox(height: 4),
         Text(
           label,
           style: const TextStyle(

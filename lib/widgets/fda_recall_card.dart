@@ -178,6 +178,8 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
                 ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
               ),
               // (Brand Name field moved to below Reports of Injury, outside this column)
             ],
@@ -697,15 +699,15 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
 
   Widget _buildRemedyCheckbox(String label, String value) {
     bool isChecked = value.toUpperCase() == 'Y';
-    return Row(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         FaIcon(
           isChecked ? FontAwesomeIcons.squareCheck : FontAwesomeIcons.square,
           color: Colors.black,
-          size: 14,
+          size: 20,
         ),
-        const SizedBox(width: 6),
+        const SizedBox(height: 4),
         Text(
           label,
           style: const TextStyle(

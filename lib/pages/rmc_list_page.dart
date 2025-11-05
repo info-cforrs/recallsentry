@@ -143,21 +143,27 @@ class _RmcListPageState extends State<RmcListPage> {
   }
 
   Widget _buildRecallCard(RecallData recall) {
-    return GestureDetector(
-      onTap: () {
-        // Navigate to recall details page
-        if (recall.agency == 'USDA') {
-          Navigator.push(
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: GestureDetector(
+        onTap: () async {
+          // Navigate to recall details page via the RMC details page
+          await Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => UsdaRecallDetailsPageV2(recall: recall),
             ),
           );
-        }
-        // TODO: Add navigation for FDA, CPSC, NHTSA recalls when their pages are ready
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 16),
+          // Always reload data after returning from details page
+          // to reflect any status changes
+          if (widget.filteredRecalls == null) {
+            await _loadActiveRecalls();
+          } else {
+            // If we have filtered recalls, we need to re-fetch from parent
+            // For now, just reload the active recalls
+            await _loadActiveRecalls();
+          }
+        },
         child: USDARmcStatusCard(recall: recall),
       ),
     );

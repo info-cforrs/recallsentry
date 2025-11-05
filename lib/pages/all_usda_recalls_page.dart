@@ -48,6 +48,8 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
   }
 
   Future<void> _loadUSDARecalls() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _errorMessage = '';
@@ -88,6 +90,8 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
         );
       }
 
+      if (!mounted) return;
+
       setState(() {
         if (recentRecalls.isNotEmpty) {
           _usdaRecalls = recentRecalls;
@@ -112,6 +116,8 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
       });
     } catch (e) {
       print('❌ USDA Page Error: $e');
+      if (!mounted) return;
+
       setState(() {
         _errorMessage = 'Error loading recalls: $e';
         _isLoading = false;
@@ -538,6 +544,64 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
     return widgets;
   }
 
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            _errorMessage.isNotEmpty
+                ? Icons.error_outline
+                : Icons.info_outline,
+            size: 80,
+            color: _errorMessage.isNotEmpty ? Colors.red : Colors.white54,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage.isNotEmpty
+                ? 'Error Loading Recalls'
+                : 'No Recalls Found',
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            _errorMessage.isNotEmpty
+                ? _errorMessage
+                : 'No USDA recalls found in the last 30 days.',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 16, color: Colors.white70),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _loadUSDARecalls,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF64B5F6),
+            ),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecallsList() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: ListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: _buildInterleavedList().length,
+        itemBuilder: (context, index) {
+          return _buildInterleavedList()[index];
+        },
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
@@ -574,7 +638,7 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/app_icon.png',
+                        'assets/images/shield_logo3.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -623,182 +687,19 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                 ],
               ),
             ),
-            // Content area
+            const SizedBox(height: 16),
+
+            // Main Content Area
             Expanded(
-              child: Container(
-                margin: const EdgeInsets.all(16.0),
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A4A5C),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Search Bar
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1D3547),
-                        borderRadius: BorderRadius.circular(8),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF64B5F6),
                       ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: _onSearchChanged,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontFamily: 'Atlanta',
-                        ),
-                        decoration: const InputDecoration(
-                          hintText: 'Search USDA recalls...',
-                          hintStyle: TextStyle(
-                            color: Colors.white54,
-                            fontFamily: 'Atlanta',
-                          ),
-                          prefixIcon: Icon(Icons.search, color: Colors.white54),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.all(16),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    // Filter and sort options
-                    Row(
-                      children: [
-                  const CustomBackButton(),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                          onTap: _showFilterDialog,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1D3547),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.filter_list,
-                                  color:
-                                      (_selectedRiskLevel != 'all' ||
-                                          _selectedRecallReason != 'all' ||
-                                          _selectedRecallClassification !=
-                                              'all')
-                                      ? const Color(0xFF4A90E2)
-                                      : Colors.white54,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Filter',
-                                  style: TextStyle(
-                                    color:
-                                        (_selectedRiskLevel != 'all' ||
-                                            _selectedRecallReason != 'all' ||
-                                            _selectedRecallClassification !=
-                                                'all')
-                                        ? const Color(0xFF4A90E2)
-                                        : Colors.white54,
-                                    fontSize: 12,
-                                    fontFamily: 'Atlanta',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        GestureDetector(
-                          onTap: _showSortDialog,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1D3547),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.sort,
-                                  color: Colors.white54,
-                                  size: 16,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  'Sort',
-                                  style: TextStyle(
-                                    color: Colors.white54,
-                                    fontSize: 12,
-                                    fontFamily: 'Atlanta',
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          '${_filteredRecalls.length} recalls found',
-                          style: const TextStyle(
-                            color: Colors.white54,
-                            fontSize: 12,
-                            fontFamily: 'Atlanta',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    // Recalls list with interleaved articles
-                    Expanded(
-                      child: _isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFF4A90E2),
-                              ),
-                            )
-                          : _filteredRecalls.isNotEmpty
-                          ? ListView(
-                              children: _buildInterleavedList(),
-                            )
-                          : Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.info_outline,
-                                    color: Colors.orange,
-                                    size: 48,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  Text(
-                                    _errorMessage.isNotEmpty
-                                        ? _errorMessage
-                                        : 'No USDA recalls found.',
-                                    style: const TextStyle(
-                                      color: Colors.white70,
-                                      fontSize: 14,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: _loadUSDARecalls,
-                                    child: const Text('Retry'),
-                                  ),
-                                ],
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
-              ),
+                    )
+                  : _filteredRecalls.isEmpty
+                  ? _buildEmptyState()
+                  : _buildRecallsList(),
             ),
           ],
         ),

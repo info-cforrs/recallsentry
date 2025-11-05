@@ -9,8 +9,8 @@ class USDARmcStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => RmcDetailsPage(recall: recall),
@@ -382,7 +382,7 @@ class USDARmcStatusCard extends StatelessWidget {
       width: 36,
       height: 36,
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFF4CAF50) : Colors.red,
+        color: isActive ? const Color(0xFF4CAF50) : Colors.grey,
         shape: BoxShape.circle,
       ),
       child: Center(
@@ -403,7 +403,7 @@ class USDARmcStatusCard extends StatelessWidget {
     switch (status) {
       case 'Not Started':
       case 'Open':
-        return 0; // No steps completed yet - all red
+        return 0; // No steps completed yet - all grey
       case 'Stopped Using':
         return 1; // Section 1 complete
       case 'Mfr Contacted':

@@ -36,7 +36,7 @@ class IntroPage1 extends StatelessWidget {
                     8.0,
                   ), // Add padding to prevent edge clipping
                   child: Image.asset(
-                    'assets/images/shield_logo.png',
+                    'assets/images/shield_logo3.png',
                     width: 120,
                     height: 120,
                     fit: BoxFit

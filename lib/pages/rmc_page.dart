@@ -150,8 +150,8 @@ class _RmcPageState extends State<RmcPage> {
         .toList();
   }
 
-  void _navigateToStatusList(String title, List<RecallData> recalls) {
-    Navigator.push(
+  void _navigateToStatusList(String title, List<RecallData> recalls) async {
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => RmcListPage(
@@ -160,6 +160,8 @@ class _RmcPageState extends State<RmcPage> {
         ),
       ),
     );
+    // Reload data after returning from list page
+    _loadActiveRecalls();
   }
 
   @override
@@ -191,7 +193,7 @@ class _RmcPageState extends State<RmcPage> {
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/app_icon.png',
+                        'assets/images/shield_logo3.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -226,13 +228,17 @@ class _RmcPageState extends State<RmcPage> {
                   ),
                   const SizedBox(width: 16),
                   // Page Title
-                  const Text(
-                    'Recall Management Center',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      fontFamily: 'Atlanta',
-                      color: Colors.white,
+                  const Expanded(
+                    child: Text(
+                      'Recall Management Center',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Atlanta',
+                        color: Colors.white,
+                      ),
+                      softWrap: true,
+                      overflow: TextOverflow.visible,
                     ),
                   ),
                 ],
@@ -282,75 +288,83 @@ class _RmcPageState extends State<RmcPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Status Buttons
-                        _buildStatusButton(
-                          'OPEN',
-                          _getOpenCount(),
-                          () => _navigateToStatusList(
-                            'Open Recalls',
-                            _activeRecalls
-                                .where((r) => r.recallResolutionStatus != 'Completed')
-                                .toList(),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
+                        // Status Buttons - wrapped in Padding for compact layout
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 15),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              _buildStatusButton(
+                                'OPEN',
+                                _getOpenCount(),
+                                () => _navigateToStatusList(
+                                  'Open Recalls',
+                                  _activeRecalls
+                                      .where((r) => r.recallResolutionStatus != 'Completed')
+                                      .toList(),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
 
-                        _buildStatusButton(
-                          'WAITING REFUND',
-                          _getWaitingRefundCount(),
-                          () => _navigateToStatusList(
-                            'Waiting Refund',
-                            _getRecallsByStatus([
-                              'Return 1B: Item Shipped Back',
-                              'Return 1A: Brought to local Retailer',
-                              'Dispose 1A: Brought to local Retailer',
-                            ]),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
+                              _buildStatusButton(
+                                'WAITING REFUND',
+                                _getWaitingRefundCount(),
+                                () => _navigateToStatusList(
+                                  'Waiting Refund',
+                                  _getRecallsByStatus([
+                                    'Return 1B: Item Shipped Back',
+                                    'Return 1A: Brought to local Retailer',
+                                    'Dispose 1A: Brought to local Retailer',
+                                  ]),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
 
-                        _buildStatusButton(
-                          'WAITING REFUND BY\nLOCAL RETAILER',
-                          _getWaitingRefundByLocalRetailerCount(),
-                          () => _navigateToStatusList(
-                            'Waiting Refund by Local Retailer',
-                            _getRecallsByStatus([
-                              'Dispose 1A: Brought to local Retailer',
-                            ]),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
+                              _buildStatusButton(
+                                'WAITING REFUND BY\nLOCAL RETAILER',
+                                _getWaitingRefundByLocalRetailerCount(),
+                                () => _navigateToStatusList(
+                                  'Waiting Refund by Local Retailer',
+                                  _getRecallsByStatus([
+                                    'Dispose 1A: Brought to local Retailer',
+                                  ]),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
 
-                        _buildStatusButton(
-                          'WAITING REFUND BY\nSERVICE CENTER',
-                          _getWaitingRefundByServiceCenterCount(),
-                          () => _navigateToStatusList(
-                            'Waiting Refund by Service Center',
-                            _getRecallsByStatus([
-                              'Repair 1A: Brought to Service Center',
-                            ]),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
+                              _buildStatusButton(
+                                'WAITING REFUND BY\nSERVICE CENTER',
+                                _getWaitingRefundByServiceCenterCount(),
+                                () => _navigateToStatusList(
+                                  'Waiting Refund by Service Center',
+                                  _getRecallsByStatus([
+                                    'Repair 1A: Brought to Service Center',
+                                  ]),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
 
-                        _buildStatusButton(
-                          'WAITING TO REPAIR ITEM\nWITH PROVIDED PARTS',
-                          _getWaitingToRepairItemCount(),
-                          () => _navigateToStatusList(
-                            'Waiting to Repair Item',
-                            _getRecallsByStatus([
-                              'Repair 2A: Received Repair Kit or Parts',
-                            ]),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
+                              _buildStatusButton(
+                                'WAITING TO REPAIR ITEM\nWITH PROVIDED PARTS',
+                                _getWaitingToRepairItemCount(),
+                                () => _navigateToStatusList(
+                                  'Waiting to Repair Item',
+                                  _getRecallsByStatus([
+                                    'Repair 2A: Received Repair Kit or Parts',
+                                  ]),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
 
-                        _buildStatusButton(
-                          'CLOSED',
-                          _getClosedCount(),
-                          () => _navigateToStatusList(
-                            'Completed Recalls',
-                            _getRecallsByStatus(['Completed']),
+                              _buildStatusButton(
+                                'CLOSED',
+                                _getClosedCount(),
+                                () => _navigateToStatusList(
+                                  'Completed Recalls',
+                                  _getRecallsByStatus(['Completed']),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
 

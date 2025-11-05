@@ -39,7 +39,7 @@ class _ShareAppPageState extends State<ShareAppPage> {
                     width: 40,
                     height: 40,
                     child: Image.asset(
-                      'assets/images/app_icon.png',
+                      'assets/images/shield_logo3.png',
                       width: 40,
                       height: 40,
                       fit: BoxFit.contain,
@@ -116,7 +116,7 @@ class _ShareAppPageState extends State<ShareAppPage> {
                             width: 80,
                             height: 80,
                             child: Image.asset(
-                              'assets/images/shield_logo.png',
+                              'assets/images/shield_logo3.png',
                               width: 80,
                               height: 80,
                               fit: BoxFit.contain,

@@ -735,15 +735,15 @@ class _SimpleRecallCardState extends State<SimpleRecallCard> {
 
   Widget _buildRemedyCheckbox(String label, String value) {
     bool isChecked = value.toUpperCase() == 'Y';
-    return Row(
+    return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         FaIcon(
           isChecked ? FontAwesomeIcons.squareCheck : FontAwesomeIcons.square,
           color: Colors.black,
-          size: 14,
+          size: 20,
         ),
-        const SizedBox(width: 6),
+        const SizedBox(height: 4),
         Text(
           label,
           style: const TextStyle(
