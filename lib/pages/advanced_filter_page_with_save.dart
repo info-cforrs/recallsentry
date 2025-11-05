@@ -34,10 +34,6 @@ class _AdvancedFilterPageWithSaveState extends State<AdvancedFilterPageWithSave>
   final List<String> _selectedProductNames = [];
   final TextEditingController _productController = TextEditingController();
 
-  // MOCKUP: Simulate user tier and saved filter count
-  final String _currentTier = 'smart_filtering'; // 'free', 'smart_filtering', 'recall_match'
-  int _currentSavedFilterCount = 3;
-
   @override
   void initState() {
     super.initState();
@@ -90,8 +86,6 @@ class _AdvancedFilterPageWithSaveState extends State<AdvancedFilterPageWithSave>
         return SaveFilterDialog(
           brandFilters: _selectedBrands,
           productFilters: _selectedProductNames,
-          currentTier: _currentTier,
-          currentFilterCount: _currentSavedFilterCount,
         );
       },
     );
@@ -121,11 +115,6 @@ class _AdvancedFilterPageWithSaveState extends State<AdvancedFilterPageWithSave>
           ),
         ),
       );
-
-      // Update saved filter count (in real app, this would come from API)
-      setState(() {
-        _currentSavedFilterCount++;
-      });
     }
   }
 
@@ -561,7 +550,7 @@ class _AdvancedFilterPageWithSaveState extends State<AdvancedFilterPageWithSave>
         elevation: 8,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Recalls'),
+          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',

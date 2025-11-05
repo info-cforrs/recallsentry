@@ -111,9 +111,8 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
         automaticallyImplyLeading: false,
         titleSpacing: 0,
         title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          padding: const EdgeInsets.all(16.0),
           child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               GestureDetector(
                 onTap: () {
@@ -125,36 +124,42 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                     (route) => false,
                   );
                 },
-                child: Image.asset(
-                  'assets/images/app_icon.png',
-                  width: 36,
-                  height: 36,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Icon(
-                        Icons.shield,
-                        color: Colors.grey,
-                        size: 22,
-                      ),
-                    );
-                  },
+                child: SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Image.asset(
+                    'assets/images/app_icon.png',
+                    width: 40,
+                    height: 40,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.shield,
+                          color: Colors.grey,
+                          size: 22,
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
-              const SizedBox(width: 12),
-              const Text(
-                'Filtered Recalls by Category',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Atlanta',
-                  color: Colors.white,
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text(
+                  'Filtered Recalls by Category',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Atlanta',
+                    color: Colors.white,
+                  ),
                 ),
               ),
             ],
@@ -366,7 +371,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
         elevation: 8,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.error), label: 'Recalls'),
+          BottomNavigationBarItem(icon: Icon(Icons.error), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',

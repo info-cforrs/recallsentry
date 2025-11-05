@@ -177,7 +177,7 @@ class IntroPage1 extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
 
               // Get Started Button
               SizedBox(
@@ -207,7 +207,7 @@ class IntroPage1 extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 20),
 
               // Page Indicator Dots
               Row(
@@ -242,7 +242,7 @@ class IntroPage1 extends StatelessWidget {
                 ],
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
             ],
           ),
         ),

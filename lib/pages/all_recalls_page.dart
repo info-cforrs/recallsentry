@@ -792,7 +792,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
                 BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.warning),
-                  label: 'Recalls',
+                  label: 'Info',
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.settings),

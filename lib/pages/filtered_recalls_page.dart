@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
-import 'main_menu_page.dart';
 import 'advanced_filter_page.dart';
 import '../services/recall_data_service.dart';
 import '../models/recall_data.dart';
@@ -152,18 +151,6 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                  ),
-                  // Menu Button
-                  IconButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const MainMenuPage(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.menu, color: Colors.white, size: 28),
                   ),
                 ],
               ),
@@ -516,7 +503,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
         elevation: 8,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.error), label: 'Recalls'),
+          BottomNavigationBarItem(icon: Icon(Icons.error), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',

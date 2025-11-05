@@ -2,13 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'user_profile.dart';
 import 'subscribe_page.dart';
-import 'saved_filters_page.dart';
 import 'report_illness_page.dart';
 import 'share_app_page.dart';
 import 'main_navigation.dart';
 import 'app_usage_page.dart';
 import 'login_page.dart';
 import 'sign_up_page.dart';
+import 'push_notifications_page.dart';
+import 'email_notifications_page.dart';
 import '../services/auth_service.dart';
 import '../services/subscription_service.dart';
 import '../services/user_profile_service.dart';
@@ -21,8 +22,6 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
-  bool _notificationsEnabled = true;
-  bool _emailNotificationsEnabled = true;
   bool _locationEnabled = true;
   UserProfile? _userProfile;
   bool _isLoadingProfile = false;
@@ -61,11 +60,6 @@ class _SettingsPageState extends State<SettingsPage> {
         _subscriptionTier = info.tier;
       });
     }
-  }
-
-  bool get _canAccessSavedFilters {
-    return _subscriptionTier == SubscriptionTier.smartFiltering ||
-        _subscriptionTier == SubscriptionTier.recallMatch;
   }
 
   bool get _isLoggedIn {
@@ -172,94 +166,6 @@ class _SettingsPageState extends State<SettingsPage> {
                 style: TextStyle(
                   color: Colors.white54,
                   fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showUpgradeModal(BuildContext context, String featureName) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2A4A5C),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Subscribe for Details',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Upgrade to Smart Filtering to access $featureName and other premium features.',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 16,
-                  height: 1.4,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              const Text(
-                'Only \$1.99/month',
-                style: TextStyle(
-                  color: Color(0xFF64B5F6),
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(
-                  color: Colors.white54,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SubscribePage(),
-                  ),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF64B5F6),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-              ),
-              child: const Text(
-                'Click to Upgrade',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
@@ -400,7 +306,7 @@ class _SettingsPageState extends State<SettingsPage> {
                   ListTile(
                     leading: const Icon(Icons.star, color: Colors.white70),
                     title: const Text(
-                      'Subscribe',
+                      'Subscriptions',
                       style: TextStyle(color: Colors.white),
                     ),
                     subtitle: const Text(
@@ -416,6 +322,54 @@ class _SettingsPageState extends State<SettingsPage> {
                       Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const SubscribePage(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, color: Colors.white24),
+                  ListTile(
+                    leading: const Icon(Icons.login, color: Colors.white70),
+                    title: const Text(
+                      'Log In',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Sign in to your account',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Colors.white70,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const LoginPage(),
+                        ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, color: Colors.white24),
+                  ListTile(
+                    leading: const Icon(Icons.person_add, color: Colors.white70),
+                    title: const Text(
+                      'Sign Up',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Create a new account',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Colors.white70,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const SignUpPage(),
                         ),
                       );
                     },
@@ -458,42 +412,6 @@ class _SettingsPageState extends State<SettingsPage> {
                   ),
                   const Divider(height: 1, color: Colors.white24),
                   ListTile(
-                    leading: Icon(
-                      Icons.filter_list,
-                      color: _canAccessSavedFilters ? Colors.white70 : Colors.black54,
-                    ),
-                    title: Text(
-                      'SmartFilters',
-                      style: TextStyle(
-                        color: _canAccessSavedFilters ? Colors.white : Colors.black,
-                      ),
-                    ),
-                    subtitle: Text(
-                      'Manage your SmartFilter presets',
-                      style: TextStyle(
-                        color: _canAccessSavedFilters ? Colors.white70 : Colors.black54,
-                      ),
-                    ),
-                    trailing: Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: _canAccessSavedFilters ? Colors.white70 : Colors.black54,
-                    ),
-                    tileColor: _canAccessSavedFilters ? null : const Color(0xFFD1D1D1),
-                    onTap: () {
-                      if (_canAccessSavedFilters) {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const SavedFiltersPage(),
-                          ),
-                        );
-                      } else {
-                        _showUpgradeModal(context, 'SmartFilters');
-                      }
-                    },
-                  ),
-                  const Divider(height: 1, color: Colors.white24),
-                  ListTile(
                     leading: const Icon(Icons.report, color: Colors.white70),
                     title: const Text(
                       'Report Illness',
@@ -516,33 +434,29 @@ class _SettingsPageState extends State<SettingsPage> {
                       );
                     },
                   ),
+                  const Divider(height: 1, color: Colors.white24),
+                  ListTile(
+                    leading: const Icon(Icons.logout, color: Colors.white70),
+                    title: const Text(
+                      'Sign Out',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Log out of your account',
+                      style: TextStyle(color: Colors.white70),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Colors.white70,
+                    ),
+                    onTap: () {
+                      _showSignOutDialog();
+                    },
+                  ),
                 ],
               ),
             ),
-            const SizedBox(height: 24),
-
-            // Sign out button
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: ElevatedButton(
-                onPressed: () {
-                  _showSignOutDialog();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: const Text(
-                  'Sign Out',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-              ),
-            ),
-
             const SizedBox(height: 24),
 
             // Preferences section
@@ -557,7 +471,11 @@ class _SettingsPageState extends State<SettingsPage> {
               ),
               child: Column(
                 children: [
-                  SwitchListTile(
+                  ListTile(
+                    leading: const Icon(
+                      Icons.notifications,
+                      color: Colors.white70,
+                    ),
                     title: const Text(
                       'Push Notifications',
                       style: TextStyle(color: Colors.white),
@@ -566,20 +484,25 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Receive alerts and updates',
                       style: TextStyle(color: Colors.white70),
                     ),
-                    value: _notificationsEnabled,
-                    onChanged: (value) {
-                      setState(() {
-                        _notificationsEnabled = value;
-                      });
-                    },
-                    secondary: const Icon(
-                      Icons.notifications,
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
                       color: Colors.white70,
                     ),
-                    activeThumbColor: Colors.green,
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const PushNotificationsPage(),
+                        ),
+                      );
+                    },
                   ),
                   const Divider(height: 1, color: Colors.white24),
-                  SwitchListTile(
+                  ListTile(
+                    leading: const Icon(
+                      Icons.email,
+                      color: Colors.white70,
+                    ),
                     title: const Text(
                       'Email Notifications',
                       style: TextStyle(color: Colors.white),
@@ -588,14 +511,18 @@ class _SettingsPageState extends State<SettingsPage> {
                       'Receive email alerts and updates',
                       style: TextStyle(color: Colors.white70),
                     ),
-                    value: _emailNotificationsEnabled,
-                    onChanged: (value) {
-                      setState(() {
-                        _emailNotificationsEnabled = value;
-                      });
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Colors.white70,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const EmailNotificationsPage(),
+                        ),
+                      );
                     },
-                    secondary: const Icon(Icons.email, color: Colors.white70),
-                    activeThumbColor: Colors.green,
                   ),
                   const Divider(height: 1, color: Colors.white24),
                   SwitchListTile(

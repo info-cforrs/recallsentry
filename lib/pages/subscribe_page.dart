@@ -461,7 +461,7 @@ class _SubscribePageState extends State<SubscribePage> {
         elevation: 8,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Recalls'),
+          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',

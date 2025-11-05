@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'home_page.dart';
-import 'all_recalls_page.dart';
+import 'info_page.dart';
 import 'settings_page.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -39,7 +39,7 @@ class _MainNavigationState extends State<MainNavigation> {
         key: ValueKey(_homePageRefreshKey),
         onNavigateToRecalls: () => _changeTab(1),
       ),
-      const AllRecallsPage(showBottomNavigation: false),
+      const InfoPage(),
       const SettingsPage(),
     ];
 
@@ -68,7 +68,7 @@ class _MainNavigationState extends State<MainNavigation> {
         iconSize: 24, // Add this
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Recalls'),
+          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',

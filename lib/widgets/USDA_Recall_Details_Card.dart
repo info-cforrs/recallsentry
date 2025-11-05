@@ -7,6 +7,30 @@ class USDARecallDetailsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Determine which section will be last (for border radius)
+    bool hasDetailsFields = recall.negativeOutcomes.isNotEmpty ||
+        recall.recallReason.isNotEmpty ||
+        recall.brandName.isNotEmpty ||
+        recall.productName.isNotEmpty ||
+        recall.packagingDesc.isNotEmpty ||
+        recall.productionDateStart != null ||
+        recall.productionDateEnd != null ||
+        recall.soldBy.isNotEmpty ||
+        recall.productQty.isNotEmpty;
+
+    bool hasDetailsGrid = (recall.upc.isNotEmpty && recall.upc != 'N/A') ||
+        (recall.sku.isNotEmpty && recall.sku != 'N/A') ||
+        (recall.batchLotCode.isNotEmpty && recall.batchLotCode != 'N/A') ||
+        (recall.sellByDate.isNotEmpty && recall.sellByDate != 'N/A');
+
+    bool hasDatesSection = (recall.expDate.isNotEmpty && recall.expDate != 'N/A') ||
+        (recall.bestUsedByDate.isNotEmpty && recall.bestUsedByDate != 'N/A');
+
+    // Determine which is the last section
+    bool detailsFieldsIsLast = hasDetailsFields && !hasDetailsGrid && !hasDatesSection;
+    bool detailsGridIsLast = hasDetailsGrid && !hasDatesSection;
+    bool datesSectionIsLast = hasDatesSection;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -30,16 +54,19 @@ class USDARecallDetailsCard extends StatelessWidget {
           productionDateEnd: recall.productionDateEnd,
           soldBy: recall.soldBy,
           productQty: recall.productQty,
+          isLast: detailsFieldsIsLast,
         ),
         _buildDetailsGrid(
           upc: recall.upc,
           sku: recall.sku,
           batchLotCode: recall.batchLotCode,
           sellByDate: recall.sellByDate,
+          isLast: detailsGridIsLast,
         ),
         _buildDatesSection(
           expDate: recall.expDate,
           bestUsedByDate: recall.bestUsedByDate,
+          isLast: datesSectionIsLast,
         ),
       ],
     );
@@ -63,7 +90,9 @@ class USDARecallDetailsCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
+          // Left Column: Icon + Category
           Expanded(
+            flex: 1,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -74,47 +103,69 @@ class USDARecallDetailsCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Flexible(
-                  child: Text(
-                    recallClassification.isNotEmpty
-                        ? (recallClassification.toLowerCase().contains(
-                                'public health alert',
-                              )
-                              ? 'Public Health Alert'
-                              : '${recallClassification.toUpperCase()} RECALL')
-                        : 'RECALL',
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 17,
-                    ),
-                    softWrap: true,
-                    overflow: TextOverflow.visible,
-                    maxLines: 2,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (recallClassification.isNotEmpty &&
+                          !recallClassification.toLowerCase().contains('public health alert'))
+                        Text(
+                          recallClassification.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 17,
+                          ),
+                        ),
+                      Text(
+                        recallClassification.toLowerCase().contains('public health alert')
+                            ? 'Public Health Alert'
+                            : 'RECALL',
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 17,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
-          Text(
-            _formatDate(dateIssued),
-            style: const TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.normal,
-              fontSize: 16,
+          // Center Column: Date
+          Expanded(
+            flex: 1,
+            child: Center(
+              child: Text(
+                _formatDate(dateIssued),
+                style: const TextStyle(
+                  color: Colors.black,
+                  fontWeight: FontWeight.normal,
+                  fontSize: 16,
+                ),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFF4CAF50),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Text(
-              agency,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
+          // Right Column: Agency badge
+          Expanded(
+            flex: 1,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF4CAF50),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  agency,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
               ),
             ),
           ),
@@ -138,21 +189,8 @@ class USDARecallDetailsCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                '[Risk Level]',
-                style: TextStyle(color: Colors.black, fontSize: 13),
-              ),
               Row(
                 children: [
-                  const Text(
-                    'RISK LEVEL:',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(width: 6),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -183,10 +221,6 @@ class USDARecallDetailsCard extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text(
-                '[State Count]',
-                style: TextStyle(color: Colors.black, fontSize: 13),
-              ),
               (stateCount == 0 ||
                       stateCount == 50 ||
                       (stateCount is String &&
@@ -226,407 +260,413 @@ class USDARecallDetailsCard extends StatelessWidget {
     required DateTime? productionDateEnd,
     required String soldBy,
     required String productQty,
+    required bool isLast,
   }) {
-    return Container(
-      color: const Color(0xFFFFC107),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    List<Widget> children = [];
+
+    // Format dates if they exist
+    String? formattedStartDate = productionDateStart != null ? _formatDate(productionDateStart) : null;
+    String? formattedEndDate = productionDateEnd != null ? _formatDate(productionDateEnd) : null;
+
+    // Negative Outcomes - only show if not empty
+    if (negativeOutcomes.isNotEmpty) {
+      children.add(Text(
+        negativeOutcomes,
+        style: const TextStyle(
+          color: Colors.black,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
+      ));
+      children.add(const SizedBox(height: 10));
+    }
+
+    // Recall Reason - only show if not empty
+    if (recallReason.isNotEmpty) {
+      children.add(Text(
+        recallReason,
+        style: const TextStyle(color: Colors.black, fontSize: 15),
+      ));
+      children.add(const SizedBox(height: 10));
+    }
+
+    // Brand Name - only show if not empty
+    if (brandName.isNotEmpty) {
+      children.add(const SizedBox(height: 3));
+      children.add(Container(
+        width: double.infinity,
+        height: 1,
+        color: Colors.black,
+      ));
+      children.add(const SizedBox(height: 3));
+      children.add(Text(
+        brandName,
+        style: const TextStyle(color: Colors.black, fontSize: 15),
+      ));
+      children.add(const SizedBox(height: 10));
+    }
+
+    // Product Name - only show if not empty
+    if (productName.isNotEmpty) {
+      children.add(Text(
+        productName,
+        style: const TextStyle(color: Colors.black, fontSize: 15),
+      ));
+      children.add(const SizedBox(height: 10));
+    }
+
+    // Packaging Desc - only show if not empty
+    if (packagingDesc.isNotEmpty) {
+      children.add(Text(
+        packagingDesc,
+        style: const TextStyle(color: Colors.black, fontSize: 15),
+      ));
+      children.add(const SizedBox(height: 10));
+    }
+
+    // Production Dates - only show if at least one is not null
+    if (formattedStartDate != null || formattedEndDate != null) {
+      children.add(const Text(
+        'Produced:',
+        style: TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ));
+      children.add(Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const Text(
-            '[Negative Outcomes]',
-            style: TextStyle(color: Colors.black, fontSize: 13),
-          ),
-          Row(
-            children: [
-              const Icon(Icons.warning, color: Colors.red, size: 18),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  negativeOutcomes,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
-                  maxLines: 3,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            '[Recall Reason]',
-            style: TextStyle(color: Colors.black, fontSize: 13),
-          ),
-          Row(
-            children: [
-              const Icon(Icons.block, color: Colors.red, size: 18),
-              const SizedBox(width: 4),
-              Flexible(
-                child: Text(
-                  recallReason,
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                  softWrap: true,
-                  overflow: TextOverflow.visible,
-                  maxLines: 3,
-                ),
-              ),
-            ],
-          ),
-          // Reports of Injury field (full width, after Recall Reason)
-          const SizedBox(height: 12),
-          const Text(
-            'Reports of Injury:',
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          Text(
-            recall.reportsOfInjury.isNotEmpty
-                ? recall.reportsOfInjury
-                : 'Not specified',
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            '[Brand Name]',
-            style: TextStyle(color: Colors.black, fontSize: 13),
-          ),
-          Text(
-            brandName,
-            style: const TextStyle(color: Colors.black, fontSize: 15),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            '[Product Name]',
-            style: TextStyle(color: Colors.black, fontSize: 13),
-          ),
-          Text(
-            productName,
-            style: const TextStyle(color: Colors.black, fontSize: 15),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            '[Packaging Description]',
-            style: TextStyle(color: Colors.black, fontSize: 13),
-          ),
-          Text(
-            packagingDesc,
-            style: const TextStyle(color: Colors.black, fontSize: 15),
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Produced:',
+            'From:',
             style: TextStyle(
               color: Colors.black,
               fontWeight: FontWeight.bold,
-              fontSize: 15,
+              fontSize: 14,
             ),
           ),
-          Row(
-            children: [
-              const Text(
-                'From:',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                _formatDate(productionDateStart),
-                style: const TextStyle(color: Colors.black, fontSize: 15),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'To:',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                _formatDate(productionDateEnd),
-                style: const TextStyle(color: Colors.black, fontSize: 15),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            '[Sold By/Distributor]',
-            style: TextStyle(color: Colors.black, fontSize: 13),
-          ),
-          Row(
-            children: [
-              const Text(
-                'Sold By:',
-                style: TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                soldBy,
-                style: const TextStyle(color: Colors.black, fontSize: 15),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            '[Product Quantity]',
-            style: TextStyle(color: Colors.black, fontSize: 13),
-          ),
+          const SizedBox(width: 4),
           Text(
-            productQty,
-            style: const TextStyle(
+            formattedStartDate ?? "N/A",
+            style: const TextStyle(color: Colors.black, fontSize: 14),
+          ),
+          const SizedBox(width: 16),
+          const Text(
+            'To:',
+            style: TextStyle(
               color: Colors.black,
               fontWeight: FontWeight.bold,
-              fontSize: 15,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(width: 4),
+          Text(
+            formattedEndDate ?? "N/A",
+            style: const TextStyle(color: Colors.black, fontSize: 14),
+          ),
+        ],
+      ));
+      children.add(const SizedBox(height: 10));
+    }
+
+    // Sold By - only show if not empty
+    if (soldBy.isNotEmpty) {
+      children.add(Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Text(
+            'Sold By:',
+            style: TextStyle(
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              soldBy,
+              style: const TextStyle(color: Colors.black, fontSize: 14),
             ),
           ),
         ],
+      ));
+      children.add(const SizedBox(height: 10));
+    }
+
+    // Product Qty - only show if not empty
+    if (productQty.isNotEmpty) {
+      children.add(Text(
+        productQty,
+        style: const TextStyle(
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ));
+    }
+
+    // Only show container if there are children to display
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFC107),
+        borderRadius: isLast
+            ? const BorderRadius.only(
+                bottomLeft: Radius.circular(18),
+                bottomRight: Radius.circular(18),
+              )
+            : null,
+      ),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
       ),
     );
   }
+
 
   Widget _buildDetailsGrid({
     required String upc,
     required String sku,
     required String batchLotCode,
     required String sellByDate,
+    required bool isLast,
   }) {
-    return Container(
-      color: const Color(0xFFFFC107),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Column(
+    List<Widget> children = [];
+
+    // UPC and SKU row
+    bool hasUpc = upc.isNotEmpty && upc != 'N/A';
+    bool hasSku = sku.isNotEmpty && sku != 'N/A';
+
+    if (hasUpc || hasSku) {
+      children.add(Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          if (hasUpc)
+            Expanded(
+              child: RichText(
+                text: TextSpan(
                   children: [
-                    const Text(
-                      '[UPC]',
-                      style: TextStyle(color: Colors.black, fontSize: 13),
+                    const TextSpan(
+                      text: 'UPC Code: ',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          const TextSpan(
-                            text: 'UPC Code: ',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          TextSpan(
-                            text: upc,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
+                    TextSpan(
+                      text: upc,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 15,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+            ),
+          if (hasUpc && hasSku) const SizedBox(width: 16),
+          if (hasSku)
+            Expanded(
+              child: RichText(
+                text: TextSpan(
                   children: [
-                    const Text(
-                      '[SKU]',
-                      style: TextStyle(color: Colors.black, fontSize: 13),
+                    const TextSpan(
+                      text: 'SKU: ',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
                     ),
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          const TextSpan(
-                            text: 'SKU: ',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          TextSpan(
-                            text: sku,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
+                    TextSpan(
+                      text: sku,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 15,
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '[Batch_Lot_Code]',
-                      style: TextStyle(color: Colors.black, fontSize: 13),
-                    ),
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          const TextSpan(
-                            text: 'Batch or Lot: ',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          TextSpan(
-                            text: batchLotCode,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      '[Sell_By_Date]',
-                      style: TextStyle(color: Colors.black, fontSize: 13),
-                    ),
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          const TextSpan(
-                            text: 'Sell By Date: ',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          TextSpan(
-                            text: sellByDate,
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
+            ),
         ],
+      ));
+      children.add(const SizedBox(height: 10));
+    }
+
+    // Batch/Lot Code - only show if not empty
+    if (batchLotCode.isNotEmpty && batchLotCode != 'N/A') {
+      children.add(RichText(
+        text: TextSpan(
+          children: [
+            const TextSpan(
+              text: 'Batch/Lot Code: ',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            TextSpan(
+              text: batchLotCode,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+      ));
+      children.add(const SizedBox(height: 10));
+    }
+
+    // Sell By Date - only show if not empty
+    if (sellByDate.isNotEmpty && sellByDate != 'N/A') {
+      children.add(RichText(
+        text: TextSpan(
+          children: [
+            const TextSpan(
+              text: 'Sell By Date: ',
+              style: TextStyle(
+                color: Colors.black,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            TextSpan(
+              text: sellByDate,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
+      ));
+    }
+
+    // Only show container if there are children to display
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFC107),
+        borderRadius: isLast
+            ? const BorderRadius.only(
+                bottomLeft: Radius.circular(18),
+                bottomRight: Radius.circular(18),
+              )
+            : null,
+      ),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
       ),
     );
   }
 
+
   Widget _buildDatesSection({
     required String expDate,
     required String bestUsedByDate,
+    required bool isLast,
   }) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFFFFC107),
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(18),
-          bottomRight: Radius.circular(18),
-        ),
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      child: Column(
+    List<Widget> children = [];
+
+    // Exp Date and Best Used By Date row
+    bool hasExpDate = expDate.isNotEmpty && expDate != 'N/A';
+    bool hasBestUsedBy = bestUsedByDate.isNotEmpty && bestUsedByDate != 'N/A';
+
+    if (hasExpDate || hasBestUsedBy) {
+      children.add(Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            '[Exp Date]',
-            style: TextStyle(color: Colors.black, fontSize: 13),
-          ),
-          RichText(
-            text: TextSpan(
-              children: [
-                const TextSpan(
-                  text: 'Expiration Date: ',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+          if (hasExpDate)
+            Expanded(
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    const TextSpan(
+                      text: 'Exp Date: ',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    TextSpan(
+                      text: expDate,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
                 ),
-                TextSpan(
-                  text: expDate,
-                  style: const TextStyle(color: Colors.black, fontSize: 15),
-                ),
-              ],
+              ),
             ),
-          ),
-          const SizedBox(height: 18),
-          const Text(
-            '[Best Used By Date]',
-            style: TextStyle(color: Colors.black, fontSize: 13),
-          ),
-          RichText(
-            text: TextSpan(
-              children: [
-                const TextSpan(
-                  text: 'Best Used By: ',
-                  style: TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
+          if (hasExpDate && hasBestUsedBy) const SizedBox(width: 16),
+          if (hasBestUsedBy)
+            Expanded(
+              child: RichText(
+                text: TextSpan(
+                  children: [
+                    const TextSpan(
+                      text: 'Best Used By: ',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    TextSpan(
+                      text: bestUsedByDate,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
                 ),
-                TextSpan(
-                  text: bestUsedByDate,
-                  style: const TextStyle(color: Colors.black, fontSize: 15),
-                ),
-              ],
+              ),
             ),
-          ),
         ],
+      ));
+    }
+
+    // Only show container if there are children to display
+    if (children.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFC107),
+        borderRadius: isLast
+            ? const BorderRadius.only(
+                bottomLeft: Radius.circular(18),
+                bottomRight: Radius.circular(18),
+              )
+            : null,
+      ),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: children,
       ),
     );
   }
+
 
   String _formatDate(DateTime? date) {
     if (date == null) return '';

@@ -1,28 +1,18 @@
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
-import 'subscribe_page.dart';
-import 'login_page.dart';
-import 'sign_up_page.dart';
-import 'all_recalls_page.dart';
-import 'only_advanced_filtered_recalls_page.dart';
-import 'saved_recalls_page.dart';
-import 'all_fda_recalls_page.dart';
-import 'all_usda_recalls_page.dart';
 import '../services/filter_state_service.dart';
 import '../services/recall_data_service.dart';
 import '../services/subscription_service.dart';
 import 'category_filter_page.dart' as category;
 
-class MainMenuPage extends StatefulWidget {
-  const MainMenuPage({super.key});
+class RecallsByCategoryPage extends StatefulWidget {
+  const RecallsByCategoryPage({super.key});
 
   @override
-  State<MainMenuPage> createState() => _MainMenuPageState();
+  State<RecallsByCategoryPage> createState() => _RecallsByCategoryPageState();
 }
 
-class _MainMenuPageState extends State<MainMenuPage> {
-  final int _currentIndex = 0; // Home tab (since this is accessed from Home)
-
+class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
   // Category counts
   final Map<String, int> _categoryCounts = {};
   bool _isLoadingCounts = true;
@@ -107,11 +97,11 @@ class _MainMenuPageState extends State<MainMenuPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1D3547), // Dark blue background
+      backgroundColor: const Color(0xFF1D3547),
       body: SafeArea(
         child: Column(
           children: [
-            // Custom Header with App Icon and Main Menu Text
+            // Custom Header with App Icon and Page Title
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -165,9 +155,9 @@ class _MainMenuPageState extends State<MainMenuPage> {
                     ),
                   ),
                   const SizedBox(width: 16),
-                  // Main Menu Text
+                  // Page Title
                   const Text(
-                    'Main Menu',
+                    'Recalls by Category',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -186,138 +176,6 @@ class _MainMenuPageState extends State<MainMenuPage> {
                 child: Column(
                   children: [
                     const SizedBox(height: 20),
-
-                    // Top Action Buttons Row - Three equally sized buttons
-                    Row(
-                      children: [
-                        // Sign-Up Button
-                        Expanded(
-                          child: Container(
-                            height: 50,
-                            margin: const EdgeInsets.only(right: 8),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                // Navigate to Sign-Up page
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const SignUpPage(),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF5DADE2),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                elevation: 2,
-                              ),
-                              child: const Text(
-                                'Sign-Up',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Login Button
-                        Expanded(
-                          child: Container(
-                            height: 50,
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                // Navigate to Login page
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const LoginPage(),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF5DADE2),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                elevation: 2,
-                              ),
-                              child: const Text(
-                                'Login',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        // Subscribe Button
-                        Expanded(
-                          child: Container(
-                            height: 50,
-                            margin: const EdgeInsets.only(left: 8),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                // Navigate directly to Subscribe page
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (context) => const SubscribePage(),
-                                  ),
-                                );
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF5DADE2),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                elevation: 2,
-                              ),
-                              child: const Text(
-                                'Subscribe',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // Category Section Header
-                    Container(
-                      width: double.infinity,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF5DADE2),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    const Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        'By Category',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
 
                     // Category Icons Row - First Row (Food, Cosmetics, Drugs)
                     Row(
@@ -378,15 +236,18 @@ class _MainMenuPageState extends State<MainMenuPage> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
+        currentIndex: 1, // Recalls tab
         onTap: (index) {
           switch (index) {
             case 0:
-              // Navigate back to Home page (pop current page to return to Home)
-              Navigator.of(context).pop();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (context) => const MainNavigation(initialIndex: 0),
+                ),
+                (route) => false,
+              );
               break;
             case 1:
-              // Navigate to Recalls tab in main navigation
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 1),
@@ -395,7 +256,6 @@ class _MainMenuPageState extends State<MainMenuPage> {
               );
               break;
             case 2:
-              // Navigate to Settings tab in main navigation
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 2),
@@ -406,9 +266,9 @@ class _MainMenuPageState extends State<MainMenuPage> {
           }
         },
         type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF2C3E50), // Dark blue-grey background
-        selectedItemColor: const Color(0xFF64B5F6), // Light blue for selected
-        unselectedItemColor: Colors.grey.shade500, // Grey for unselected
+        backgroundColor: const Color(0xFF2C3E50),
+        selectedItemColor: const Color(0xFF64B5F6),
+        unselectedItemColor: Colors.grey.shade500,
         selectedLabelStyle: const TextStyle(
           fontSize: 12,
           fontWeight: FontWeight.w600,
@@ -418,9 +278,12 @@ class _MainMenuPageState extends State<MainMenuPage> {
           fontWeight: FontWeight.w500,
         ),
         elevation: 8,
+        selectedFontSize: 12,
+        unselectedFontSize: 10,
+        iconSize: 24,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Recalls'),
+          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',

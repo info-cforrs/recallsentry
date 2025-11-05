@@ -26,47 +26,76 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        categoryIcon,
-        const SizedBox(width: 5),
-        Text(
-          categoryText,
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+        // Left Column: Icon + Category (increased width for "Veterinary")
+        Expanded(
+          flex: 2,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              categoryIcon,
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      categoryText,
+                      style: const TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      softWrap: false,
+                      overflow: TextOverflow.visible,
+                    ),
+                    const Text(
+                      'RECALL',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        const SizedBox(width: 5),
-        const Text(
-          'RECALL',
-          style: TextStyle(
-            color: Colors.black,
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
+        // Center Column: Date
+        Expanded(
+          flex: 1,
+          child: Center(
+            child: Text(
+              dateIssued,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
+            ),
           ),
         ),
-        const Spacer(),
-        Text(
-          dateIssued,
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: badgeColor,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Text(
-            badgeText,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+        // Right Column: Badge
+        Expanded(
+          flex: 1,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: badgeColor,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                badgeText,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ),
@@ -91,30 +120,8 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              // Field title for Risk Level
-              SizedBox(
-                width: 100, // Constrain label width
-                child: Text(
-                  '[Risk Level]',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
               Row(
                 children: <Widget>[
-                  const Text(
-                    'RISK LEVEL: ',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -138,21 +145,7 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Field title for Negative Outcomes
-              SizedBox(
-                width: 100, // Constrain label width
-                child: Text(
-                  '[Negative Outcomes]',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              const SizedBox(height: 10),
               Row(
                 children: <Widget>[
                   FaIcon(
@@ -175,21 +168,7 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
-              // Field title for Recall Reason Short
-              SizedBox(
-                width: 100, // Constrain label width
-                child: Text(
-                  '[Recall Reason Short]',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              const SizedBox(height: 10),
               Text(
                 widget.recall.recallReasonShort.isNotEmpty
                     ? widget.recall.recallReasonShort
@@ -268,20 +247,6 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        // Field title for Product Label Text
-        SizedBox(
-          width: 100, // Constrain label width
-          child: Text(
-            '[Product Label Text]',
-            style: TextStyle(
-              color: Colors.black54,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
         Text(
           productName,
           style: const TextStyle(
@@ -289,22 +254,10 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 12),
-        // Field title for Sold By/Distributor
-        SizedBox(
-          width: 100, // Constrain label width
-          child: Text(
-            '[Sold By/Distributor]',
-            style: TextStyle(
-              color: Colors.black54,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
+        const SizedBox(height: 10),
         Text(
           soldBy.isEmpty
               ? 'Distributor/Retailer: Not specified'
@@ -314,8 +267,10 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
+          maxLines: 3,
+          overflow: TextOverflow.ellipsis,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
@@ -514,20 +469,7 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
               onToggleSaved: _toggleSaved,
             ),
             // Reports of Injury (full width, above Brand Name)
-            const SizedBox(height: 12),
-            SizedBox(
-              width: 100, // Constrain label width
-              child: Text(
-                '[Reports of Injury]',
-                style: TextStyle(
-                  color: Colors.black54,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+            const SizedBox(height: 10),
             Text(
               widget.recall.reportsOfInjury.isNotEmpty
                   ? widget.recall.reportsOfInjury
@@ -539,20 +481,7 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
               ),
             ),
             // Brand Name (full width, below Reports of Injury)
-            const SizedBox(height: 12),
-            SizedBox(
-              width: 100, // Constrain label width
-              child: Text(
-                '[Brand Name]',
-                style: TextStyle(
-                  color: Colors.black54,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
+            const SizedBox(height: 10),
             Text(
               widget.recall.brandName,
               style: const TextStyle(

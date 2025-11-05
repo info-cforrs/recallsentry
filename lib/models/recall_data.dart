@@ -51,6 +51,7 @@ class RecallData {
   final String adverseReactions;
   final String adverseReactionDetails;
   final String id;
+  final int? databaseId; // Numeric database ID for API updates
   final String productName;
   final String brandName;
   final String riskLevel; // 'HIGH', 'MEDIUM', 'LOW'
@@ -118,6 +119,8 @@ class RecallData {
   final String usdaToReportAProblem;
   final String usdaFoodSafetyQuestionsPhone;
   final String usdaFoodSafetyQuestionsEmail;
+  final String recallResolutionStatus;
+  final bool inRmc;
 
   RecallData({
     this.usdaRecallId = '',
@@ -155,6 +158,7 @@ class RecallData {
     this.firmContactWebSite = '',
     this.firmWebSiteInfo = '',
     required this.id,
+    this.databaseId,
     required this.productName,
     required this.brandName,
     required this.riskLevel,
@@ -208,6 +212,8 @@ class RecallData {
     this.usdaToReportAProblem = '',
     this.usdaFoodSafetyQuestionsPhone = '',
     this.usdaFoodSafetyQuestionsEmail = '',
+    this.recallResolutionStatus = 'Not Started',
+    this.inRmc = false,
   });
 
   // This converts data FROM a spreadsheet/JSON into a RecallData object
@@ -262,6 +268,7 @@ class RecallData {
       recallUrl: json['recall_url'] ?? '',
       // Prioritize recall_id field, fallback to id field (convert to string)
       id: (json['recall_id'] ?? json['id'] ?? '').toString(),
+      databaseId: json['id'] is int ? json['id'] : (json['id'] != null ? int.tryParse(json['id'].toString()) : null),
       productName: json['product_name'] ?? '',
       brandName: json['brand_name'] ?? '',
       riskLevel: json['risk_level'] ?? 'LOW',
@@ -392,6 +399,8 @@ class RecallData {
           json['USDA-food-safety-questions-phone'] ?? '',
       usdaFoodSafetyQuestionsEmail:
           json['USDA-food-safety-questions-email'] ?? '',
+      recallResolutionStatus: json['recall_resolution_status'] ?? 'Not Started',
+      inRmc: json['in_rmc'] ?? false,
     );
   }
 
@@ -491,6 +500,8 @@ class RecallData {
       'USDA-To-report-a-problem': usdaToReportAProblem,
       'USDA-food-safety-questions-phone': usdaFoodSafetyQuestionsPhone,
       'USDA-food-safety-questions-email': usdaFoodSafetyQuestionsEmail,
+      'recall_resolution_status': recallResolutionStatus,
+      'in_rmc': inRmc,
     };
   }
 

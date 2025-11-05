@@ -9,6 +9,7 @@ import '../widgets/USDA_Recall_Details_Card.dart';
 import '../widgets/shared/shared_manufacturer_retailer_accordion.dart';
 import '../widgets/shared/shared_usda_resources_section.dart';
 import '../services/recall_data_service.dart';
+import '../services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'main_navigation.dart';
 
@@ -174,6 +175,9 @@ class _UsdaRecallDetailsPageV2State extends State<UsdaRecallDetailsPageV2> {
               const SizedBox(height: 8),
               // USDA Recall Details Card
               USDARecallDetailsCard(recall: recall),
+              const SizedBox(height: 16),
+              // Start Recall Process button (always visible)
+              _buildStartRecallProcessButton(context, recall),
               const SizedBox(height: 12),
               if (recall.recallPhaReason.trim().isNotEmpty)
                 Container(
@@ -411,12 +415,157 @@ class _UsdaRecallDetailsPageV2State extends State<UsdaRecallDetailsPageV2> {
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Recalls'),
+          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStartRecallProcessButton(BuildContext context, RecallData recall) {
+    final bool isNotInRmc = !recall.inRmc;
+    final String statusText = isNotInRmc
+        ? 'Start Recall Process'
+        : 'Recall Started: ${recall.recallResolutionStatus}';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A4A5C),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: isNotInRmc ? () {
+            // Only show confirmation dialog if not started
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  backgroundColor: const Color(0xFF2A4A5C),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  title: const Text(
+                    'Start Recall Process',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  content: const Text(
+                    'Are you ready to start managing this recall? This will activate the Recall Management Center for this item.',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4CAF50),
+                      ),
+                      onPressed: () async {
+                        // Enroll recall in RMC
+                        try {
+                          final updatedRecall = await ApiService().enrollInRmc(recall);
+                          if (!mounted) return;
+                          setState(() {
+                            _freshRecall = updatedRecall;
+                          });
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Recall Management Center activated!'),
+                              backgroundColor: Color(0xFF4CAF50),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to enroll recall in RMC: $e'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text(
+                        'Start Process',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          } : () {
+            // If already started, navigate to RMC page
+            // TODO: Navigate to Recall Management Center page
+            // Navigator.of(context).pushNamed('/usda-rmc', arguments: recall);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00B6FF),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.list_alt,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isNotInRmc
+                            ? 'I have this recalled item'
+                            : 'Recall Management Center',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        statusText,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

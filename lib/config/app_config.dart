@@ -4,7 +4,8 @@ class AppConfig {
   static const DataSource dataSource = DataSource.restApi;
 
   // REST API Configuration (Production - recommended)
-  static const String apiBaseUrl = 'http://18.218.174.62:8000/api';
+  static const String apiBaseUrl = 'https://api.centerforrecallsafety.com/api';
+  static const String mediaBaseUrl = 'https://api.centerforrecallsafety.com'; // For images/media files
   static const String apiRecallsEndpoint = '/recalls/';
   static const String apiFdaEndpoint = '/recalls/fda/';
   static const String apiUsdaEndpoint = '/recalls/usda/';

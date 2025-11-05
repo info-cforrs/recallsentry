@@ -46,14 +46,6 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
                   ),
                   Row(
                     children: <Widget>[
-                      const Text(
-                        'RISK LEVEL: ',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 8,
@@ -273,45 +265,75 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: <Widget>[
-        const Icon(Icons.warning, color: Colors.black, size: 20),
-        const SizedBox(width: 8),
-        Flexible(
-          child: Text(
-            recallClassification.isEmpty
-                ? 'USDA RECALL'
-                : '${recallClassification.toUpperCase()} RECALL',
-            style: const TextStyle(
-              color: Colors.black,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
+        // Left Column: Icon + Category
+        Expanded(
+          flex: 1,
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.warning, color: Colors.black, size: 20),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (recallClassification.isNotEmpty)
+                      Text(
+                        recallClassification.toUpperCase(),
+                        style: const TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    const Text(
+                      'RECALL',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Center Column: Date
+        Expanded(
+          flex: 1,
+          child: Center(
+            child: Text(
+              _formatDate(dateIssued),
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+              textAlign: TextAlign.center,
             ),
-            softWrap: true,
-            overflow: TextOverflow.visible,
-            maxLines: 2,
           ),
         ),
-        const Spacer(),
-        Text(
-          _formatDate(dateIssued),
-          style: const TextStyle(
-            color: Colors.black,
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFF4CAF50),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: const Text(
-            'USDA',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
+        // Right Column: Badge
+        Expanded(
+          flex: 1,
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4CAF50),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Text(
+                'USDA',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ),

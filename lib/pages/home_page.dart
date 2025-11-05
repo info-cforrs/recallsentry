@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
-import 'main_menu_page.dart';
-import 'advanced_filter_page.dart';
-import 'saved_recalls_page.dart';
-import 'saved_filters_page.dart';
-import 'subscribe_page.dart';
+import 'package:flutter/gestures.dart';
 import 'all_fda_recalls_page.dart';
 import 'all_usda_recalls_page.dart';
 import 'all_recalls_page.dart';
@@ -13,6 +9,7 @@ import '../models/recall_data.dart';
 import '../services/filter_state_service.dart';
 import '../services/saved_recalls_service.dart';
 import '../services/subscription_service.dart';
+import 'category_filter_page.dart' as category;
 
 class HomePage extends StatefulWidget {
   final VoidCallback? onNavigateToRecalls;
@@ -27,13 +24,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final RecallDataService _recallService = RecallDataService();
   final FilterStateService _filterStateService = FilterStateService();
   final SavedRecallsService _savedRecallsService = SavedRecallsService();
+  final ScrollController _carouselScrollController = ScrollController();
 
   int _totalRecalls = 0;
   int _fdaRecalls = 0;
   int _usdaRecalls = 0;
   int _filteredRecalls = 0;
   int _savedRecalls = 0;
-  SubscriptionTier _subscriptionTier = SubscriptionTier.guest;
+  final Map<String, int> _categoryCounts = {};
 
   @override
   void initState() {
@@ -45,6 +43,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _carouselScrollController.dispose();
     super.dispose();
   }
 
@@ -148,6 +147,37 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
       }
 
+      // Calculate category counts
+      final categories = {
+        'food': ['food'],
+        'cosmetics': ['cosmetics', 'personal care'],
+        'drugs': ['otc drugs', 'supplements'],
+        'home': ['home', 'furniture'],
+        'clothing': ['clothing', 'kids items'],
+        'childSeats': ['child seats', 'other accessories'],
+        'powerTools': ['power tools', 'lawn care'],
+        'electronics': ['electronics', 'appliances'],
+        'vehicles': ['car', 'truck', 'suv'],
+        'tires': ['tires'],
+        'toys': ['toys'],
+        'pets': ['pet', 'veterinary', 'animal'],
+      };
+
+      final counts = <String, int>{};
+      categories.forEach((key, keywords) {
+        final fdaCount = recentFdaRecalls.where((recall) {
+          final cat = recall.category.toLowerCase();
+          return keywords.any((k) => cat.contains(k.toLowerCase()));
+        }).length;
+
+        final usdaCount = recentUsdaRecalls.where((recall) {
+          final cat = recall.category.toLowerCase();
+          return keywords.any((k) => cat.contains(k.toLowerCase()));
+        }).length;
+
+        counts[key] = fdaCount + usdaCount;
+      });
+
       if (mounted) {
         setState(() {
           _totalRecalls = totalRecalls;
@@ -155,7 +185,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           _usdaRecalls = recentUsdaRecalls.length;
           _filteredRecalls = filteredCount;
           _savedRecalls = savedCount;
-          _subscriptionTier = tier;
+          _categoryCounts.clear();
+          _categoryCounts.addAll(counts);
         });
 
         print(
@@ -202,83 +233,152 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     );
   }
 
-  void _showSmartFiltersUpgradeModal() {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2A4A5C),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          title: const Row(
-            children: [
-              Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 24),
-              SizedBox(width: 8),
-              Text(
-                'Upgrade Required',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          content: const Text(
-            'SmartFilters is a premium feature. Upgrade to SmartFiltering to save up to 10 filters, or RecallMatch for unlimited filters.',
-            style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white54, fontSize: 16),
+  Widget _buildCategoryCard({
+    required String? imagePath,
+    required IconData icon,
+    required String label,
+    required int? badgeCount,
+    required String categoryKey,
+    required List<String> categories,
+  }) {
+    return GestureDetector(
+      onTap: () async {
+        // Get subscription tier to determine cutoff date
+        final subscriptionService = SubscriptionService();
+        final subscriptionInfo = await subscriptionService.getSubscriptionInfo();
+        final tier = subscriptionInfo.tier;
+
+        final now = DateTime.now();
+        final DateTime cutoff;
+        if (tier == SubscriptionTier.guest || tier == SubscriptionTier.free) {
+          // Last 30 days for Guest/Free users
+          cutoff = now.subtract(const Duration(days: 30));
+        } else {
+          // Since Jan 1 of current year for SmartFiltering/RecallMatch users
+          cutoff = DateTime(now.year, 1, 1);
+        }
+
+        // Fetch FDA and USDA recalls
+        final fdaRecalls = await _recallService.getFdaRecalls();
+        final usdaRecalls = await _recallService.getUsdaRecalls();
+
+        // Filter by cutoff date and matching categories
+        final recentFda = fdaRecalls.where((recall) {
+          if (!recall.dateIssued.isAfter(cutoff)) return false;
+          final cat = recall.category.toLowerCase();
+          return categories.any((c) => cat.contains(c.toLowerCase()));
+        }).toList();
+
+        final recentUsda = usdaRecalls.where((recall) {
+          if (!recall.dateIssued.isAfter(cutoff)) return false;
+          final cat = recall.category.toLowerCase();
+          return categories.any((c) => cat.contains(c.toLowerCase()));
+        }).toList();
+
+        final filtered = [...recentFda, ...recentUsda];
+
+        if (context.mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => category.FilteredRecallsPage(
+                filteredRecalls: filtered,
               ),
             ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const SubscribePage()),
-                );
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF64B5F6),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              ),
-              child: const Text(
-                'View Plans',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          );
+        }
+      },
+      child: SizedBox(
+        width: 85,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF5DADE2), width: 3),
+                  ),
+                  child: ClipOval(
+                    child: imagePath != null
+                        ? Image.asset(
+                            imagePath,
+                            width: 70,
+                            height: 70,
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Icon(
+                                icon,
+                                size: 36,
+                                color: const Color(0xFF2C3E50),
+                              );
+                            },
+                          )
+                        : Icon(
+                            icon,
+                            size: 36,
+                            color: const Color(0xFF2C3E50),
+                          ),
+                  ),
+                ),
+                if (badgeCount != null && badgeCount > 0)
+                  Positioned(
+                    top: -5,
+                    right: -5,
+                    child: Container(
+                      width: 28,
+                      height: 28,
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: Center(
+                        child: Text(
+                          badgeCount > 99 ? '99+' : badgeCount.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF2C3E50),
-              Color(0xFF34495E),
-            ], // Dark blue gradient
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+      backgroundColor: const Color(0xFF1D3547), // Solid dark blue-grey
+      body: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 // Custom Header with App Icon and RecallSentry Text
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -350,25 +450,159 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               .white, // Changed to white for dark background
                         ),
                       ),
-                      const Spacer(), // Push menu icon to the right
-                      // Three-dot menu icon
-                      IconButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const MainMenuPage(),
-                            ),
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.more_vert,
-                          color: Colors.white,
-                          size: 24,
-                        ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Title for Category Carousel
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Text(
+                    'Recalls by Category',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Category Carousel
+                SizedBox(
+                  height: 140,
+                  child: Listener(
+                    onPointerSignal: (pointerSignal) {
+                      if (pointerSignal is PointerScrollEvent) {
+                        final offset = pointerSignal.scrollDelta.dy;
+                        _carouselScrollController.jumpTo(
+                          _carouselScrollController.offset + offset,
+                        );
+                      }
+                    },
+                    child: Scrollbar(
+                      controller: _carouselScrollController,
+                      thumbVisibility: true,
+                      child: ListView(
+                        controller: _carouselScrollController,
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        children: [
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/food_beverage_category_button.png',
+                        icon: Icons.restaurant,
+                        label: 'Food &\nBeverages',
+                        badgeCount: _categoryCounts['food'],
+                        categoryKey: 'food',
+                        categories: ['food'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/cosmetics_category_button.png',
+                        icon: Icons.brush,
+                        label: 'Cosmetics &\nPersonal Care',
+                        badgeCount: _categoryCounts['cosmetics'],
+                        categoryKey: 'cosmetics',
+                        categories: ['cosmetics', 'personal care'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/otc_category_button.png',
+                        icon: Icons.medication,
+                        label: 'OTC Drugs &\nSupplements',
+                        badgeCount: _categoryCounts['drugs'],
+                        categoryKey: 'drugs',
+                        categories: ['otc drugs', 'supplements'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/home_furniture_category_button.png',
+                        icon: Icons.chair,
+                        label: 'Home &\nFurniture',
+                        badgeCount: _categoryCounts['home'],
+                        categoryKey: 'home',
+                        categories: ['home', 'furniture'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/clothing_category_button.png',
+                        icon: Icons.checkroom,
+                        label: 'Clothing',
+                        badgeCount: _categoryCounts['clothing'],
+                        categoryKey: 'clothing',
+                        categories: ['clothing', 'kids items'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/child_seats_category_button.png',
+                        icon: Icons.child_care,
+                        label: 'Child Seats &\nAccessories',
+                        badgeCount: _categoryCounts['childSeats'],
+                        categoryKey: 'childSeats',
+                        categories: ['child seats', 'other accessories'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/power_tools_category_button.png',
+                        icon: Icons.build,
+                        label: 'Power Tools &\nLawn Care',
+                        badgeCount: _categoryCounts['powerTools'],
+                        categoryKey: 'powerTools',
+                        categories: ['power tools', 'lawn care'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/electronics_category_button.png',
+                        icon: Icons.devices,
+                        label: 'Electronics &\nAppliances',
+                        badgeCount: _categoryCounts['electronics'],
+                        categoryKey: 'electronics',
+                        categories: ['electronics', 'appliances'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/vehicles_category_button.png',
+                        icon: Icons.directions_car,
+                        label: 'Vehicles',
+                        badgeCount: _categoryCounts['vehicles'],
+                        categoryKey: 'vehicles',
+                        categories: ['car', 'truck', 'suv'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/tires_category_button.png',
+                        icon: Icons.trip_origin,
+                        label: 'Tires',
+                        badgeCount: _categoryCounts['tires'],
+                        categoryKey: 'tires',
+                        categories: ['tires'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/toys_category_button.png',
+                        icon: Icons.toys,
+                        label: 'Toys',
+                        badgeCount: _categoryCounts['toys'],
+                        categoryKey: 'toys',
+                        categories: ['toys'],
+                      ),
+                      const SizedBox(width: 12),
+                      _buildCategoryCard(
+                        imagePath: 'assets/images/pets_veterinary_category_button.png',
+                        icon: Icons.pets,
+                        label: 'Pets &\nVeterinary',
+                        badgeCount: _categoryCounts['pets'],
+                        categoryKey: 'pets',
+                        categories: ['pet', 'veterinary', 'animal'],
                       ),
                     ],
                   ),
                 ),
+              ),
+            ),
 
                 const SizedBox(height: 24),
 
@@ -394,16 +628,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     mainAxisSize:
                         MainAxisSize.min, // Make column take minimum space
                     children: [
-                      const Text(
-                        'Recalls',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-
                       // All Recalls Button
                       Stack(
                         children: [
@@ -445,168 +669,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         ],
                       ),
 
-                      const SizedBox(height: 16),
-
-                      // SmartFilters Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton.icon(
-                          onPressed: () {
-                            final canAccess = _subscriptionTier == SubscriptionTier.smartFiltering ||
-                                _subscriptionTier == SubscriptionTier.recallMatch;
-
-                            if (canAccess) {
-                              // Navigate to Saved SmartFilters page
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (context) => const SavedFiltersPage(),
-                                ),
-                              );
-                            } else {
-                              // Show upgrade modal for Free/Guest users
-                              _showSmartFiltersUpgradeModal();
-                            }
-                          },
-                          icon: Icon(
-                            Icons.filter_list,
-                            size: 20,
-                            color: _subscriptionTier == SubscriptionTier.guest ||
-                                    _subscriptionTier == SubscriptionTier.free
-                                ? Colors.black
-                                : Colors.white,
-                          ),
-                          label: Text(
-                            'SmartFilters',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                              color: _subscriptionTier == SubscriptionTier.guest ||
-                                      _subscriptionTier == SubscriptionTier.free
-                                  ? Colors.black
-                                  : Colors.white,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: _subscriptionTier == SubscriptionTier.guest ||
-                                    _subscriptionTier == SubscriptionTier.free
-                                ? Colors.grey
-                                : const Color(0xFF42A5F5), // Medium blue for premium users
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 2,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 26), // Increased from 16 to 26
-                      // Filter and Saved Buttons Row
-                      Row(
-                        children: [
-                          // Filter Button
-                          Expanded(
-                            child: Stack(
-                              children: [
-                                SizedBox(
-                                  height: 48,
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const AdvancedFilterPage(),
-                                        ),
-                                      );
-                                    },
-                                    icon: const Icon(
-                                      Icons.filter_alt,
-                                      size: 20,
-                                      color: Color(
-                                        0xFF404040,
-                                      ), // Dark gray color
-                                    ),
-                                    label: const Text(
-                                      'Filter',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(
-                                        0xFF42A5F5,
-                                      ), // Medium blue
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      elevation: 2,
-                                    ),
-                                  ),
-                                ),
-                                _buildRecallBadge(
-                                  _filteredRecalls,
-                                ), // Dynamic filtered recalls count
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          // Saved Button
-                          Expanded(
-                            child: Stack(
-                              children: [
-                                SizedBox(
-                                  height: 48,
-                                  width: double.infinity,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const SavedRecallsPage(),
-                                        ),
-                                      );
-                                    },
-                                    icon: const Icon(
-                                      Icons.favorite,
-                                      size: 20,
-                                      color: Color(
-                                        0xFF92D050,
-                                      ), // Light green color
-                                    ),
-                                    label: const Text(
-                                      'Saved',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.white,
-                                      ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(
-                                        0xFF1E88E5,
-                                      ), // Darker blue
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      elevation: 2,
-                                    ),
-                                  ),
-                                ),
-                                _buildRecallBadge(
-                                  _savedRecalls,
-                                ), // Dynamic saved recalls count
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 26), // Increased from 16 to 26
+                      const SizedBox(height: 26),
                       // FDA and USDA Buttons Row
                       Row(
                         children: [

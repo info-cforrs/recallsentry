@@ -285,6 +285,9 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> with Widg
               // Details card
               USDARecallDetailsCard(recall: widget.recall),
               const SizedBox(height: 16),
+              // Start Recall Process button (always visible)
+              _buildStartRecallProcessButton(context),
+              const SizedBox(height: 16),
               // PRODUCT IDENTIFICATION section
               if (widget.recall.productIdentification.isNotEmpty)
                 Container(
@@ -441,7 +444,7 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> with Widg
         },
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Recalls'),
+          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
@@ -453,6 +456,145 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> with Widg
         elevation: 8,
         selectedFontSize: 14,
         unselectedFontSize: 12,
+      ),
+    );
+  }
+
+  Widget _buildStartRecallProcessButton(BuildContext context) {
+    final bool isNotStarted = widget.recall.recallResolutionStatus == 'Not Started';
+    final String statusText = isNotStarted
+        ? 'Start Recall Process'
+        : 'Recall Started: ${widget.recall.recallResolutionStatus}';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A4A5C),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: isNotStarted ? () {
+            // Only show confirmation dialog if not started
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  backgroundColor: const Color(0xFF2A4A5C),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  title: const Text(
+                    'Start Recall Process',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  content: const Text(
+                    'Are you ready to start managing this recall? This will activate the Recall Management Center for this item.',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4CAF50),
+                      ),
+                      onPressed: () {
+                        // TODO: Update recall status in backend
+                        // For now, we'll update the local state
+                        setState(() {
+                          // This will need to be properly implemented with a service call
+                          // to update the backend and refresh the data
+                        });
+
+                        Navigator.of(context).pop();
+
+                        // Show success message
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Recall Management Center activated!'),
+                            backgroundColor: Color(0xFF4CAF50),
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+
+                        // TODO: Navigate to Recall Management Center page
+                        // Navigator.of(context).pushNamed('/usda-rmc', arguments: widget.recall);
+                      },
+                      child: const Text(
+                        'Start Process',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          } : () {
+            // If already started, navigate to RMC page
+            // TODO: Navigate to Recall Management Center page
+            // Navigator.of(context).pushNamed('/usda-rmc', arguments: widget.recall);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00B6FF),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.list_alt,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isNotStarted
+                            ? 'I have this recalled item'
+                            : 'Recall Management Center',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        statusText,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

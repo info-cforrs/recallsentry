@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/recall_data.dart';
 import '../models/recommended_product.dart';
 import '../config/app_config.dart';
+import 'auth_service.dart';
 
 class ApiService {
   final String baseUrl = AppConfig.apiBaseUrl;
@@ -109,6 +110,33 @@ class ApiService {
     }
   }
 
+  /// Fetch recalls with active resolution status (not 'Not Started')
+  Future<List<RecallData>> fetchActiveRecalls() async {
+    try {
+      final uri = Uri.parse('$baseUrl${AppConfig.apiRecallsEndpoint}active_recalls/');
+      print('🌐 Fetching active recalls from: $uri');
+
+      final response = await http.get(uri);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final results = jsonData['results'] as List;
+
+        print('✅ Successfully fetched ${results.length} active recalls');
+
+        return results
+            .map((json) => _convertFromApi(json as Map<String, dynamic>))
+            .toList();
+      } else {
+        print('❌ Error fetching active recalls: ${response.statusCode}');
+        throw Exception('Failed to load active recalls: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception fetching active recalls: $e');
+      rethrow;
+    }
+  }
+
   /// Fetch a single recall by ID
   Future<RecallData> fetchRecallById(int id) async {
     try {
@@ -171,6 +199,8 @@ class ApiService {
     return RecallData(
       // Use the recall_id as the main ID for Flutter app
       id: recallId,
+      // Store the numeric database ID for API updates
+      databaseId: json['id'] as int?,
       // Set FDA/USDA specific fields based on the recall type
       usdaRecallId: isUsda ? recallId : '',
       fdaRecallId: isFda ? recallId : '',
@@ -300,8 +330,76 @@ class ApiService {
 
       // Parse recommendations
       recommendations: (json['recommendations'] as List<dynamic>?)
-          ?.map((rec) => RecommendedProduct.fromJson(rec as Map<String, dynamic>))
+          ?.whereType<Map<String, dynamic>>()
+          .map((rec) => RecommendedProduct.fromJson(rec))
           .toList() ?? [],
+
+      // Recall resolution status
+      recallResolutionStatus: json['recall_resolution_status']?.toString() ?? 'Not Started',
     );
+  }
+
+  /// Update recall resolution status
+  Future<RecallData> updateRecallStatus(RecallData recall, String newStatus) async {
+    if (recall.databaseId == null) {
+      throw Exception('Cannot update recall: missing database ID');
+    }
+
+    try {
+      print('🌐 Updating recall ${recall.databaseId} status to: $newStatus');
+
+      // Try the update_status custom endpoint
+      final response = await AuthService().authenticatedRequest(
+        'POST',
+        '${AppConfig.apiRecallsEndpoint}${recall.databaseId}/update_status/',
+        body: {
+          'recall_resolution_status': newStatus,
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        print('✅ Successfully updated recall ${recall.databaseId} status');
+        print('📦 Response recall_resolution_status: ${jsonData['recall_resolution_status']}');
+        return _convertFromApi(jsonData as Map<String, dynamic>);
+      } else{
+        print('❌ Error updating recall status: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        throw Exception('Failed to update recall status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception updating recall status: $e');
+      rethrow;
+    }
+  }
+
+  /// Enroll a recall into the Recall Management Center
+  /// Sets in_rmc=True and initializes recall_resolution_status to 'Open'
+  Future<RecallData> enrollInRmc(RecallData recall) async {
+    if (recall.databaseId == null) {
+      throw Exception('Cannot enroll recall: missing database ID');
+    }
+
+    try {
+      print('🌐 Enrolling recall ${recall.databaseId} in RMC');
+
+      final response = await AuthService().authenticatedRequest(
+        'POST',
+        '${AppConfig.apiRecallsEndpoint}${recall.databaseId}/enroll_in_rmc/',
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        print('✅ Successfully enrolled recall ${recall.databaseId} in RMC');
+        return _convertFromApi(jsonData as Map<String, dynamic>);
+      } else {
+        print('❌ Error enrolling recall in RMC: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        throw Exception('Failed to enroll recall in RMC: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception enrolling recall in RMC: $e');
+      rethrow;
+    }
   }
 }
