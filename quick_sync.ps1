@@ -24,6 +24,13 @@ if (-not (Test-Path ".git")) {
 $branch = git branch --show-current
 Write-Host "Branch: $branch" -ForegroundColor Green
 
+# Ensure credentials directory exists
+if (-not (Test-Path "assets\credentials")) {
+    New-Item -ItemType Directory -Force -Path "assets\credentials" | Out-Null
+    Set-Content -Path "assets\credentials\.gitkeep" -Value "{}"
+    Write-Host "Created assets/credentials directory" -ForegroundColor Yellow
+}
+
 # Show changes
 Write-Host ""
 Write-Host "Changes to sync:" -ForegroundColor Yellow

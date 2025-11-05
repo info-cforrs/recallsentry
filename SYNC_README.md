@@ -86,9 +86,10 @@ The updated `sync_from_github.sh` now automatically:
 - **Status:** Automated in sync script
 
 ### ✅ Missing Credentials Folder
-- **Issue:** Build error about missing assets/credentials
-- **Fix:** Script creates placeholder
-- **Status:** Automated in sync script
+- **Issue:** Build error about missing `assets/credentials/` directory
+- **Fix:** Both PC and Mac scripts automatically create placeholder
+- **Status:** Automated in all sync scripts
+- **Note:** This folder is in `.gitignore` for security, but must exist locally
 
 ---
 
