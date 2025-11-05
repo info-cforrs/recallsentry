@@ -104,7 +104,7 @@ flutter:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "assets/images/App_Store_icon.png"
+  image_path: "assets/images/shield_logo.png"
   min_sdk_android: 21
 
   # iOS specific settings
@@ -113,4 +113,4 @@ flutter_launcher_icons:
 
   # Adaptive icon for Android (recommended for Android 8.0+)
   adaptive_icon_background: "#1D3547"  # Dark blue background matching your app theme
-  adaptive_icon_foreground: "assets/images/App_Store_icon.png"
+  adaptive_icon_foreground: "assets/images/shield_logo.png"
