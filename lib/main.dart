@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 import 'package:window_manager/window_manager.dart';
 import 'pages/intro_page1.dart';
 import 'widgets/iphone_simulator.dart';
@@ -14,30 +16,33 @@ void main() async {
   // SubscriptionService().clearCache();
   // print('✅ DEBUG: Auth tokens cleared - app will run as guest');
 
-  // Initialize window manager and set iPhone 15 window size
-  await windowManager.ensureInitialized();
+  // Initialize window manager ONLY on desktop platforms (Windows, macOS, Linux)
+  // Skip on mobile (iOS, Android) and web
+  if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux)) {
+    await windowManager.ensureInitialized();
 
-  // iPhone 15 dimensions with some padding for the frame and shadows
-  const double windowWidth =
-      450.0; // iPhone width (393) + padding for frame/shadows
-  const double windowHeight =
-      920.0; // iPhone height (852) + padding for frame/shadows
+    // iPhone 15 dimensions with some padding for the frame and shadows
+    const double windowWidth =
+        450.0; // iPhone width (393) + padding for frame/shadows
+    const double windowHeight =
+        920.0; // iPhone height (852) + padding for frame/shadows
 
-  WindowOptions windowOptions = const WindowOptions(
-    size: Size(windowWidth, windowHeight),
-    minimumSize: Size(windowWidth, windowHeight),
-    maximumSize: Size(windowWidth, windowHeight),
-    center: true,
-    backgroundColor: Colors.black,
-    skipTaskbar: false,
-    titleBarStyle: TitleBarStyle.normal,
-    windowButtonVisibility: true,
-  );
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(windowWidth, windowHeight),
+      minimumSize: Size(windowWidth, windowHeight),
+      maximumSize: Size(windowWidth, windowHeight),
+      center: true,
+      backgroundColor: Colors.black,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+      windowButtonVisibility: true,
+    );
 
-  await windowManager.waitUntilReadyToShow(windowOptions, () async {
-    await windowManager.show();
-    await windowManager.focus();
-  });
+    await windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
 
   runApp(const MyApp());
 }
