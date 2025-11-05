@@ -2,7 +2,7 @@
 # RecallSentry - QUICK SYNC to GitHub (PC)
 # ============================================
 # One-command sync: Stage, commit, and push all changes
-# Usage: Right-click this file → "Run with PowerShell"
+# Usage: Right-click this file -> "Run with PowerShell"
 
 param(
     [string]$CommitMessage = ""
@@ -52,32 +52,32 @@ Write-Host ""
 Write-Host "[1/4] Pulling latest changes..." -ForegroundColor Cyan
 git pull origin $branch --rebase 2>&1 | Out-Null
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✓ Pulled successfully" -ForegroundColor Green
+    Write-Host "  Success: Pulled successfully" -ForegroundColor Green
 } else {
-    Write-Host "⚠ Pull had issues (will try to push anyway)" -ForegroundColor Yellow
+    Write-Host "  Warning: Pull had issues (will try to push anyway)" -ForegroundColor Yellow
 }
 
 # Stage all
 Write-Host "[2/4] Staging all changes..." -ForegroundColor Cyan
 git add -A
-Write-Host "✓ Staged" -ForegroundColor Green
+Write-Host "  Success: Staged" -ForegroundColor Green
 
 # Commit
 Write-Host "[3/4] Creating commit..." -ForegroundColor Cyan
 git commit -m $CommitMessage 2>&1 | Out-Null
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✓ Committed" -ForegroundColor Green
+    Write-Host "  Success: Committed" -ForegroundColor Green
 } else {
-    Write-Host "⚠ No new changes to commit" -ForegroundColor Yellow
+    Write-Host "  Warning: No new changes to commit" -ForegroundColor Yellow
 }
 
 # Push
 Write-Host "[4/4] Pushing to GitHub..." -ForegroundColor Cyan
 git push origin $branch 2>&1 | Out-Null
 if ($LASTEXITCODE -eq 0) {
-    Write-Host "✓ Pushed to GitHub" -ForegroundColor Green
+    Write-Host "  Success: Pushed to GitHub" -ForegroundColor Green
 } else {
-    Write-Host "✗ Push failed" -ForegroundColor Red
+    Write-Host "  Error: Push failed" -ForegroundColor Red
     Write-Host ""
     Write-Host "Trying again with verbose output..." -ForegroundColor Yellow
     git push origin $branch
@@ -86,8 +86,8 @@ if ($LASTEXITCODE -eq 0) {
 }
 
 Write-Host ""
-Write-Host "======================================"  -ForegroundColor Green
-Write-Host "  ✓ SYNC COMPLETE!"  -ForegroundColor Green
+Write-Host "======================================" -ForegroundColor Green
+Write-Host "  SUCCESS - SYNC COMPLETE!" -ForegroundColor Green
 Write-Host "======================================" -ForegroundColor Green
 Write-Host ""
 Write-Host "View on GitHub:" -ForegroundColor Cyan
