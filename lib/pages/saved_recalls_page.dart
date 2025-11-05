@@ -4,6 +4,7 @@ import '../services/saved_recalls_service.dart';
 import '../widgets/usda_recall_card.dart';
 import '../widgets/fda_recall_card.dart';
 import 'main_navigation.dart';
+import '../widgets/custom_back_button.dart';
 
 class SavedRecallsPage extends StatefulWidget {
   const SavedRecallsPage({super.key});
@@ -63,6 +64,8 @@ class _SavedRecallsPageState extends State<SavedRecallsPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {

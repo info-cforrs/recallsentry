@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
 import '../services/saved_filter_service.dart';
+import '../widgets/custom_back_button.dart';
 
 /// Edit Saved Filter Page with full API integration
 /// Allows users to edit existing saved filters with real-time sync
@@ -248,7 +249,9 @@ class _EditSavedFilterPageState extends State<EditSavedFilterPage> {
                 padding: const EdgeInsets.all(16.0),
                 child: Row(
                   children: [
-                    GestureDetector(
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
+                  GestureDetector(
                       onTap: () async {
                         final shouldPop = await _onWillPop();
                         if (shouldPop && mounted) {

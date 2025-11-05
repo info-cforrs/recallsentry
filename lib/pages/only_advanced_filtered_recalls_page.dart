@@ -7,6 +7,7 @@ import '../services/subscription_service.dart';
 import '../models/recall_data.dart';
 import '../widgets/usda_recall_card.dart';
 import '../widgets/fda_recall_card.dart';
+import '../widgets/custom_back_button.dart';
 
 class OnlyAdvancedFilteredRecallsPage extends StatefulWidget {
   final List<String> brandFilters;
@@ -202,6 +203,8 @@ class _OnlyAdvancedFilteredRecallsPageState
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {

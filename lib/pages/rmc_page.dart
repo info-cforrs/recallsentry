@@ -3,6 +3,7 @@ import '../models/recall_data.dart';
 import '../services/api_service.dart';
 import 'rmc_list_page.dart';
 import 'main_navigation.dart';
+import '../widgets/custom_back_button.dart';
 
 class RmcPage extends StatefulWidget {
   const RmcPage({super.key});
@@ -173,6 +174,8 @@ class _RmcPageState extends State<RmcPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {

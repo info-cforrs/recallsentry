@@ -7,6 +7,7 @@ import '../models/article.dart';
 import '../widgets/fda_recall_card.dart';
 import '../widgets/article_card.dart';
 import '../pages/fda_recall_details_page.dart';
+import '../widgets/custom_back_button.dart';
 
 class AllFDARecallsPage extends StatefulWidget {
   const AllFDARecallsPage({super.key});
@@ -471,6 +472,8 @@ class _AllFDARecallsPageState extends State<AllFDARecallsPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {
@@ -577,7 +580,9 @@ class _AllFDARecallsPageState extends State<AllFDARecallsPage> {
                     // Filter and sort options
                     Row(
                       children: [
-                        GestureDetector(
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
+                  GestureDetector(
                           onTap: _showFilterDialog,
                           child: Container(
                             padding: const EdgeInsets.symmetric(

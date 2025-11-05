@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
+import '../widgets/custom_back_button.dart';
 
 class EmailNotificationsPage extends StatefulWidget {
   const EmailNotificationsPage({super.key});
@@ -53,6 +54,8 @@ class _EmailNotificationsPageState extends State<EmailNotificationsPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {

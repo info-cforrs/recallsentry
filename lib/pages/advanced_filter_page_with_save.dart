@@ -4,6 +4,7 @@ import 'only_advanced_filtered_recalls_page.dart';
 import 'subscribe_page.dart';
 import 'widgets/save_filter_dialog.dart';
 import '../services/filter_state_service.dart';
+import '../widgets/custom_back_button.dart';
 
 /// MOCKUP: Advanced Filter Page with Save Filter Button
 /// This is a modified version of the existing Advanced Filter page
@@ -194,6 +195,8 @@ class _AdvancedFilterPageWithSaveState extends State<AdvancedFilterPageWithSave>
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {

@@ -3,6 +3,7 @@ import 'main_navigation.dart';
 import '../services/filter_state_service.dart';
 import '../services/recall_data_service.dart';
 import '../services/subscription_service.dart';
+import '../widgets/custom_back_button.dart';
 import 'category_filter_page.dart' as category;
 
 class RecallsByCategoryPage extends StatefulWidget {
@@ -106,6 +107,8 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {

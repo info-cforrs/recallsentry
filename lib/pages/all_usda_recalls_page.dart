@@ -6,6 +6,7 @@ import '../models/recall_data.dart';
 import '../models/article.dart';
 import '../widgets/usda_recall_card.dart';
 import '../widgets/article_card.dart';
+import '../widgets/custom_back_button.dart';
 
 class AllUSDARecallsPage extends StatefulWidget {
   const AllUSDARecallsPage({super.key});
@@ -555,6 +556,8 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {
@@ -661,7 +664,9 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                     // Filter and sort options
                     Row(
                       children: [
-                        GestureDetector(
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
+                  GestureDetector(
                           onTap: _showFilterDialog,
                           child: Container(
                             padding: const EdgeInsets.symmetric(

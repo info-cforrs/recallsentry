@@ -13,6 +13,7 @@ import 'email_notifications_page.dart';
 import '../services/auth_service.dart';
 import '../services/subscription_service.dart';
 import '../services/user_profile_service.dart';
+import '../widgets/custom_back_button.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
@@ -188,6 +189,8 @@ class _SettingsPageState extends State<SettingsPage> {
               padding: const EdgeInsets.symmetric(vertical: 16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {

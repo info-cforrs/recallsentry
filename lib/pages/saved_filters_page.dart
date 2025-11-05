@@ -7,6 +7,7 @@ import 'edit_saved_filter_page.dart';
 import '../models/saved_filter.dart';
 import '../services/saved_filter_service.dart';
 import '../services/subscription_service.dart';
+import '../widgets/custom_back_button.dart';
 
 /// Saved SmartFilters Page - Cloud-synced filter presets
 /// Premium feature with tier limits: Free (0), SmartFiltering (10), RecallMatch (unlimited)
@@ -280,6 +281,8 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {

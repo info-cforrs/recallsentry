@@ -5,6 +5,7 @@ import '../models/recall_data.dart';
 import '../widgets/simple_recall_card.dart';
 import '../widgets/usda_recall_card.dart';
 import '../widgets/fda_recall_card.dart';
+import '../widgets/custom_back_button.dart';
 
 class FilteredRecallsPage extends StatefulWidget {
   final List<String> brandFilters;
@@ -114,7 +115,9 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
           padding: const EdgeInsets.all(16.0),
           child: Row(
             children: [
-              GestureDetector(
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
+                  GestureDetector(
                 onTap: () {
                   Navigator.of(context).pushAndRemoveUntil(
                     MaterialPageRoute(

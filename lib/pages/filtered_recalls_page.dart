@@ -4,6 +4,7 @@ import 'advanced_filter_page.dart';
 import '../services/recall_data_service.dart';
 import '../models/recall_data.dart';
 import '../widgets/simple_recall_card.dart';
+import '../widgets/custom_back_button.dart';
 
 class FilteredRecallsPage extends StatefulWidget {
   final List<String> brandFilters;
@@ -103,6 +104,8 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {

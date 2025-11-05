@@ -4,6 +4,7 @@ import '../services/recall_data_service.dart';
 import '../models/recall_data.dart';
 import '../widgets/usda_recall_card.dart';
 import '../widgets/fda_recall_card.dart';
+import '../widgets/custom_back_button.dart';
 
 class AllRecallsPage extends StatefulWidget {
   final bool showBottomNavigation;
@@ -487,6 +488,8 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {
@@ -593,7 +596,9 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
                     // Filter and sort options
                     Row(
                       children: [
-                        GestureDetector(
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
+                  GestureDetector(
                           onTap: _showFilterDialog,
                           child: Container(
                             padding: const EdgeInsets.symmetric(

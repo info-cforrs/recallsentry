@@ -6,6 +6,7 @@ import '../services/filter_state_service.dart';
 import '../services/subscription_service.dart';
 import '../models/saved_filter.dart';
 import 'widgets/save_filter_dialog.dart';
+import '../widgets/custom_back_button.dart';
 
 class AdvancedFilterPage extends StatefulWidget {
   final bool clearFiltersOnInit;
@@ -255,6 +256,8 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {

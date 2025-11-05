@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
+import '../widgets/custom_back_button.dart';
 
 class PushNotificationsPage extends StatefulWidget {
   const PushNotificationsPage({super.key});
@@ -53,6 +54,8 @@ class _PushNotificationsPageState extends State<PushNotificationsPage> {
               padding: const EdgeInsets.all(16.0),
               child: Row(
                 children: [
+                  const CustomBackButton(),
+                  const SizedBox(width: 8),
                   // App Icon - Clickable to return to Home
                   GestureDetector(
                     onTap: () {
