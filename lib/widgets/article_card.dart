@@ -20,7 +20,7 @@ class ArticleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16.0),
+      margin: EdgeInsets.zero,
       color: const Color(0xFF1B7DA9),
       elevation: 2,
       shape: RoundedRectangleBorder(

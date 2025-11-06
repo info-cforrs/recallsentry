@@ -5,22 +5,23 @@ import '../widgets/shared/shared_adverse_reactions_accordion.dart';
 import '../widgets/shared/shared_recommendations_accordion.dart';
 import '../widgets/shared/shared_product_distribution_accordion.dart';
 import '../widgets/shared/shared_recommended_products_accordion.dart';
-import '../widgets/FDA_Recall_Details_Card.dart';
-import '../widgets/shared/shared_fda_manufacturer_retailer_accordion.dart';
-import '../widgets/shared/shared_fda_resources_section.dart';
+import '../widgets/USDA_Recall_Details_Card.dart';
+import '../widgets/shared/shared_manufacturer_retailer_accordion.dart';
+import '../widgets/shared/shared_usda_resources_section.dart';
 import '../services/recall_data_service.dart';
+import '../services/api_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'main_navigation.dart';
 
-class FdaRecallDetailsPageV2 extends StatefulWidget {
+class UsdaRecallDetailsPageV3 extends StatefulWidget {
   final RecallData recall;
-  const FdaRecallDetailsPageV2({super.key, required this.recall});
+  const UsdaRecallDetailsPageV3({super.key, required this.recall});
 
   @override
-  State<FdaRecallDetailsPageV2> createState() => _FdaRecallDetailsPageV2State();
+  State<UsdaRecallDetailsPageV3> createState() => _UsdaRecallDetailsPageV3State();
 }
 
-class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
+class _UsdaRecallDetailsPageV3State extends State<UsdaRecallDetailsPageV3> {
   RecallData? _freshRecall;
   bool _isLoading = true;
   String? _error;
@@ -37,24 +38,21 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
       _error = null;
     });
     try {
-      print('🔄 Fetching fresh FDA recalls with forceRefresh=true...');
-      final recalls = await RecallDataService().getFdaRecalls(
+      print('🔄 Fetching fresh USDA recalls with forceRefresh=true...');
+      final recalls = await RecallDataService().getUsdaRecalls(
         forceRefresh: true,
       );
-      final id = widget.recall.fdaRecallId;
-      print('🔍 Looking for recall with FDA ID: $id');
+      final id = widget.recall.usdaRecallId;
+      print('🔍 Looking for recall with USDA ID: $id');
       final fresh = recalls.firstWhere(
-        (r) => r.fdaRecallId == id,
+        (r) => r.usdaRecallId == id,
         orElse: () => widget.recall,
       );
       print('📦 Found recall with ${fresh.recommendations.length} recommendations');
-      print('📦 Fresh recall imageUrl: ${fresh.imageUrl}');
-      print('📦 Fresh recall images count: ${fresh.images.length}');
       setState(() {
         _freshRecall = fresh;
         _isLoading = false;
       });
-      print('✅ FDA Details v2: setState completed, _isLoading = $_isLoading');
     } catch (e) {
       setState(() {
         _error = 'Failed to load latest recall data: $e';
@@ -72,7 +70,7 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
         appBar: AppBar(
           backgroundColor: const Color(0xFF1D3547),
           title: const Text(
-            'FDA Recall Details',
+            'USDA Recall Details V3',
             style: TextStyle(color: Colors.white),
           ),
           iconTheme: const IconThemeData(color: Colors.white),
@@ -88,7 +86,7 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
         appBar: AppBar(
           backgroundColor: const Color(0xFF1D3547),
           title: const Text(
-            'FDA Recall Details',
+            'USDA Recall Details V3',
             style: TextStyle(color: Colors.white),
           ),
           iconTheme: const IconThemeData(color: Colors.white),
@@ -101,14 +99,12 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
     }
 
     final recall = _freshRecall ?? widget.recall;
-    print('🏗️ FDA Details v2: Building page for recall: ${recall.productName}');
-    print('   Recall ID: ${recall.fdaRecallId}');
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: const Color(0xFF1D3547),
         title: const Text(
-          'FDA Recall Details',
+          'USDA Recall Details V3',
           style: TextStyle(color: Colors.white),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
@@ -159,20 +155,12 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
                   ),
                 ),
               // Image Carousel
-              Builder(
-                builder: (context) {
-                  final imageUrls = recall.getAllImageUrls();
-                  print('🔍 FDA Details v2: getAllImageUrls() returned ${imageUrls.length} URLs');
-                  print('   URLs: $imageUrls');
-                  print('   Recall: ${recall.productName}');
-                  return SharedImageCarousel(
-                    imageUrls: imageUrls,
-                    showIndicators: false,
-                    height: 220,
-                    width: double.infinity,
-                    borderRadius: 18,
-                  );
-                },
+              SharedImageCarousel(
+                imageUrls: recall.getAllImageUrls(),
+                showIndicators: false,
+                height: 220,
+                width: double.infinity,
+                borderRadius: 18,
               ),
               const SizedBox(height: 18),
               // Recall Title and Classification
@@ -185,10 +173,13 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
                 ),
               ),
               const SizedBox(height: 8),
-              // FDA Recall Details Card
-              FDARecallDetailsCard(recall: recall),
+              // USDA Recall Details Card
+              USDARecallDetailsCard(recall: recall),
+              const SizedBox(height: 16),
+              // Start Recall Process button (always visible)
+              _buildStartRecallProcessButton(context, recall),
               const SizedBox(height: 12),
-              if (recall.productIdentification.trim().isNotEmpty)
+              if (recall.recallPhaReason.trim().isNotEmpty)
                 Container(
                   margin: const EdgeInsets.only(bottom: 16),
                   padding: const EdgeInsets.all(16),
@@ -200,7 +191,7 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Product Identification:',
+                        'Reason for Recall:',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -209,7 +200,7 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        recall.productIdentification,
+                        recall.recallPhaReason,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.normal,
@@ -219,38 +210,38 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
                     ],
                   ),
                 ),
-              if (recall.howFound.trim().isNotEmpty)
-                Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF2A4A5C),
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'How Found:',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        recall.howFound,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.normal,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
-                  ),
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF2A4A5C),
+                  borderRadius: BorderRadius.circular(18),
                 ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Product Identification:',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      recall.productIdentification.trim().isNotEmpty
+                          ? recall.productIdentification
+                          : 'Not specified',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.normal,
+                        fontSize: 15,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 6),
               // Accordions
               SharedAdverseReactionsAccordion(
@@ -267,8 +258,8 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
               SharedManufacturerRetailerAccordion(recall: recall),
               // Recommended Replacement Items Section
               SharedRecommendedProductsAccordion(recall: recall),
-              // FDA Resources Section (from original page)
-              const SharedFdaResourcesSection(),
+              // USDA Resources Section (from original page)
+              SharedUsdaResourcesSection(recall: recall),
               const SizedBox(height: 24),
               // --- Bottom Big Button Section ---
               Column(
@@ -294,46 +285,16 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
                       }
                     },
                     child: const Text(
-                      'FDA Recall/Alert Link',
+                      'USDA Recall/Alert Link',
                       style: TextStyle(
                         color: Colors.black,
                         fontWeight: FontWeight.normal,
-                        fontSize: 16,
+                        fontSize: 18,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  const SizedBox(height: 35),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () async {
-                      if (recall.pressReleaseLink.isNotEmpty) {
-                        final url = Uri.parse(recall.pressReleaseLink);
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(
-                            url,
-                            mode: LaunchMode.externalApplication,
-                          );
-                        }
-                      }
-                    },
-                    child: const Text(
-                      'FDA Recall/Alert Press Release',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.normal,
-                        fontSize: 16,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                  const SizedBox(height: 35),
+                  const SizedBox(height: 40),
                   TextButton(
                     style: TextButton.styleFrom(
                       backgroundColor: const Color(0xFF00B6FF),
@@ -350,13 +311,13 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
-                        fontSize: 16,
+                        fontSize: 18,
                         letterSpacing: 1.1,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 20),
                 ],
               ),
               // Recall ID and States
@@ -367,11 +328,11 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        '[FDA Recall ID]',
+                        '[USDA Recall ID]',
                         style: TextStyle(color: Colors.white, fontSize: 12),
                       ),
                       Text(
-                        recall.fdaRecallId,
+                        recall.usdaRecallId,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
@@ -460,6 +421,151 @@ class _FdaRecallDetailsPageV2State extends State<FdaRecallDetailsPageV2> {
             label: 'Settings',
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStartRecallProcessButton(BuildContext context, RecallData recall) {
+    final bool isNotInRmc = !recall.inRmc;
+    final String statusText = isNotInRmc
+        ? 'Start Recall Process'
+        : 'Recall Started: ${recall.recallResolutionStatus}';
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A4A5C),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: isNotInRmc ? () {
+            // Only show confirmation dialog if not started
+            showDialog(
+              context: context,
+              builder: (BuildContext context) {
+                return AlertDialog(
+                  backgroundColor: const Color(0xFF2A4A5C),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  title: const Text(
+                    'Start Recall Process',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  content: const Text(
+                    'Are you ready to start managing this recall? This will activate the Recall Management Center for this item.',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF4CAF50),
+                      ),
+                      onPressed: () async {
+                        // Enroll recall in RMC
+                        try {
+                          final updatedRecall = await ApiService().enrollInRmc(recall);
+                          if (!mounted) return;
+                          setState(() {
+                            _freshRecall = updatedRecall;
+                          });
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Recall Management Center activated!'),
+                              backgroundColor: Color(0xFF4CAF50),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to enroll recall in RMC: $e'),
+                              backgroundColor: Colors.red,
+                              duration: const Duration(seconds: 3),
+                            ),
+                          );
+                        }
+                      },
+                      child: const Text(
+                        'Start Process',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          } : () {
+            // If already started, navigate to RMC page
+            // TODO: Navigate to Recall Management Center page
+            // Navigator.of(context).pushNamed('/usda-rmc', arguments: recall);
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00B6FF),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.list_alt,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        isNotInRmc
+                            ? 'I have this recalled item'
+                            : 'Recall Management Center',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        statusText,
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Colors.white,
+                  size: 18,
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

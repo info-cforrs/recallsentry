@@ -119,6 +119,21 @@ class SubscriptionInfo {
         return 0;
     }
   }
+
+  /// Get state filter limit based on tier
+  /// Free: 1 state, SmartFiltering: 3 states, RecallMatch: 999 (unlimited)
+  int getStateFilterLimit() {
+    switch (tier) {
+      case SubscriptionTier.recallMatch:
+        return 999; // Unlimited
+      case SubscriptionTier.smartFiltering:
+        return 3;
+      case SubscriptionTier.free:
+        return 1;
+      case SubscriptionTier.guest:
+        return 1; // Same as free for state filtering
+    }
+  }
 }
 
 /// Service for managing user subscriptions

@@ -557,19 +557,54 @@ class RecallData {
   List<String> getAllImageUrls() {
     List<String> urls = [];
 
+    print('🖼️ getAllImageUrls() called for recall: $productName');
+    print('   - Admin images count: ${images.length}');
+    print('   - imageUrl: "$imageUrl"');
+    print('   - imageUrl2: "$imageUrl2"');
+    print('   - imageUrl3: "$imageUrl3"');
+    print('   - imageUrl4: "$imageUrl4"');
+    print('   - imageUrl5: "$imageUrl5"');
+
     // Add all uploaded images first
     for (var img in images) {
       if (img.imageUrl.isNotEmpty) {
-        urls.add(_makeAbsoluteUrl(img.imageUrl));
+        final absoluteUrl = _makeAbsoluteUrl(img.imageUrl);
+        print('   ✅ Adding admin image: $absoluteUrl');
+        urls.add(absoluteUrl);
       }
     }
 
     // Add CSV image URLs
-    if (imageUrl.isNotEmpty) urls.add(_makeAbsoluteUrl(imageUrl));
-    if (imageUrl2.isNotEmpty) urls.add(_makeAbsoluteUrl(imageUrl2));
-    if (imageUrl3.isNotEmpty) urls.add(_makeAbsoluteUrl(imageUrl3));
-    if (imageUrl4.isNotEmpty) urls.add(_makeAbsoluteUrl(imageUrl4));
-    if (imageUrl5.isNotEmpty) urls.add(_makeAbsoluteUrl(imageUrl5));
+    if (imageUrl.isNotEmpty) {
+      final absoluteUrl = _makeAbsoluteUrl(imageUrl);
+      print('   ✅ Adding imageUrl: $absoluteUrl');
+      urls.add(absoluteUrl);
+    }
+    if (imageUrl2.isNotEmpty) {
+      final absoluteUrl = _makeAbsoluteUrl(imageUrl2);
+      print('   ✅ Adding imageUrl2: $absoluteUrl');
+      urls.add(absoluteUrl);
+    }
+    if (imageUrl3.isNotEmpty) {
+      final absoluteUrl = _makeAbsoluteUrl(imageUrl3);
+      print('   ✅ Adding imageUrl3: $absoluteUrl');
+      urls.add(absoluteUrl);
+    }
+    if (imageUrl4.isNotEmpty) {
+      final absoluteUrl = _makeAbsoluteUrl(imageUrl4);
+      print('   ✅ Adding imageUrl4: $absoluteUrl');
+      urls.add(absoluteUrl);
+    }
+    if (imageUrl5.isNotEmpty) {
+      final absoluteUrl = _makeAbsoluteUrl(imageUrl5);
+      print('   ✅ Adding imageUrl5: $absoluteUrl');
+      urls.add(absoluteUrl);
+    }
+
+    print('   📊 Total image URLs: ${urls.length}');
+    if (urls.isEmpty) {
+      print('   ⚠️ WARNING: No images found for this recall!');
+    }
 
     return urls;
   }

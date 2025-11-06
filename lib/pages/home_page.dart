@@ -9,7 +9,13 @@ import '../models/recall_data.dart';
 import '../services/filter_state_service.dart';
 import '../services/saved_recalls_service.dart';
 import '../services/subscription_service.dart';
+import '../services/api_service.dart';
 import 'category_filter_page.dart' as category;
+import 'rmc_page.dart';
+import '../widgets/small_main_page_recall_card.dart';
+import '../services/saved_filter_service.dart';
+import '../models/saved_filter.dart';
+import 'usda_recall_details_pagev3.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback? onNavigateToRecalls;
@@ -31,7 +37,11 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int _usdaRecalls = 0;
   int _filteredRecalls = 0;
   int _savedRecalls = 0;
+  int _rmcOpenRecalls = 0;
   final Map<String, int> _categoryCounts = {};
+  List<RecallData> _savedRecallsList = [];
+  List<RecallData> _smartFilteredRecallsList = [];
+  List<RecallData> _rmcRecallsList = [];
 
   @override
   void initState() {
@@ -147,6 +157,64 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
       }
 
+      // Fetch RMC active recalls
+      print('🔍 HomePage: Fetching RMC active recalls...');
+      int rmcOpenCount = 0;
+      List<RecallData> rmcRecalls = [];
+      try {
+        final activeRecalls = await ApiService().fetchActiveRecalls();
+        // Filter recalls that are NOT Completed or Closed
+        rmcRecalls = activeRecalls
+            .where((r) =>
+                r.recallResolutionStatus.toLowerCase() != 'completed' &&
+                r.recallResolutionStatus.toLowerCase() != 'closed')
+            .toList();
+        rmcOpenCount = rmcRecalls.length;
+        print('📊 HomePage: Got $rmcOpenCount open RMC recalls');
+      } catch (e) {
+        print('❌ Error fetching RMC recalls: $e');
+        rmcOpenCount = 0;
+        rmcRecalls = [];
+      }
+
+      // Fetch SmartFiltered recalls
+      print('🔍 HomePage: Fetching SmartFiltered recalls...');
+      List<RecallData> smartFilteredRecalls = [];
+      try {
+        final filterService = SavedFilterService();
+        final filters = await filterService.fetchSavedFilters();
+
+        if (filters.isNotEmpty) {
+          // Get all recalls (FDA + USDA)
+          final allRecalls = [...recentFdaRecalls, ...recentUsdaRecalls];
+
+          // Apply all saved filters and collect matching recalls
+          Set<String> matchingRecallIds = {};
+          for (var filter in filters) {
+            for (var recall in allRecalls) {
+              // Check if recall matches any brand or product filter
+              final matchesBrand = filter.brandFilters.any((brand) =>
+                  recall.brandName.toLowerCase().contains(brand.toLowerCase()));
+              final matchesProduct = filter.productFilters.any((product) =>
+                  recall.productName.toLowerCase().contains(product.toLowerCase()));
+
+              if (matchesBrand || matchesProduct) {
+                matchingRecallIds.add(recall.id);
+              }
+            }
+          }
+
+          // Get the actual recall objects for matching IDs
+          smartFilteredRecalls = allRecalls
+              .where((r) => matchingRecallIds.contains(r.id))
+              .toList();
+        }
+        print('📊 HomePage: Got ${smartFilteredRecalls.length} SmartFiltered recalls');
+      } catch (e) {
+        print('❌ Error fetching SmartFiltered recalls: $e');
+        smartFilteredRecalls = [];
+      }
+
       // Calculate category counts
       final categories = {
         'food': ['food'],
@@ -185,12 +253,16 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           _usdaRecalls = recentUsdaRecalls.length;
           _filteredRecalls = filteredCount;
           _savedRecalls = savedCount;
+          _savedRecallsList = savedRecalls;
+          _rmcOpenRecalls = rmcOpenCount;
+          _rmcRecallsList = rmcRecalls;
+          _smartFilteredRecallsList = smartFilteredRecalls;
           _categoryCounts.clear();
           _categoryCounts.addAll(counts);
         });
 
         print(
-          '📊 Recall counts loaded (30-day rule): Total: $_totalRecalls, FDA: $_fdaRecalls, USDA: $_usdaRecalls, Filtered: $_filteredRecalls, Saved: $_savedRecalls',
+          '📊 Recall counts loaded (30-day rule): Total: $_totalRecalls, FDA: $_fdaRecalls, USDA: $_usdaRecalls, Filtered: $_filteredRecalls, Saved: $_savedRecalls, RMC Open: $_rmcOpenRecalls',
         );
       }
     } catch (e) {
@@ -202,6 +274,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           _usdaRecalls = 0;
           _filteredRecalls = 0;
           _savedRecalls = 0;
+          _savedRecallsList = [];
+          _rmcOpenRecalls = 0;
+          _rmcRecallsList = [];
+          _smartFilteredRecallsList = [];
         });
       }
     }
@@ -451,6 +527,43 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         ),
                       ),
                     ],
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Test Button for USDA Recall Details V3
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      // Get a sample USDA recall to test with
+                      final usdaRecalls = await _recallService.getUsdaRecalls();
+                      if (usdaRecalls.isNotEmpty) {
+                        if (!mounted) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => UsdaRecallDetailsPageV3(recall: usdaRecalls.first),
+                          ),
+                        );
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFEC7A2D),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Test USDA Recall Details V3',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
 
@@ -831,11 +944,256 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         ],
                       ),
 
+                      const SizedBox(height: 20),
+
+                      // Recall Management Center Button
+                      Stack(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton(
+                              onPressed: () {
+                                // Navigate to RMC page
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) => const RmcPage(),
+                                  ),
+                                );
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF5DADE2),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                elevation: 2,
+                              ),
+                              child: const Text(
+                                'Recall Management Center',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                          _buildRecallBadge(_rmcOpenRecalls),
+                        ],
+                      ),
+
                       const SizedBox(
                         height: 20,
                       ), // 20px spacing after last button row
                     ],
                   ),
+                ),
+
+                const SizedBox(height: 24),
+
+                // Saved Recalls Carousel Section
+                if (_savedRecallsList.isNotEmpty) ...[
+                  // Title
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text(
+                      'Your Saved Recalls',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Carousel
+                  SizedBox(
+                    height: 315,
+                    child: ScrollConfiguration(
+                      behavior: ScrollConfiguration.of(context).copyWith(
+                        dragDevices: {
+                          PointerDeviceKind.touch,
+                          PointerDeviceKind.mouse,
+                        },
+                      ),
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        itemCount: _savedRecallsList.length,
+                        separatorBuilder: (context, index) => const SizedBox(width: 15),
+                        itemBuilder: (context, index) {
+                          return SizedBox(
+                            width: (MediaQuery.of(context).size.width - 32 - 30) / 2.5,
+                            child: SmallMainPageRecallCard(
+                              recall: _savedRecallsList[index],
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                // SmartFiltered Recalls Carousel Section
+                FutureBuilder<SubscriptionInfo>(
+                  future: SubscriptionService().getSubscriptionInfo(),
+                  builder: (context, snapshot) {
+                    final hasPremiumAccess = snapshot.data?.hasPremiumAccess ?? false;
+                    final hasRecalls = _smartFilteredRecallsList.isNotEmpty;
+
+                    if (!hasRecalls && !hasPremiumAccess) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text(
+                            'Your SmartFiltered Recalls',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: hasPremiumAccess ? Colors.white : Colors.white38,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Carousel
+                        Opacity(
+                          opacity: hasPremiumAccess ? 1.0 : 0.4,
+                          child: SizedBox(
+                            height: 315,
+                            child: hasRecalls
+                                ? ScrollConfiguration(
+                                    behavior: ScrollConfiguration.of(context).copyWith(
+                                      dragDevices: {
+                                        PointerDeviceKind.touch,
+                                        PointerDeviceKind.mouse,
+                                      },
+                                    ),
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      physics: const AlwaysScrollableScrollPhysics(),
+                                      itemCount: _smartFilteredRecallsList.length,
+                                      separatorBuilder: (context, index) => const SizedBox(width: 15),
+                                      itemBuilder: (context, index) {
+                                        return SizedBox(
+                                          width: (MediaQuery.of(context).size.width - 32 - 30) / 2.5,
+                                          child: IgnorePointer(
+                                            ignoring: !hasPremiumAccess,
+                                            child: SmallMainPageRecallCard(
+                                              recall: _smartFilteredRecallsList[index],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : Center(
+                                    child: Text(
+                                      hasPremiumAccess
+                                          ? 'No SmartFiltered recalls found'
+                                          : 'Upgrade to access SmartFiltered recalls',
+                                      style: TextStyle(
+                                        color: hasPremiumAccess ? Colors.white70 : Colors.white38,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+                    );
+                  },
+                ),
+
+                // RMC Recalls Carousel Section
+                FutureBuilder<SubscriptionInfo>(
+                  future: SubscriptionService().getSubscriptionInfo(),
+                  builder: (context, snapshot) {
+                    final hasPremiumAccess = snapshot.data?.hasPremiumAccess ?? false;
+                    final hasRecalls = _rmcRecallsList.isNotEmpty;
+
+                    // Hide from free users completely
+                    if (!hasPremiumAccess) {
+                      return const SizedBox.shrink();
+                    }
+
+                    if (!hasRecalls) {
+                      return const SizedBox.shrink();
+                    }
+
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Title
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: Text(
+                            'Your Recall Management Recalls',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: hasPremiumAccess ? Colors.white : Colors.white38,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        // Carousel
+                        Opacity(
+                          opacity: hasPremiumAccess ? 1.0 : 0.4,
+                          child: SizedBox(
+                            height: 315,
+                            child: hasRecalls
+                                ? ScrollConfiguration(
+                                    behavior: ScrollConfiguration.of(context).copyWith(
+                                      dragDevices: {
+                                        PointerDeviceKind.touch,
+                                        PointerDeviceKind.mouse,
+                                      },
+                                    ),
+                                    child: ListView.separated(
+                                      scrollDirection: Axis.horizontal,
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                                      physics: const AlwaysScrollableScrollPhysics(),
+                                      itemCount: _rmcRecallsList.length,
+                                      separatorBuilder: (context, index) => const SizedBox(width: 15),
+                                      itemBuilder: (context, index) {
+                                        return SizedBox(
+                                          width: (MediaQuery.of(context).size.width - 32 - 30) / 2.5,
+                                          child: IgnorePointer(
+                                            ignoring: !hasPremiumAccess,
+                                            child: SmallMainPageRecallCard(
+                                              recall: _rmcRecallsList[index],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : Center(
+                                    child: Text(
+                                      hasPremiumAccess
+                                          ? 'No active RMC recalls found'
+                                          : 'Upgrade to access Recall Management',
+                                      style: TextStyle(
+                                        color: hasPremiumAccess ? Colors.white70 : Colors.white38,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 16),
