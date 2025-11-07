@@ -207,20 +207,13 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
                     onTap: onToggleSaved,
                     child: Container(
                       padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.9),
+                      decoration: const BoxDecoration(
+                        color: Colors.black,
                         shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.1),
-                            blurRadius: 2,
-                            offset: const Offset(0, 1),
-                          ),
-                        ],
                       ),
                       child: Icon(
                         isSaved ? Icons.favorite : Icons.favorite_border,
-                        color: isSaved ? Colors.green : Colors.grey.shade600,
+                        color: isSaved ? Color(0xFF4CAF50) : Colors.white,
                         size: 18,
                       ),
                     ),

@@ -5,7 +5,7 @@ import '../../models/recommended_product.dart';
 import '../premium_section_wrapper.dart';
 import '../../services/subscription_service.dart';
 
-class SharedRecommendedProductsAccordion extends StatefulWidget {
+class SharedRecommendedProductsAccordion extends StatelessWidget {
   final RecallData recall;
   final bool? isPremiumUser; // Optional override for premium status
 
@@ -15,18 +15,9 @@ class SharedRecommendedProductsAccordion extends StatefulWidget {
     super.key,
   });
 
-  @override
-  State<SharedRecommendedProductsAccordion> createState() =>
-      _SharedRecommendedProductsAccordionState();
-}
-
-class _SharedRecommendedProductsAccordionState
-    extends State<SharedRecommendedProductsAccordion> {
-  bool _expanded = false;
-
   Future<bool> _checkPremiumAccess() async {
-    if (widget.isPremiumUser != null) {
-      return widget.isPremiumUser!;
+    if (isPremiumUser != null) {
+      return isPremiumUser!;
     }
     final subscription = await SubscriptionService().getSubscriptionInfo();
     return subscription.hasPremiumAccess;
@@ -55,62 +46,44 @@ class _SharedRecommendedProductsAccordionState
           );
         }
 
-        // If premium, show normal accordion
-        return _buildAccordionContent();
+        // If premium, show normal section
+        return _buildSectionContent();
       },
     );
   }
 
-  Widget _buildAccordionContent() {
+  Widget _buildSectionContent() {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: const Color(0xFF2A4A5C),
         borderRadius: BorderRadius.circular(18),
       ),
-      child: Column(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: () {
-              setState(() {
-                _expanded = !_expanded;
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Recommended Replacement Items',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ),
-                  Icon(
-                    _expanded ? Icons.remove : Icons.add,
-                    color: Colors.white,
-                  ),
-                ],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Section Title
+            const Text(
+              'Recommended Replacement Items',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
             ),
-          ),
-          if (_expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: _buildProductsList(),
-            ),
-        ],
+            const SizedBox(height: 12),
+            // Content (always shown)
+            _buildProductsList(),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildProductsList() {
-    final recommendations = widget.recall.recommendations;
+    final recommendations = recall.recommendations;
 
     if (recommendations.isEmpty) {
       return Align(

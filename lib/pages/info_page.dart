@@ -8,11 +8,6 @@ import 'main_navigation.dart';
 import 'rmc_page.dart';
 import 'recalls_by_category_page.dart';
 import '../services/subscription_service.dart';
-import '../services/saved_recalls_service.dart';
-import '../services/filter_state_service.dart';
-import '../services/recall_data_service.dart';
-import '../services/api_service.dart';
-import '../models/recall_data.dart';
 
 class InfoPage extends StatefulWidget {
   final VoidCallback? onNavigateToRecalls;
@@ -25,15 +20,11 @@ class InfoPage extends StatefulWidget {
 
 class _InfoPageState extends State<InfoPage> {
   SubscriptionTier _subscriptionTier = SubscriptionTier.guest;
-  int _savedRecallsCount = 0;
-  int _filteredRecallsCount = 0;
-  int _rmcOpenCount = 0;
 
   @override
   void initState() {
     super.initState();
     _loadSubscriptionTier();
-    _loadCounts();
   }
 
   Future<void> _loadSubscriptionTier() async {
@@ -48,128 +39,6 @@ class _InfoPageState extends State<InfoPage> {
     } catch (e) {
       // Silently fail - subscription tier will remain guest
     }
-  }
-
-  Future<void> _loadCounts() async {
-    try {
-      // Load saved recalls count
-      final savedRecallsService = SavedRecallsService();
-      final savedRecalls = await savedRecallsService.getSavedRecalls();
-
-      // Load filtered recalls count
-      final filterStateService = FilterStateService();
-      final filterState = await filterStateService.loadFilterState();
-      final recallDataService = RecallDataService();
-      final fdaRecalls = await recallDataService.getFdaRecalls();
-      final usdaRecalls = await recallDataService.getUsdaRecalls();
-
-      // Get subscription tier for date filtering
-      final subscriptionService = SubscriptionService();
-      final subscriptionInfo = await subscriptionService.getSubscriptionInfo();
-      final tier = subscriptionInfo.tier;
-
-      final now = DateTime.now();
-      final DateTime cutoff;
-      if (tier == SubscriptionTier.guest || tier == SubscriptionTier.free) {
-        cutoff = now.subtract(const Duration(days: 30));
-      } else {
-        cutoff = DateTime(now.year, 1, 1);
-      }
-
-      final recentFdaRecalls = fdaRecalls
-          .where((recall) => recall.dateIssued.isAfter(cutoff))
-          .toList();
-      final recentUsdaRecalls = usdaRecalls
-          .where((recall) => recall.dateIssued.isAfter(cutoff))
-          .toList();
-
-      List<RecallData> allRecentRecalls = [
-        ...recentFdaRecalls,
-        ...recentUsdaRecalls,
-      ];
-
-      List<RecallData> filtered = allRecentRecalls;
-      if (filterState.brandFilters.isNotEmpty ||
-          filterState.productFilters.isNotEmpty) {
-        filtered = allRecentRecalls.where((recall) {
-          bool matchesBrand = filterState.brandFilters.isEmpty;
-          bool matchesProduct = filterState.productFilters.isEmpty;
-
-          if (filterState.brandFilters.isNotEmpty) {
-            matchesBrand = false;
-            for (String brandFilter in filterState.brandFilters) {
-              if (recall.brandName.toLowerCase().contains(
-                brandFilter.toLowerCase(),
-              )) {
-                matchesBrand = true;
-                break;
-              }
-            }
-          }
-
-          if (filterState.productFilters.isNotEmpty) {
-            matchesProduct = false;
-            for (String productFilter in filterState.productFilters) {
-              if (recall.productName.toLowerCase().contains(
-                productFilter.toLowerCase(),
-              )) {
-                matchesProduct = true;
-                break;
-              }
-            }
-          }
-
-          return matchesBrand || matchesProduct;
-        }).toList();
-      }
-
-      // Load RMC open count (recalls NOT completed)
-      final apiService = ApiService();
-      final rmcRecalls = await apiService.fetchActiveRecalls();
-      final openRecalls = rmcRecalls
-          .where((r) => r.recallResolutionStatus != 'Completed')
-          .length;
-
-      if (mounted) {
-        setState(() {
-          _savedRecallsCount = savedRecalls.length;
-          _filteredRecallsCount = filtered.length;
-          _rmcOpenCount = openRecalls;
-        });
-      }
-    } catch (e) {
-      print('Error loading counts: $e');
-    }
-  }
-
-  Widget _buildCountBadge(int count) {
-    if (count == 0) return const SizedBox.shrink();
-
-    return Container(
-      margin: const EdgeInsets.only(right: 8),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.red,
-        shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFF2A4A5C), width: 2),
-      ),
-      constraints: const BoxConstraints(
-        minWidth: 28,
-        minHeight: 28,
-      ),
-      child: Center(
-        child: Text(
-          count > 99 ? '99+' : count.toString(),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 11,
-            fontWeight: FontWeight.bold,
-            height: 1,
-          ),
-          textAlign: TextAlign.center,
-        ),
-      ),
-    );
   }
 
   void _showSmartFiltersUpgradeModal() {
@@ -246,24 +115,6 @@ class _InfoPageState extends State<InfoPage> {
                   padding: const EdgeInsets.symmetric(vertical: 16.0),
                   child: Row(
                     children: [
-                      // Back button - navigate to home
-                      IconButton(
-                        onPressed: () {
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(
-                              builder: (context) =>
-                                  const MainNavigation(initialIndex: 0),
-                            ),
-                            (route) => false,
-                          );
-                        },
-                        icon: const Icon(
-                          Icons.arrow_back,
-                          color: Colors.white,
-                          size: 24,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
                       // App Icon - Clickable to return to Home
                       GestureDetector(
                         onTap: () {
@@ -407,16 +258,10 @@ class _InfoPageState extends State<InfoPage> {
                           'Advanced filtering options',
                           style: TextStyle(color: Colors.white70),
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildCountBadge(_filteredRecallsCount),
-                            const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                              color: Colors.white70,
-                            ),
-                          ],
+                        trailing: const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: Colors.white70,
                         ),
                         onTap: () {
                           Navigator.of(context).push(
@@ -437,16 +282,10 @@ class _InfoPageState extends State<InfoPage> {
                           'View your saved recalls',
                           style: TextStyle(color: Colors.white70),
                         ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            _buildCountBadge(_savedRecallsCount),
-                            const Icon(
-                              Icons.arrow_forward_ios,
-                              size: 16,
-                              color: Colors.white70,
-                            ),
-                          ],
+                        trailing: const Icon(
+                          Icons.arrow_forward_ios,
+                          size: 16,
+                          color: Colors.white70,
                         ),
                         onTap: () {
                           Navigator.of(context).push(
@@ -571,16 +410,10 @@ class _InfoPageState extends State<InfoPage> {
                       'Track and manage your recalls',
                       style: TextStyle(color: Colors.white70),
                     ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildCountBadge(_rmcOpenCount),
-                        const Icon(
-                          Icons.arrow_forward_ios,
-                          size: 16,
-                          color: Colors.white70,
-                        ),
-                      ],
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Colors.white70,
                     ),
                     onTap: () {
                       Navigator.of(context).push(

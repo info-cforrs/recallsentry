@@ -26,6 +26,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
   final ArticleService _articleService = ArticleService();
   final SubscriptionService _subscriptionService = SubscriptionService();
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
   List<RecallData> _allRecalls = [];
   List<RecallData> _filteredRecalls = [];
@@ -41,6 +42,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
   List<String> _availableRiskLevels = []; // Dynamic risk levels from actual data
   List<String> _availableCategories = []; // Dynamic categories from actual data
   List<String> _availableAgencies = []; // Dynamic agencies from actual data
+  bool _showSearchAndFilters = true;
   bool _isSearchFieldFocused = false; // Track if search field is currently focused
   bool _keepButtonVisible = false; // Keep button visible even when focus is lost (during save)
 
@@ -49,6 +51,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
     super.initState();
     print('🔥 All Recalls Page: initState() called - starting to load recalls');
     _loadAllRecalls();
+    _scrollController.addListener(_onScroll);
 
     // Listen to focus changes
     _searchFocusNode.addListener(() {
@@ -58,9 +61,23 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
     });
   }
 
+  void _onScroll() {
+    if (_scrollController.hasClients) {
+      final isAtTop = _scrollController.offset <= 10;
+      final shouldShow = isAtTop;
+
+      if (shouldShow != _showSearchAndFilters) {
+        setState(() {
+          _showSearchAndFilters = shouldShow;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     _searchFocusNode.dispose();
     super.dispose();
   }
@@ -1107,6 +1124,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
     );
 
     return ListView(
+      controller: _scrollController,
       padding: const EdgeInsets.all(16),
       children: widgets,
     );
@@ -1192,11 +1210,11 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
               ),
             ),
 
+            if (_showSearchAndFilters) ...[
             // Search, Filter, and Sort Section
-            Column(
-              children: [
-                // Search Field
-                Padding(
+            const SizedBox(height: 16),
+            // Search Field
+            Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: TextField(
                     controller: _searchController,
@@ -1347,9 +1365,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 16),
-              ],
-            ),
+            ],
 
             // Main Content Area
             Expanded(
@@ -1411,10 +1427,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
               },
               items: const [
                 BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.warning),
-                  label: 'Info',
-                ),
+                BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.settings),
                   label: 'Settings',

@@ -239,11 +239,18 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: 1, // Recalls tab
+        backgroundColor: const Color(0xFF2C3E50),
+        selectedItemColor: const Color(0xFF64B5F6),
+        unselectedItemColor: Colors.white54,
+        currentIndex: 1,
+        elevation: 8,
+        selectedFontSize: 14,
+        unselectedFontSize: 12,
         onTap: (index) {
           switch (index) {
             case 0:
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 0),
                 ),
@@ -251,7 +258,8 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
               );
               break;
             case 1:
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 1),
                 ),
@@ -259,7 +267,8 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
               );
               break;
             case 2:
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 2),
                 ),
@@ -268,29 +277,15 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
               break;
           }
         },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.grey.shade500,
-        selectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-        elevation: 8,
-        selectedFontSize: 12,
-        unselectedFontSize: 10,
-        iconSize: 24,
         items: const [
+
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
+        
         ],
       ),
     );

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/recall_data.dart';
 import '../services/saved_recalls_service.dart';
-import '../pages/usda_recall_details_pagev2.dart';
+import '../pages/usda_recall_details_page.dart';
 
 class SmallUsdaRecallCard extends StatefulWidget {
   final RecallData recall;
@@ -51,7 +51,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => UsdaRecallDetailsPageV2(recall: widget.recall),
+            builder: (context) => UsdaRecallDetailsPage(recall: widget.recall),
           ),
         );
       },
@@ -221,12 +221,12 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
                           child: Container(
                             padding: const EdgeInsets.all(4),
                             decoration: const BoxDecoration(
-                              color: Color(0xFF4CAF50),
+                              color: Colors.black,
                               shape: BoxShape.circle,
                             ),
                             child: Icon(
                               _isSaved ? Icons.favorite : Icons.favorite_border,
-                              color: Colors.white,
+                              color: _isSaved ? Color(0xFF4CAF50) : Colors.white,
                               size: 16,
                             ),
                           ),

@@ -120,7 +120,6 @@ class RecallData {
   final String usdaFoodSafetyQuestionsPhone;
   final String usdaFoodSafetyQuestionsEmail;
   final String recallResolutionStatus;
-  final bool inRmc;
 
   RecallData({
     this.usdaRecallId = '',
@@ -213,7 +212,6 @@ class RecallData {
     this.usdaFoodSafetyQuestionsPhone = '',
     this.usdaFoodSafetyQuestionsEmail = '',
     this.recallResolutionStatus = 'Not Started',
-    this.inRmc = false,
   });
 
   // This converts data FROM a spreadsheet/JSON into a RecallData object
@@ -400,7 +398,6 @@ class RecallData {
       usdaFoodSafetyQuestionsEmail:
           json['USDA-food-safety-questions-email'] ?? '',
       recallResolutionStatus: json['recall_resolution_status'] ?? 'Not Started',
-      inRmc: json['in_rmc'] ?? false,
     );
   }
 
@@ -501,7 +498,6 @@ class RecallData {
       'USDA-food-safety-questions-phone': usdaFoodSafetyQuestionsPhone,
       'USDA-food-safety-questions-email': usdaFoodSafetyQuestionsEmail,
       'recall_resolution_status': recallResolutionStatus,
-      'in_rmc': inRmc,
     };
   }
 

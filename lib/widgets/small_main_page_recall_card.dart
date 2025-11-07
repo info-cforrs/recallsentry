@@ -2,12 +2,21 @@ import 'package:flutter/material.dart';
 import '../models/recall_data.dart';
 import '../services/saved_recalls_service.dart';
 import '../pages/fda_recall_details_pagev2.dart';
-import '../pages/usda_recall_details_pagev2.dart';
+import '../pages/usda_recall_details_page.dart';
 
 class SmallMainPageRecallCard extends StatefulWidget {
   final RecallData recall;
+  final String? currentStatus;
+  final String? filterName;
+  final VoidCallback? onTap;
 
-  const SmallMainPageRecallCard({super.key, required this.recall});
+  const SmallMainPageRecallCard({
+    super.key,
+    required this.recall,
+    this.currentStatus,
+    this.filterName,
+    this.onTap,
+  });
 
   @override
   State<SmallMainPageRecallCard> createState() => _SmallMainPageRecallCardState();
@@ -79,13 +88,13 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
+      onTap: widget.onTap ?? () {
         // Navigate to appropriate details page based on agency
         if (widget.recall.agency.toUpperCase() == 'USDA') {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => UsdaRecallDetailsPageV2(recall: widget.recall),
+              builder: (context) => UsdaRecallDetailsPage(recall: widget.recall),
             ),
           );
         } else {
@@ -105,71 +114,142 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image with Save Icon (with rounded top corners only)
-            Stack(
-              children: [
-                Container(
-                  width: double.infinity,
-                  height: 180,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(16),
-                      topRight: Radius.circular(16),
+            // Product Image with Save Icon (square, with rounded top corners only)
+            LayoutBuilder(
+              builder: (context, constraints) {
+                return Stack(
+                  children: [
+                    Container(
+                      width: constraints.maxWidth,
+                      height: constraints.maxWidth,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                        ),
+                      ),
+                      child: widget.recall.imageUrl.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: const BorderRadius.only(
+                                topLeft: Radius.circular(16),
+                                topRight: Radius.circular(16),
+                              ),
+                              child: Image.network(
+                                widget.recall.imageUrl.startsWith('http')
+                                    ? widget.recall.imageUrl
+                                    : 'https://api.centerforrecallsafety.com${widget.recall.imageUrl}',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Icon(
+                                      Icons.image_not_supported,
+                                      size: 40,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                          : const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 40,
+                                color: Colors.grey,
+                              ),
+                            ),
                     ),
-                  ),
-                  child: widget.recall.imageUrl.isNotEmpty
-                      ? ClipRRect(
-                          borderRadius: const BorderRadius.only(
-                            topLeft: Radius.circular(16),
-                            topRight: Radius.circular(16),
+                    // Heart/Save overlay (top right corner with dark background)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: GestureDetector(
+                        onTap: _toggleSave,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: const BoxDecoration(
+                            color: Colors.black,
+                            shape: BoxShape.circle,
                           ),
-                          child: Image.network(
-                            widget.recall.imageUrl.startsWith('http')
-                                ? widget.recall.imageUrl
-                                : 'https://api.centerforrecallsafety.com${widget.recall.imageUrl}',
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return const Center(
-                                child: Icon(
-                                  Icons.image_not_supported,
-                                  size: 40,
-                                  color: Colors.grey,
-                                ),
-                              );
-                            },
-                          ),
-                        )
-                      : const Center(
                           child: Icon(
-                            Icons.image_not_supported,
-                            size: 40,
-                            color: Colors.grey,
+                            _isSaved ? Icons.favorite : Icons.favorite_border,
+                            color: _isSaved ? Color(0xFF4CAF50) : Colors.white,
+                            size: 20,
                           ),
                         ),
-                ),
-                // Heart/Save overlay (top right corner with dark background)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: GestureDetector(
-                    onTap: _toggleSave,
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1D3547),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _isSaved ? Icons.favorite : Icons.favorite_border,
-                        color: Colors.white,
-                        size: 20,
                       ),
                     ),
-                  ),
-                ),
-              ],
+                  ],
+                );
+              },
             ),
+            // Category row with background color #0C5876
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              color: const Color(0xFF0C5876),
+              child: Text(
+                widget.recall.category.isNotEmpty
+                    ? widget.recall.category
+                    : 'N/A',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // RMC Current Status row (if provided)
+            if (widget.currentStatus != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                color: const Color(0xFF0C5876),
+                child: Text(
+                  widget.currentStatus!,
+                  style: const TextStyle(
+                    color: Color(0xFF5DADE2),
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            // Filter Name row (if provided)
+            if (widget.filterName != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                color: const Color(0xFF0C5876),
+                child: Row(
+                  children: [
+                    const Text(
+                      'Filter: ',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    Expanded(
+                      child: Text(
+                        widget.filterName!,
+                        style: const TextStyle(
+                          color: Color(0xFF5DADE2),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             // Content area with padding
             Padding(
               padding: const EdgeInsets.all(12),

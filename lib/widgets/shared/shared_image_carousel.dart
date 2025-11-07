@@ -50,104 +50,98 @@ class _SharedImageCarouselState extends State<SharedImageCarousel> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
+        // Main image area
         SizedBox(
           height: widget.height,
           width: widget.width,
-          child: Stack(
-            children: [
-              PageView.builder(
-                controller: _controller,
-                itemCount: imageUrls.length,
-                onPageChanged: (index) {
-                  setState(() {
-                    _currentPage = index;
-                  });
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: imageUrls.length,
+            onPageChanged: (index) {
+              setState(() {
+                _currentPage = index;
+              });
+            },
+            itemBuilder: (context, index) {
+              final url = imageUrls[index];
+              return GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => _FullScreenImageView(imageUrl: url),
+                      fullscreenDialog: true,
+                    ),
+                  );
                 },
-                itemBuilder: (context, index) {
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  child: Image.network(
+                    url,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => Center(
+                      child: Icon(
+                        Icons.broken_image,
+                        size: 80,
+                        color: Colors.grey[400],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // Thumbnail previews (only show if more than 1 image)
+        if (imageUrls.length > 1)
+          Padding(
+            padding: const EdgeInsets.only(top: 12.0),
+            child: SizedBox(
+              height: 60,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(imageUrls.length, (index) {
                   final url = imageUrls[index];
+                  final isSelected = _currentPage == index;
                   return GestureDetector(
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => _FullScreenImageView(imageUrl: url),
-                          fullscreenDialog: true,
-                        ),
+                      _controller.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
                       );
                     },
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(widget.borderRadius),
-                      child: Image.network(
-                        url,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) => Center(
-                          child: Icon(
-                            Icons.broken_image,
-                            size: 80,
-                            color: Colors.grey[400],
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: 60,
+                      height: 60,
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                          color: isSelected ? Colors.white : Colors.transparent,
+                          width: 2,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(6),
+                        child: Image.network(
+                          url,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) => Center(
+                            child: Icon(
+                              Icons.broken_image,
+                              size: 24,
+                              color: Colors.grey[400],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   );
-                },
+                }),
               ),
-              if (imageUrls.length > 1)
-                Positioned(
-                  left: 8,
-                  top: 0,
-                  bottom: 0,
-                  child: Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(32),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back_ios, size: 36),
-                        color: Colors.black,
-                        onPressed: _currentPage > 0
-                            ? () {
-                                _controller.previousPage(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              }
-                            : null,
-                        tooltip: 'Back',
-                      ),
-                    ),
-                  ),
-                ),
-              if (imageUrls.length > 1)
-                Positioned(
-                  right: 8,
-                  top: 0,
-                  bottom: 0,
-                  child: Center(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.grey.withOpacity(0.6),
-                        borderRadius: BorderRadius.circular(32),
-                      ),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_forward_ios, size: 36),
-                        color: Colors.black,
-                        onPressed: _currentPage < imageUrls.length - 1
-                            ? () {
-                                _controller.nextPage(
-                                  duration: const Duration(milliseconds: 300),
-                                  curve: Curves.easeInOut,
-                                );
-                              }
-                            : null,
-                        tooltip: 'Next',
-                      ),
-                    ),
-                  ),
-                ),
-            ],
+            ),
           ),
-        ),
+        // Keep old dot indicators if showIndicators is true (for backward compatibility)
         if (widget.showIndicators && imageUrls.length > 1)
           Padding(
             padding: const EdgeInsets.only(top: 8.0, bottom: 4.0),

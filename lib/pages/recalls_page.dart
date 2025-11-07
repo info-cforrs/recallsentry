@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'all_fda_recalls_page.dart';
 import 'all_usda_recalls_page.dart';
 import 'advanced_filter_page.dart';
+import 'main_navigation.dart';
 
 class RecallsPage extends StatelessWidget {
   const RecallsPage({super.key});
@@ -266,6 +267,54 @@ class RecallsPage extends StatelessWidget {
             ],
           ),
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF2C3E50),
+        selectedItemColor: const Color(0xFF64B5F6),
+        unselectedItemColor: Colors.white54,
+        currentIndex: 1,
+        elevation: 8,
+        selectedFontSize: 14,
+        unselectedFontSize: 12,
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainNavigation(initialIndex: 0),
+                ),
+                (route) => false,
+              );
+              break;
+            case 1:
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainNavigation(initialIndex: 1),
+                ),
+                (route) => false,
+              );
+              break;
+            case 2:
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainNavigation(initialIndex: 2),
+                ),
+                (route) => false,
+              );
+              break;
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
       ),
     );
   }

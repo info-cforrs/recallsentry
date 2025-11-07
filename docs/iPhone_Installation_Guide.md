@@ -389,6 +389,7 @@ If you prefer using Xcode instead of `flutter run`:
 3. ✅ Install Xcode and Flutter on MacBook
 4. ✅ Configure signing in Xcode
 5. ✅ Run `pod install` in ios folder
+
 6. ✅ Connect iPhone and run `flutter run --release`
 7. ✅ Trust developer certificate on iPhone
 8. ✅ Launch app!
@@ -410,3 +411,30 @@ If you prefer using Xcode instead of `flutter run`:
 
 *Document created: 2025-11-02*
 *Project: RecallSentry Flutter Application*
+
+
+
+
+
+
+Option 1: Free Apple ID (Current Setup) - Requires Re-trusting Every Time
+
+With a free Apple Developer account, the certificate expires daily and you need to re-trust after each build. Here's the process: Every time you want to test on your iPhone:
+
+Delete the old app from your iPhone
+
+In Terminal, run:
+cd /Users/markmayeux/recallsentry && /Users/markmayeux/Development/flutter/bin/flutter run -d 00008130-001124391821401C
+
+Wait for it to install on your iPhone
+
+Go to Settings → General → VPN & Device Management
+
+Trust your certificate (Apple Development: mmayeux@hotmail.com)
+
+Launch the app
+
+This works but is tedious for daily testing.
+
+
+

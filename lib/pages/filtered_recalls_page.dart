@@ -3,7 +3,8 @@ import 'main_navigation.dart';
 import 'advanced_filter_page.dart';
 import '../services/recall_data_service.dart';
 import '../models/recall_data.dart';
-import '../widgets/simple_recall_card.dart';
+import '../widgets/small_fda_recall_card.dart';
+import '../widgets/small_usda_recall_card.dart';
 import '../widgets/custom_back_button.dart';
 
 class FilteredRecallsPage extends StatefulWidget {
@@ -404,10 +405,9 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                               itemCount: _filteredRecalls.length,
                               itemBuilder: (context, index) {
                                 final recall = _filteredRecalls[index];
-                                return SimpleRecallCard(
-                                  recall: recall,
-                                  agency: recall.agency,
-                                );
+                                return recall.agency.toUpperCase() == 'USDA'
+                                    ? SmallUsdaRecallCard(recall: recall)
+                                    : SmallFdaRecallCard(recall: recall);
                               },
                             )
                           : Center(
@@ -462,11 +462,18 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF2C3E50),
+        selectedItemColor: const Color(0xFF64B5F6),
+        unselectedItemColor: Colors.white54,
         currentIndex: _currentIndex,
+        elevation: 8,
+        selectedFontSize: 14,
+        unselectedFontSize: 12,
         onTap: (index) {
           switch (index) {
             case 0:
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 0),
                 ),
@@ -474,7 +481,8 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
               );
               break;
             case 1:
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 1),
                 ),
@@ -482,7 +490,8 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
               );
               break;
             case 2:
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 2),
                 ),
@@ -491,26 +500,15 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
               break;
           }
         },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-        elevation: 8,
         items: const [
+
           BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.error), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
+        
         ],
       ),
     );

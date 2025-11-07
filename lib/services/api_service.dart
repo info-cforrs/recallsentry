@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/recall_data.dart';
 import '../models/recommended_product.dart';
+import '../models/rmc_enrollment.dart';
 import '../config/app_config.dart';
 import 'auth_service.dart';
 
@@ -373,8 +374,8 @@ class ApiService {
     }
   }
 
-  /// Enroll a recall into the Recall Management Center
-  /// Sets in_rmc=True and initializes recall_resolution_status to 'Open'
+  /// Legacy method - Creates RmcEnrollment for backward compatibility
+  /// Note: This method is deprecated, use enrollRecallInRmc() instead
   Future<RecallData> enrollInRmc(RecallData recall) async {
     if (recall.databaseId == null) {
       throw Exception('Cannot enroll recall: missing database ID');
@@ -399,6 +400,238 @@ class ApiService {
       }
     } catch (e) {
       print('❌ Exception enrolling recall in RMC: $e');
+      rethrow;
+    }
+  }
+
+  // ============================================================================
+  // NEW RMC ENROLLMENT API METHODS (User-specific)
+  // ============================================================================
+
+  /// Fetch all RMC enrollments for the authenticated user
+  Future<List<RmcEnrollment>> fetchRmcEnrollments() async {
+    try {
+      print('🌐 Fetching RMC enrollments');
+
+      final response = await AuthService().authenticatedRequest(
+        'GET',
+        '/rmc-enrollments/',
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final results = jsonData['results'] as List;
+        print('✅ Successfully fetched ${results.length} RMC enrollments');
+        return results.map((json) => RmcEnrollment.fromJson(json as Map<String, dynamic>)).toList();
+      } else {
+        print('❌ Error fetching RMC enrollments: ${response.statusCode}');
+        throw Exception('Failed to fetch RMC enrollments: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception fetching RMC enrollments: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch active RMC enrollments (excluding "Not Active" status)
+  Future<List<RmcEnrollment>> fetchActiveRmcEnrollments() async {
+    try {
+      print('🌐 Fetching active RMC enrollments');
+
+      final response = await AuthService().authenticatedRequest(
+        'GET',
+        '/rmc-enrollments/active/',
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body) as List;
+        print('✅ Successfully fetched ${jsonData.length} active RMC enrollments');
+        return jsonData.map((json) => RmcEnrollment.fromJson(json as Map<String, dynamic>)).toList();
+      } else {
+        print('❌ Error fetching active RMC enrollments: ${response.statusCode}');
+        throw Exception('Failed to fetch active RMC enrollments: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception fetching active RMC enrollments: $e');
+      rethrow;
+    }
+  }
+
+  /// Fetch RMC enrollments by status
+  Future<List<RmcEnrollment>> fetchRmcEnrollmentsByStatus(String status) async {
+    try {
+      print('🌐 Fetching RMC enrollments with status: $status');
+
+      final uri = Uri.parse('${AppConfig.apiBaseUrl}/rmc-enrollments/').replace(
+        queryParameters: {'status': status},
+      );
+
+      final response = await AuthService().authenticatedRequest(
+        'GET',
+        uri.toString().replaceFirst(AppConfig.apiBaseUrl, ''),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final results = jsonData['results'] as List;
+        print('✅ Successfully fetched ${results.length} RMC enrollments with status $status');
+        return results.map((json) => RmcEnrollment.fromJson(json as Map<String, dynamic>)).toList();
+      } else {
+        print('❌ Error fetching RMC enrollments by status: ${response.statusCode}');
+        throw Exception('Failed to fetch RMC enrollments: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception fetching RMC enrollments by status: $e');
+      rethrow;
+    }
+  }
+
+  /// Enroll a recall in RMC for the authenticated user
+  Future<RmcEnrollment> enrollRecallInRmc({
+    required int recallId,
+    String status = 'Not Active',
+    String? lotNumber,
+    String? purchaseDate,
+    String? purchaseLocation,
+    double? estimatedValue,
+  }) async {
+    try {
+      print('🌐 Enrolling recall $recallId in RMC with status: $status');
+
+      final body = <String, dynamic>{
+        'recall_id': recallId,
+        'status': status,
+      };
+
+      if (lotNumber != null && lotNumber.isNotEmpty) {
+        body['lot_number'] = lotNumber;
+      }
+      if (purchaseDate != null && purchaseDate.isNotEmpty) {
+        body['purchase_date'] = purchaseDate;
+      }
+      if (purchaseLocation != null && purchaseLocation.isNotEmpty) {
+        body['purchase_location'] = purchaseLocation;
+      }
+      if (estimatedValue != null) {
+        body['estimated_value'] = estimatedValue.toString();
+      }
+
+      final response = await AuthService().authenticatedRequest(
+        'POST',
+        '/rmc-enrollments/enroll_recall/',
+        body: body,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final jsonData = json.decode(response.body);
+        print('✅ Successfully enrolled recall $recallId in RMC');
+        return RmcEnrollment.fromJson(jsonData as Map<String, dynamic>);
+      } else {
+        print('❌ Error enrolling recall in RMC: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        throw Exception('Failed to enroll recall in RMC: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception enrolling recall in RMC: $e');
+      rethrow;
+    }
+  }
+
+  /// Update RMC enrollment status
+  Future<RmcEnrollment> updateRmcEnrollmentStatus(int enrollmentId, String newStatus) async {
+    try {
+      print('🌐 Updating RMC enrollment $enrollmentId status to: $newStatus');
+
+      final response = await AuthService().authenticatedRequest(
+        'POST',
+        '/rmc-enrollments/$enrollmentId/update_status/',
+        body: {'status': newStatus},
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        print('✅ Successfully updated RMC enrollment $enrollmentId status');
+        return RmcEnrollment.fromJson(jsonData as Map<String, dynamic>);
+      } else {
+        print('❌ Error updating RMC enrollment status: ${response.statusCode}');
+        print('Response body: ${response.body}');
+        throw Exception('Failed to update RMC enrollment status: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception updating RMC enrollment status: $e');
+      rethrow;
+    }
+  }
+
+  /// Get a specific RMC enrollment by ID
+  Future<RmcEnrollment> fetchRmcEnrollmentById(int enrollmentId) async {
+    try {
+      print('🌐 Fetching RMC enrollment $enrollmentId');
+
+      final response = await AuthService().authenticatedRequest(
+        'GET',
+        '/rmc-enrollments/$enrollmentId/',
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        print('✅ Successfully fetched RMC enrollment $enrollmentId');
+        return RmcEnrollment.fromJson(jsonData as Map<String, dynamic>);
+      } else {
+        print('❌ Error fetching RMC enrollment: ${response.statusCode}');
+        throw Exception('Failed to fetch RMC enrollment: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception fetching RMC enrollment: $e');
+      rethrow;
+    }
+  }
+
+  /// Get RMC enrollment for a specific recall (if exists)
+  Future<RmcEnrollment?> fetchRmcEnrollmentForRecall(int recallId) async {
+    try {
+      print('🌐 Fetching RMC enrollment for recall $recallId');
+
+      final enrollments = await fetchRmcEnrollmentsByRecallFilter(recallId);
+
+      if (enrollments.isNotEmpty) {
+        print('✅ Found RMC enrollment for recall $recallId');
+        return enrollments.first;
+      } else {
+        print('ℹ️ No RMC enrollment found for recall $recallId');
+        return null;
+      }
+    } catch (e) {
+      print('❌ Exception fetching RMC enrollment for recall: $e');
+      return null;
+    }
+  }
+
+  /// Fetch RMC enrollments filtered by recall ID
+  Future<List<RmcEnrollment>> fetchRmcEnrollmentsByRecallFilter(int recallId) async {
+    try {
+      print('🌐 Fetching RMC enrollments for recall $recallId');
+
+      final uri = Uri.parse('${AppConfig.apiBaseUrl}/rmc-enrollments/').replace(
+        queryParameters: {'recall': recallId.toString()},
+      );
+
+      final response = await AuthService().authenticatedRequest(
+        'GET',
+        uri.toString().replaceFirst(AppConfig.apiBaseUrl, ''),
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        final results = jsonData['results'] as List;
+        print('✅ Successfully fetched ${results.length} RMC enrollments for recall $recallId');
+        return results.map((json) => RmcEnrollment.fromJson(json as Map<String, dynamic>)).toList();
+      } else {
+        print('❌ Error fetching RMC enrollments for recall: ${response.statusCode}');
+        throw Exception('Failed to fetch RMC enrollments: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('❌ Exception fetching RMC enrollments for recall: $e');
       rethrow;
     }
   }

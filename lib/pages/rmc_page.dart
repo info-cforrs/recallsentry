@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models/recall_data.dart';
+import '../models/rmc_enrollment.dart';
 import '../services/api_service.dart';
-import 'rmc_list_page.dart';
+import 'rmc_status_page.dart';
 import 'main_navigation.dart';
 import '../widgets/custom_back_button.dart';
 
@@ -12,85 +13,107 @@ class RmcPage extends StatefulWidget {
   State<RmcPage> createState() => _RmcPageState();
 }
 
-class _RmcPageState extends State<RmcPage> {
-  List<RecallData> _activeRecalls = [];
+class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
+  List<RmcEnrollment> _enrollments = [];
   bool _isLoading = true;
   String? _error;
   String _selectedTimePeriod = 'ALL';
+  bool _hasLoadedOnce = false;
 
   @override
   void initState() {
     super.initState();
-    _loadActiveRecalls();
+    WidgetsBinding.instance.addObserver(this);
+    _loadEnrollments();
   }
 
-  Future<void> _loadActiveRecalls() async {
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Reload data when app comes back to foreground
+    if (state == AppLifecycleState.resumed && _hasLoadedOnce) {
+      _loadEnrollments();
+    }
+  }
+
+  Future<void> _loadEnrollments() async {
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final activeRecalls = await ApiService().fetchActiveRecalls();
+      // Fetch active enrollments (excludes "Not Active" status)
+      final enrollments = await ApiService().fetchActiveRmcEnrollments();
 
       setState(() {
-        _activeRecalls = activeRecalls;
+        _enrollments = enrollments;
         _isLoading = false;
+        _hasLoadedOnce = true;
       });
     } catch (e) {
       setState(() {
-        _error = 'Failed to load active recalls: $e';
+        _error = 'Failed to load RMC enrollments: $e';
         _isLoading = false;
+        _hasLoadedOnce = true;
       });
     }
   }
 
-  int _getOpenCount() {
-    // Count recalls that are NOT completed
-    return _activeRecalls
-        .where((r) => r.recallResolutionStatus != 'Completed')
+  // New status counters based on RMC enrollment statuses
+  int _getNotStartedCount() {
+    return _enrollments
+        .where((e) => e.status == 'Not Started')
         .length;
   }
 
-  int _getWaitingRefundCount() {
-    // Count recalls with status: Return 1B, Return 1A, or Dispose 1A
-    return _activeRecalls.where((r) {
-      final status = r.recallResolutionStatus;
-      return status == 'Return 1B: Item Shipped Back' ||
-          status == 'Return 1A: Brought to local Retailer' ||
-          status == 'Dispose 1A: Brought to local Retailer';
-    }).length;
-  }
-
-  int _getWaitingRefundByLocalRetailerCount() {
-    // Count recalls with status: Dispose 1A
-    return _activeRecalls
-        .where((r) =>
-            r.recallResolutionStatus == 'Dispose 1A: Brought to local Retailer')
+  int _getDiscontinuedUseCount() {
+    return _enrollments
+        .where((e) => e.status == 'In Progress - Discontinued Use')
         .length;
   }
 
-  int _getWaitingRefundByServiceCenterCount() {
-    // Count recalls with status: Repair 1A
-    return _activeRecalls
-        .where((r) =>
-            r.recallResolutionStatus == 'Repair 1A: Brought to Service Center')
+  int _getContactedManufacturerCount() {
+    return _enrollments
+        .where((e) => e.status == 'In Progress - Contacted Manufacturer')
         .length;
   }
 
-  int _getWaitingToRepairItemCount() {
-    // Count recalls with status: Repair 2A
-    return _activeRecalls
-        .where((r) =>
-            r.recallResolutionStatus == 'Repair 2A: Received Repair Kit or Parts')
+  int _getInProgressCount() {
+    return _enrollments
+        .where((e) {
+          final status = e.status.trim().toLowerCase();
+          // Only count true "In Progress" statuses, excluding specific subcategories
+          return status != 'closed' &&
+                 status != 'completed' &&
+                 status != 'not started' &&
+                 status != 'in progress - discontinued use' &&
+                 status != 'in progress - contacted manufacturer';
+        })
         .length;
   }
 
-  int _getClosedCount() {
-    // Count recalls with status: Completed
-    return _activeRecalls
-        .where((r) => r.recallResolutionStatus == 'Completed')
+  int _getCompletedCount() {
+    return _enrollments
+        .where((e) {
+          final status = e.status.trim().toLowerCase();
+          return status == 'completed' || status == 'closed';
+        })
         .length;
+  }
+
+  List<RmcEnrollment> _getInProgressEnrollments() {
+    return _enrollments
+        .where((e) {
+          final status = e.status.trim().toLowerCase();
+          return status != 'closed' && status != 'completed' && status != 'not started';
+        })
+        .toList();
   }
 
   double _calculateTotalRecallValue() {
@@ -119,23 +142,16 @@ class _RmcPageState extends State<RmcPage> {
         break;
     }
 
-    // Sum est_item_value for completed recalls within the time period
+    // Sum estimated_value for completed enrollments within the time period
     double total = 0.0;
-    for (var recall in _activeRecalls) {
-      if (recall.recallResolutionStatus == 'Completed') {
-        // Check if recall is within the selected time period
-        if (startDate == null || recall.dateIssued.isAfter(startDate)) {
-          // Parse est_item_value (remove $ and commas, convert to double)
-          final valueStr = recall.estItemValue
-              .replaceAll('\$', '')
-              .replaceAll(',', '')
-              .trim();
-          if (valueStr.isNotEmpty) {
-            try {
-              total += double.parse(valueStr);
-            } catch (e) {
-              // Skip if can't parse est_item_value
-            }
+    for (var enrollment in _enrollments) {
+      if (enrollment.status == 'Completed') {
+        // Check if enrollment is within the selected time period
+        if (startDate == null ||
+            (enrollment.completedAt != null && enrollment.completedAt!.isAfter(startDate))) {
+          // Use the user's estimated value from the enrollment
+          if (enrollment.estimatedValue != null) {
+            total += enrollment.estimatedValue!;
           }
         }
       }
@@ -144,24 +160,34 @@ class _RmcPageState extends State<RmcPage> {
     return total;
   }
 
-  List<RecallData> _getRecallsByStatus(List<String> statuses) {
-    return _activeRecalls
-        .where((r) => statuses.contains(r.recallResolutionStatus))
+  List<RmcEnrollment> _getEnrollmentsByStatus(String status) {
+    return _enrollments
+        .where((e) => e.status == status)
         .toList();
   }
 
-  void _navigateToStatusList(String title, List<RecallData> recalls) async {
+  List<RmcEnrollment> _getCompletedEnrollments() {
+    return _enrollments
+        .where((e) {
+          final status = e.status.trim().toLowerCase();
+          return status == 'completed' || status == 'closed';
+        })
+        .toList();
+  }
+
+  void _navigateToStatusList(String title, String? statusFilter, List<RmcEnrollment> enrollments) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => RmcListPage(
+        builder: (context) => RmcStatusPage(
           pageTitle: title,
-          filteredRecalls: recalls,
+          statusFilter: statusFilter,
+          filteredEnrollments: enrollments,
         ),
       ),
     );
     // Reload data after returning from list page
-    _loadActiveRecalls();
+    _loadEnrollments();
   }
 
   @override
@@ -262,14 +288,14 @@ class _RmcPageState extends State<RmcPage> {
                       ),
                       const SizedBox(height: 16),
                       ElevatedButton(
-                        onPressed: _loadActiveRecalls,
+                        onPressed: _loadEnrollments,
                         child: const Text('Retry'),
                       ),
                     ],
                   ),
                 )
               : RefreshIndicator(
-                  onRefresh: _loadActiveRecalls,
+                  onRefresh: _loadEnrollments,
                   child: SingleChildScrollView(
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
@@ -288,80 +314,63 @@ class _RmcPageState extends State<RmcPage> {
                         ),
                         const SizedBox(height: 16),
 
-                        // Status Buttons - wrapped in Padding for compact layout
+                        // Status Buttons - New statuses from RMC Details Test Page
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 15),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               _buildStatusButton(
-                                'OPEN',
-                                _getOpenCount(),
+                                'NOT STARTED',
+                                _getNotStartedCount(),
                                 () => _navigateToStatusList(
-                                  'Open Recalls',
-                                  _activeRecalls
-                                      .where((r) => r.recallResolutionStatus != 'Completed')
-                                      .toList(),
+                                  'Not Started',
+                                  'Not Started',
+                                  _getEnrollmentsByStatus('Not Started'),
                                 ),
                               ),
                               const SizedBox(height: 12),
 
                               _buildStatusButton(
-                                'WAITING REFUND',
-                                _getWaitingRefundCount(),
+                                'DISCONTINUED USE',
+                                _getDiscontinuedUseCount(),
                                 () => _navigateToStatusList(
-                                  'Waiting Refund',
-                                  _getRecallsByStatus([
-                                    'Return 1B: Item Shipped Back',
-                                    'Return 1A: Brought to local Retailer',
-                                    'Dispose 1A: Brought to local Retailer',
-                                  ]),
+                                  'Discontinued Use',
+                                  'In Progress - Discontinued Use',
+                                  _getEnrollmentsByStatus('In Progress - Discontinued Use'),
                                 ),
                               ),
                               const SizedBox(height: 12),
 
                               _buildStatusButton(
-                                'WAITING REFUND BY\nLOCAL RETAILER',
-                                _getWaitingRefundByLocalRetailerCount(),
+                                'CONTACTED MANUFACTURER',
+                                _getContactedManufacturerCount(),
                                 () => _navigateToStatusList(
-                                  'Waiting Refund by Local Retailer',
-                                  _getRecallsByStatus([
-                                    'Dispose 1A: Brought to local Retailer',
-                                  ]),
+                                  'Contacted Manufacturer',
+                                  'In Progress - Contacted Manufacturer',
+                                  _getEnrollmentsByStatus('In Progress - Contacted Manufacturer'),
                                 ),
                               ),
                               const SizedBox(height: 12),
 
                               _buildStatusButton(
-                                'WAITING REFUND BY\nSERVICE CENTER',
-                                _getWaitingRefundByServiceCenterCount(),
+                                'IN PROGRESS',
+                                _getInProgressCount(),
                                 () => _navigateToStatusList(
-                                  'Waiting Refund by Service Center',
-                                  _getRecallsByStatus([
-                                    'Repair 1A: Brought to Service Center',
-                                  ]),
+                                  'In Progress',
+                                  null, // No specific status filter - show all in progress
+                                  _getInProgressEnrollments(),
                                 ),
                               ),
                               const SizedBox(height: 12),
 
                               _buildStatusButton(
-                                'WAITING TO REPAIR ITEM\nWITH PROVIDED PARTS',
-                                _getWaitingToRepairItemCount(),
+                                'COMPLETED',
+                                _getCompletedCount(),
                                 () => _navigateToStatusList(
-                                  'Waiting to Repair Item',
-                                  _getRecallsByStatus([
-                                    'Repair 2A: Received Repair Kit or Parts',
-                                  ]),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-
-                              _buildStatusButton(
-                                'CLOSED',
-                                _getClosedCount(),
-                                () => _navigateToStatusList(
-                                  'Completed Recalls',
-                                  _getRecallsByStatus(['Completed']),
+                                  'Completed',
+                                  null, // Show both Completed and Closed
+                                  _getCompletedEnrollments(),
                                 ),
                               ),
                             ],
@@ -469,6 +478,54 @@ class _RmcPageState extends State<RmcPage> {
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF2C3E50),
+        selectedItemColor: const Color(0xFF64B5F6),
+        unselectedItemColor: Colors.white54,
+        currentIndex: 2,
+        elevation: 8,
+        selectedFontSize: 14,
+        unselectedFontSize: 12,
+        onTap: (index) {
+          switch (index) {
+            case 0:
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainNavigation(initialIndex: 0),
+                ),
+                (route) => false,
+              );
+              break;
+            case 1:
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainNavigation(initialIndex: 1),
+                ),
+                (route) => false,
+              );
+              break;
+            case 2:
+              Navigator.pushAndRemoveUntil(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainNavigation(initialIndex: 2),
+                ),
+                (route) => false,
+              );
+              break;
+          }
+        },
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
       ),
     );
   }

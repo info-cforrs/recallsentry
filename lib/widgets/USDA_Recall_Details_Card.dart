@@ -5,6 +5,581 @@ class USDARecallDetailsCard extends StatelessWidget {
   final RecallData recall;
   const USDARecallDetailsCard({super.key, required this.recall});
 
+  void _showManufacturerRetailerModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Manufacturer & Retailer Details',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Establishment Manufacturer
+                if (recall.establishmentManufacturer.isNotEmpty) ...[
+                  const Text(
+                    'Establishment/Manufacturer:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.establishmentManufacturer,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Manufacturer Contact Name
+                if (recall.establishmentManufacturerContactName.isNotEmpty) ...[
+                  const Text(
+                    'Contact Name:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.establishmentManufacturerContactName,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Manufacturer Contact Phone
+                if (recall.establishmentManufacturerContactPhone.isNotEmpty) ...[
+                  const Text(
+                    'Contact Phone:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.establishmentManufacturerContactPhone,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Manufacturer Contact Email
+                if (recall.establishmentManufacturerContactEmail.isNotEmpty) ...[
+                  const Text(
+                    'Contact Email:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.establishmentManufacturerContactEmail,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Retailer
+                if (recall.retailer1.isNotEmpty) ...[
+                  const Text(
+                    'Retailer:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.retailer1,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Retailer Contact Name
+                if (recall.retailer1ContactName.isNotEmpty) ...[
+                  const Text(
+                    'Retailer Contact Name:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.retailer1ContactName,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Retailer Contact Phone
+                if (recall.retailer1ContactPhone.isNotEmpty) ...[
+                  const Text(
+                    'Retailer Contact Phone:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.retailer1ContactPhone,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Retailer Contact Email
+                if (recall.retailer1ContactEmail.isNotEmpty) ...[
+                  const Text(
+                    'Retailer Contact Email:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.retailer1ContactEmail,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+                // Show message if no data
+                if (recall.establishmentManufacturer.isEmpty &&
+                    recall.establishmentManufacturerContactName.isEmpty &&
+                    recall.establishmentManufacturerContactPhone.isEmpty &&
+                    recall.establishmentManufacturerContactEmail.isEmpty &&
+                    recall.retailer1.isEmpty &&
+                    recall.retailer1ContactName.isEmpty &&
+                    recall.retailer1ContactPhone.isEmpty &&
+                    recall.retailer1ContactEmail.isEmpty)
+                  const Text(
+                    'No manufacturer or retailer details available.',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showProductDetailsModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Product Details',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Product Identification
+                if (recall.productIdentification.isNotEmpty) ...[
+                  const Text(
+                    'Product Identification:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.productIdentification,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // UPC
+                if (recall.upc.isNotEmpty && recall.upc != 'N/A') ...[
+                  const Text(
+                    'UPC Code:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.upc,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // SKU
+                if (recall.sku.isNotEmpty && recall.sku != 'N/A') ...[
+                  const Text(
+                    'SKU:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.sku,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Batch/Lot Code
+                if (recall.batchLotCode.isNotEmpty && recall.batchLotCode != 'N/A') ...[
+                  const Text(
+                    'Batch/Lot Code:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.batchLotCode,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Production Dates
+                if (recall.productionDateStart != null || recall.productionDateEnd != null) ...[
+                  const Text(
+                    'Production Dates:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'From: ${recall.productionDateStart != null ? _formatDate(recall.productionDateStart) : "N/A"}',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'To: ${recall.productionDateEnd != null ? _formatDate(recall.productionDateEnd) : "N/A"}',
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Expiration Date
+                if (recall.expDate.isNotEmpty && recall.expDate != 'N/A') ...[
+                  const Text(
+                    'Expiration Date:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.expDate,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Best Used By Date
+                if (recall.bestUsedByDate.isNotEmpty && recall.bestUsedByDate != 'N/A') ...[
+                  const Text(
+                    'Best Used By Date:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.bestUsedByDate,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Packaging Description
+                if (recall.packagingDesc.isNotEmpty) ...[
+                  const Text(
+                    'Packaging Info:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.packagingDesc,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+                // Show message if no data
+                if (recall.productIdentification.isEmpty &&
+                    (recall.upc.isEmpty || recall.upc == 'N/A') &&
+                    (recall.sku.isEmpty || recall.sku == 'N/A') &&
+                    (recall.batchLotCode.isEmpty || recall.batchLotCode == 'N/A') &&
+                    recall.productionDateStart == null &&
+                    recall.productionDateEnd == null &&
+                    (recall.expDate.isEmpty || recall.expDate == 'N/A') &&
+                    (recall.bestUsedByDate.isEmpty || recall.bestUsedByDate == 'N/A') &&
+                    recall.packagingDesc.isEmpty)
+                  const Text(
+                    'No product details available.',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showAdverseReactionsModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+          title: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Adverse Reactions',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Adverse Reactions
+                if (recall.adverseReactions.isNotEmpty) ...[
+                  const Text(
+                    'Adverse Reactions:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.adverseReactions,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+                // Negative Outcomes
+                if (recall.negativeOutcomes.isNotEmpty) ...[
+                  const Text(
+                    'Negative Outcomes:',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    recall.negativeOutcomes,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+                // Show message if no data
+                if (recall.adverseReactions.isEmpty && recall.negativeOutcomes.isEmpty)
+                  const Text(
+                    'No adverse reactions or negative outcomes reported.',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 15,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Determine which section will be last (for border radius)
@@ -79,7 +654,7 @@ class USDARecallDetailsCard extends StatelessWidget {
   }) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFFFC107),
+        color: Color(0xFF2A4A5C),
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(18),
           topRight: Radius.circular(18),
@@ -90,82 +665,28 @@ class USDARecallDetailsCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left Column: Icon + Category
-          Expanded(
-            flex: 1,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.black,
-                  size: 22,
-                ),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (recallClassification.isNotEmpty &&
-                          !recallClassification.toLowerCase().contains('public health alert'))
-                        Text(
-                          recallClassification.toUpperCase(),
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 17,
-                          ),
-                        ),
-                      Text(
-                        recallClassification.toLowerCase().contains('public health alert')
-                            ? 'Public Health Alert'
-                            : 'RECALL',
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 17,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          // Date (left side)
+          Text(
+            _formatDate(dateIssued),
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.normal,
+              fontSize: 16,
             ),
           ),
-          // Center Column: Date
-          Expanded(
-            flex: 1,
-            child: Center(
-              child: Text(
-                _formatDate(dateIssued),
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.normal,
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
+          // Agency badge (right side)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFF4CAF50),
+              borderRadius: BorderRadius.circular(8),
             ),
-          ),
-          // Right Column: Agency badge
-          Expanded(
-            flex: 1,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF4CAF50),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  agency,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
+            child: Text(
+              agency,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
             ),
           ),
@@ -180,7 +701,7 @@ class USDARecallDetailsCard extends StatelessWidget {
     required dynamic stateCount,
   }) {
     return Container(
-      color: const Color(0xFFFFC107),
+      color: const Color(0xFF2A4A5C),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -238,7 +759,7 @@ class USDARecallDetailsCard extends StatelessWidget {
                   : Text(
                       '$stateCount States',
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -268,60 +789,127 @@ class USDARecallDetailsCard extends StatelessWidget {
     String? formattedStartDate = productionDateStart != null ? _formatDate(productionDateStart) : null;
     String? formattedEndDate = productionDateEnd != null ? _formatDate(productionDateEnd) : null;
 
-    // Negative Outcomes - only show if not empty
+    // Negative Outcomes / Adverse Reactions - only show if not empty (with arrow and modal trigger)
     if (negativeOutcomes.isNotEmpty) {
-      children.add(Text(
-        negativeOutcomes,
-        style: const TextStyle(
-          color: Colors.black,
-          fontSize: 15,
-          fontWeight: FontWeight.w600,
-        ),
+      children.add(Builder(
+        builder: (context) {
+          return GestureDetector(
+            onTap: () => _showAdverseReactionsModal(context),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      negativeOutcomes,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ));
-      children.add(const SizedBox(height: 10));
+      children.add(const SizedBox(height: 16));
     }
 
     // Recall Reason - only show if not empty
     if (recallReason.isNotEmpty) {
       children.add(Text(
         recallReason,
-        style: const TextStyle(color: Colors.black, fontSize: 15),
+        style: const TextStyle(color: Colors.white, fontSize: 15),
       ));
-      children.add(const SizedBox(height: 10));
+      children.add(const SizedBox(height: 16));
     }
 
-    // Brand Name - only show if not empty
+    // Brand Name - only show if not empty (with arrow and modal trigger)
     if (brandName.isNotEmpty) {
-      children.add(const SizedBox(height: 3));
-      children.add(Container(
-        width: double.infinity,
-        height: 1,
-        color: Colors.black,
+      children.add(Builder(
+        builder: (context) {
+          return GestureDetector(
+            onTap: () => _showManufacturerRetailerModal(context),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      brandName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ));
-      children.add(const SizedBox(height: 3));
-      children.add(Text(
-        brandName,
-        style: const TextStyle(color: Colors.black, fontSize: 15),
-      ));
-      children.add(const SizedBox(height: 10));
+      children.add(const SizedBox(height: 16));
     }
 
-    // Product Name - only show if not empty
+    // Product Name - only show if not empty (with arrow and modal trigger)
     if (productName.isNotEmpty) {
-      children.add(Text(
-        productName,
-        style: const TextStyle(color: Colors.black, fontSize: 15),
+      children.add(Builder(
+        builder: (context) {
+          return GestureDetector(
+            onTap: () => _showProductDetailsModal(context),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Expanded(
+                    child: Text(
+                      productName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
       ));
-      children.add(const SizedBox(height: 10));
+      children.add(const SizedBox(height: 16));
     }
 
     // Packaging Desc - only show if not empty
     if (packagingDesc.isNotEmpty) {
       children.add(Text(
         packagingDesc,
-        style: const TextStyle(color: Colors.black, fontSize: 15),
+        style: const TextStyle(color: Colors.white, fontSize: 15),
       ));
-      children.add(const SizedBox(height: 10));
+      children.add(const SizedBox(height: 16));
     }
 
     // Production Dates - only show if at least one is not null
@@ -329,7 +917,7 @@ class USDARecallDetailsCard extends StatelessWidget {
       children.add(const Text(
         'Produced:',
         style: TextStyle(
-          color: Colors.black,
+          color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: 14,
         ),
@@ -340,7 +928,7 @@ class USDARecallDetailsCard extends StatelessWidget {
           const Text(
             'From:',
             style: TextStyle(
-              color: Colors.black,
+              color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -348,13 +936,13 @@ class USDARecallDetailsCard extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             formattedStartDate ?? "N/A",
-            style: const TextStyle(color: Colors.black, fontSize: 14),
+            style: const TextStyle(color: Colors.white, fontSize: 14),
           ),
           const SizedBox(width: 16),
           const Text(
             'To:',
             style: TextStyle(
-              color: Colors.black,
+              color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -362,11 +950,11 @@ class USDARecallDetailsCard extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             formattedEndDate ?? "N/A",
-            style: const TextStyle(color: Colors.black, fontSize: 14),
+            style: const TextStyle(color: Colors.white, fontSize: 14),
           ),
         ],
       ));
-      children.add(const SizedBox(height: 10));
+      children.add(const SizedBox(height: 16));
     }
 
     // Sold By - only show if not empty
@@ -377,7 +965,7 @@ class USDARecallDetailsCard extends StatelessWidget {
           const Text(
             'Sold By:',
             style: TextStyle(
-              color: Colors.black,
+              color: Colors.white,
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -386,12 +974,12 @@ class USDARecallDetailsCard extends StatelessWidget {
           Expanded(
             child: Text(
               soldBy,
-              style: const TextStyle(color: Colors.black, fontSize: 14),
+              style: const TextStyle(color: Colors.white, fontSize: 14),
             ),
           ),
         ],
       ));
-      children.add(const SizedBox(height: 10));
+      children.add(const SizedBox(height: 16));
     }
 
     // Product Qty - only show if not empty
@@ -399,7 +987,7 @@ class USDARecallDetailsCard extends StatelessWidget {
       children.add(Text(
         productQty,
         style: const TextStyle(
-          color: Colors.black,
+          color: Colors.white,
           fontWeight: FontWeight.bold,
           fontSize: 14,
         ),
@@ -413,7 +1001,7 @@ class USDARecallDetailsCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFC107),
+        color: const Color(0xFF2A4A5C),
         borderRadius: isLast
             ? const BorderRadius.only(
                 bottomLeft: Radius.circular(18),
@@ -455,7 +1043,7 @@ class USDARecallDetailsCard extends StatelessWidget {
                     const TextSpan(
                       text: 'UPC Code: ',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -463,7 +1051,7 @@ class USDARecallDetailsCard extends StatelessWidget {
                     TextSpan(
                       text: upc,
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontSize: 15,
                       ),
                     ),
@@ -480,7 +1068,7 @@ class USDARecallDetailsCard extends StatelessWidget {
                     const TextSpan(
                       text: 'SKU: ',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -488,7 +1076,7 @@ class USDARecallDetailsCard extends StatelessWidget {
                     TextSpan(
                       text: sku,
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontSize: 15,
                       ),
                     ),
@@ -509,7 +1097,7 @@ class USDARecallDetailsCard extends StatelessWidget {
             const TextSpan(
               text: 'Batch/Lot Code: ',
               style: TextStyle(
-                color: Colors.black,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
               ),
@@ -517,7 +1105,7 @@ class USDARecallDetailsCard extends StatelessWidget {
             TextSpan(
               text: batchLotCode,
               style: const TextStyle(
-                color: Colors.black,
+                color: Colors.white,
                 fontSize: 15,
               ),
             ),
@@ -535,7 +1123,7 @@ class USDARecallDetailsCard extends StatelessWidget {
             const TextSpan(
               text: 'Sell By Date: ',
               style: TextStyle(
-                color: Colors.black,
+                color: Colors.white,
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
               ),
@@ -543,7 +1131,7 @@ class USDARecallDetailsCard extends StatelessWidget {
             TextSpan(
               text: sellByDate,
               style: const TextStyle(
-                color: Colors.black,
+                color: Colors.white,
                 fontSize: 15,
               ),
             ),
@@ -559,7 +1147,7 @@ class USDARecallDetailsCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFC107),
+        color: const Color(0xFF2A4A5C),
         borderRadius: isLast
             ? const BorderRadius.only(
                 bottomLeft: Radius.circular(18),
@@ -599,7 +1187,7 @@ class USDARecallDetailsCard extends StatelessWidget {
                     const TextSpan(
                       text: 'Exp Date: ',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -607,7 +1195,7 @@ class USDARecallDetailsCard extends StatelessWidget {
                     TextSpan(
                       text: expDate,
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontSize: 15,
                       ),
                     ),
@@ -624,7 +1212,7 @@ class USDARecallDetailsCard extends StatelessWidget {
                     const TextSpan(
                       text: 'Best Used By: ',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -632,7 +1220,7 @@ class USDARecallDetailsCard extends StatelessWidget {
                     TextSpan(
                       text: bestUsedByDate,
                       style: const TextStyle(
-                        color: Colors.black,
+                        color: Colors.white,
                         fontSize: 15,
                       ),
                     ),
@@ -644,6 +1232,22 @@ class USDARecallDetailsCard extends StatelessWidget {
       ));
     }
 
+    // Add recall ID at the bottom if this is the last section and recall number exists
+    if (isLast && recall.fieldRecallNumber.trim().isNotEmpty) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 16));
+      }
+      children.add(
+        Text(
+          'Recall Number: ${recall.fieldRecallNumber}',
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 13,
+          ),
+        ),
+      );
+    }
+
     // Only show container if there are children to display
     if (children.isEmpty) {
       return const SizedBox.shrink();
@@ -651,7 +1255,7 @@ class USDARecallDetailsCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFC107),
+        color: const Color(0xFF2A4A5C),
         borderRadius: isLast
             ? const BorderRadius.only(
                 bottomLeft: Radius.circular(18),

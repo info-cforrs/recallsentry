@@ -180,7 +180,12 @@ class SavedRecallsService {
       );
 
       if (response.statusCode == 200) {
-        final List<dynamic> jsonList = jsonDecode(response.body);
+        final responseData = jsonDecode(response.body);
+
+        // Handle paginated response
+        final List<dynamic> jsonList = responseData is List
+            ? responseData
+            : (responseData['results'] ?? []);
 
         // Find the saved recall with matching recall_id
         final savedRecall = jsonList.firstWhere(

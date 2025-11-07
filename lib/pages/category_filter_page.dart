@@ -52,6 +52,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
   List<String> _availableAgencies = []; // Dynamic agencies from actual data
   bool _isSearchFieldFocused = false; // Track if search field is currently focused
   bool _keepButtonVisible = false; // Keep button visible even when focus is lost (during save)
+  bool _showSearchAndFilters = true; // Show/hide search and filter UI on scroll
   final int _currentIndex = 1; // Recalls tab
 
   @override
@@ -68,6 +69,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
     } else {
       _loadFilteredRecalls();
     }
+    _scrollController.addListener(_onScroll);
 
     // Listen to focus changes
     _searchFocusNode.addListener(() {
@@ -83,6 +85,18 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
     _searchFocusNode.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.hasClients) {
+      final isAtTop = _scrollController.offset <= 10;
+      final shouldShow = isAtTop;
+      if (shouldShow != _showSearchAndFilters) {
+        setState(() {
+          _showSearchAndFilters = shouldShow;
+        });
+      }
+    }
   }
 
   Future<void> _loadArticles() async {
@@ -1224,159 +1238,162 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                 ),
               ),
 
-            // Search Field
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: TextField(
-                controller: _searchController,
-                focusNode: _searchFocusNode,
-                onChanged: (value) {
-                  setState(() {
-                    _searchQuery = value;
-                    _applyFiltersAndSort();
-                  });
-                },
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Search recalls...',
-                  hintStyle: const TextStyle(color: Colors.white54),
-                  prefixIcon: const Icon(Icons.search, color: Colors.white54),
-                  suffixIcon: _searchQuery.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, color: Colors.white54),
-                          onPressed: () {
-                            _searchController.clear();
-                            setState(() {
-                              _searchQuery = '';
-                              _applyFiltersAndSort();
-                            });
-                          },
-                        )
-                      : null,
-                  filled: true,
-                  fillColor: const Color(0xFF2C3E50),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            // Filter and Sort Buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _showFilterDialog,
-                      icon: const Icon(Icons.filter_list, size: 18),
-                      label: const Text('Filter'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2C3E50),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _showSortDialog,
-                      icon: const Icon(Icons.sort, size: 18),
-                      label: const Text('Sort'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2C3E50),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Conditionally show Save as SmartFilter button only when search field is focused or button is being interacted with
-            if (_isSearchFieldFocused || _keepButtonVisible) ...[
-              const SizedBox(height: 12),
-
-              // Save as SmartFilter Button
+            // Search, Filter, and Sort Section - Hide on scroll
+            if (_showSearchAndFilters) ...[
+              // Search Field
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: FutureBuilder<SubscriptionInfo>(
-                  future: _subscriptionService.getSubscriptionInfo(),
-                  builder: (context, snapshot) {
-                    final hasPremiumAccess = snapshot.data?.hasPremiumAccess ?? false;
+                child: TextField(
+                  controller: _searchController,
+                  focusNode: _searchFocusNode,
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                      _applyFiltersAndSort();
+                    });
+                  },
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Search recalls...',
+                    hintStyle: const TextStyle(color: Colors.white54),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                    suffixIcon: _searchQuery.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: Colors.white54),
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() {
+                                _searchQuery = '';
+                                _applyFiltersAndSort();
+                              });
+                            },
+                          )
+                        : null,
+                    filled: true,
+                    fillColor: const Color(0xFF2C3E50),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
 
-                    return Listener(
-                      onPointerDown: (_) {
-                        // Keep button visible when user starts interacting
-                        setState(() {
-                          _keepButtonVisible = true;
-                        });
-                      },
-                      child: SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: hasPremiumAccess ? () {
-                            _showSaveSmartFilterDialog();
-                            // Reset after a delay to allow dialog to open
-                            Future.delayed(const Duration(milliseconds: 500), () {
-                              if (mounted) {
-                                setState(() {
-                                  _keepButtonVisible = false;
-                                });
-                              }
-                            });
-                          } : () {
-                            _showSaveSmartFilterDialog();
-                            Future.delayed(const Duration(milliseconds: 500), () {
-                              if (mounted) {
-                                setState(() {
-                                  _keepButtonVisible = false;
-                                });
-                              }
-                            });
-                          },
-                          icon: Icon(
-                            Icons.bookmark_add,
-                            size: 18,
-                            color: hasPremiumAccess ? Colors.white : Colors.white54,
-                          ),
-                          label: Text(
-                            'Save as SmartFilter',
-                            style: TextStyle(
-                              color: hasPremiumAccess ? Colors.white : Colors.white54,
-                            ),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: hasPremiumAccess
-                                ? const Color(0xFF64B5F6)
-                                : const Color(0xFF2C3E50).withValues(alpha: 0.5),
-                            foregroundColor: hasPremiumAccess ? Colors.white : Colors.white54,
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: hasPremiumAccess ? 2 : 0,
+              // Filter and Sort Buttons
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _showFilterDialog,
+                        icon: const Icon(Icons.filter_list, size: 18),
+                        label: const Text('Filter'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2C3E50),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
                         ),
                       ),
-                    );
-                  },
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: _showSortDialog,
+                        icon: const Icon(Icons.sort, size: 18),
+                        label: const Text('Sort'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2C3E50),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
+
+              // Conditionally show Save as SmartFilter button only when search field is focused or button is being interacted with
+              if (_isSearchFieldFocused || _keepButtonVisible) ...[
+                const SizedBox(height: 12),
+
+                // Save as SmartFilter Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: FutureBuilder<SubscriptionInfo>(
+                    future: _subscriptionService.getSubscriptionInfo(),
+                    builder: (context, snapshot) {
+                      final hasPremiumAccess = snapshot.data?.hasPremiumAccess ?? false;
+
+                      return Listener(
+                        onPointerDown: (_) {
+                          // Keep button visible when user starts interacting
+                          setState(() {
+                            _keepButtonVisible = true;
+                          });
+                        },
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: hasPremiumAccess ? () {
+                              _showSaveSmartFilterDialog();
+                              // Reset after a delay to allow dialog to open
+                              Future.delayed(const Duration(milliseconds: 500), () {
+                                if (mounted) {
+                                  setState(() {
+                                    _keepButtonVisible = false;
+                                  });
+                                }
+                              });
+                            } : () {
+                              _showSaveSmartFilterDialog();
+                              Future.delayed(const Duration(milliseconds: 500), () {
+                                if (mounted) {
+                                  setState(() {
+                                    _keepButtonVisible = false;
+                                  });
+                                }
+                              });
+                            },
+                            icon: Icon(
+                              Icons.bookmark_add,
+                              size: 18,
+                              color: hasPremiumAccess ? Colors.white : Colors.white54,
+                            ),
+                            label: Text(
+                              'Save as SmartFilter',
+                              style: TextStyle(
+                                color: hasPremiumAccess ? Colors.white : Colors.white54,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: hasPremiumAccess
+                                  ? const Color(0xFF64B5F6)
+                                  : const Color(0xFF2C3E50).withValues(alpha: 0.5),
+                              foregroundColor: hasPremiumAccess ? Colors.white : Colors.white54,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: hasPremiumAccess ? 2 : 0,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
             ],
-            const SizedBox(height: 12),
 
             // Found recalls count
             Container(
@@ -1458,11 +1475,18 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF2C3E50),
+        selectedItemColor: const Color(0xFF64B5F6),
+        unselectedItemColor: Colors.white54,
         currentIndex: _currentIndex,
+        elevation: 8,
+        selectedFontSize: 14,
+        unselectedFontSize: 12,
         onTap: (index) {
           switch (index) {
             case 0:
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 0),
                 ),
@@ -1470,7 +1494,8 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
               );
               break;
             case 1:
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 1),
                 ),
@@ -1478,7 +1503,8 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
               );
               break;
             case 2:
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 2),
                 ),
@@ -1487,26 +1513,15 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
               break;
           }
         },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.grey,
-        selectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-        elevation: 8,
         items: const [
+
           BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
           BottomNavigationBarItem(icon: Icon(Icons.error), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
+        
         ],
       ),
     );

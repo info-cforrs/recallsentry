@@ -6,16 +6,17 @@ import 'all_recalls_page.dart';
 import 'main_navigation.dart';
 import '../services/recall_data_service.dart';
 import '../models/recall_data.dart';
+import '../models/rmc_enrollment.dart';
 import '../services/filter_state_service.dart';
 import '../services/saved_recalls_service.dart';
 import '../services/subscription_service.dart';
 import '../services/api_service.dart';
 import 'category_filter_page.dart' as category;
 import 'rmc_page.dart';
+import 'rmc_details_page.dart';
 import '../widgets/small_main_page_recall_card.dart';
 import '../services/saved_filter_service.dart';
 import '../models/saved_filter.dart';
-import 'usda_recall_details_pagev3.dart';
 
 class HomePage extends StatefulWidget {
   final VoidCallback? onNavigateToRecalls;
@@ -41,7 +42,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   final Map<String, int> _categoryCounts = {};
   List<RecallData> _savedRecallsList = [];
   List<RecallData> _smartFilteredRecallsList = [];
+  List<String> _smartFilterNamesList = []; // Parallel list to store filter names
   List<RecallData> _rmcRecallsList = [];
+  List<String> _rmcStatusList = []; // Parallel list to store RMC statuses
+  List<RmcEnrollment> _rmcEnrollmentsList = []; // Parallel list to store RMC enrollments
 
   @override
   void initState() {
@@ -157,20 +161,42 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         }
       }
 
-      // Fetch RMC active recalls
+      // Fetch RMC active recalls (not completed/closed)
       print('🔍 HomePage: Fetching RMC active recalls...');
       int rmcOpenCount = 0;
       List<RecallData> rmcRecalls = [];
+      List<RmcEnrollment> rmcEnrollments = [];
       try {
-        final activeRecalls = await ApiService().fetchActiveRecalls();
-        // Filter recalls that are NOT Completed or Closed
-        rmcRecalls = activeRecalls
-            .where((r) =>
-                r.recallResolutionStatus.toLowerCase() != 'completed' &&
-                r.recallResolutionStatus.toLowerCase() != 'closed')
-            .toList();
+        final enrollments = await ApiService().fetchActiveRmcEnrollments();
+        // Filter out completed and closed enrollments
+        final activeEnrollments = enrollments.where((e) {
+          final status = e.status.trim().toLowerCase();
+          return status != 'completed' && status != 'closed';
+        }).toList();
+
+        // Fetch recall data for each active enrollment
+        List<String> rmcStatuses = [];
+        for (var enrollment in activeEnrollments) {
+          try {
+            final recall = await ApiService().fetchRecallById(enrollment.recallId);
+            rmcRecalls.add(recall);
+            rmcStatuses.add(enrollment.status); // Store corresponding status
+            rmcEnrollments.add(enrollment); // Store enrollment
+          } catch (e) {
+            print('❌ Error fetching recall ${enrollment.recallId}: $e');
+          }
+        }
+
         rmcOpenCount = rmcRecalls.length;
-        print('📊 HomePage: Got $rmcOpenCount open RMC recalls');
+        print('📊 HomePage: Got $rmcOpenCount open RMC recalls from ${activeEnrollments.length} enrollments');
+
+        // Store statuses and enrollments in state
+        if (mounted) {
+          setState(() {
+            _rmcStatusList = rmcStatuses;
+            _rmcEnrollmentsList = rmcEnrollments;
+          });
+        }
       } catch (e) {
         print('❌ Error fetching RMC recalls: $e');
         rmcOpenCount = 0;
@@ -180,6 +206,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
       // Fetch SmartFiltered recalls
       print('🔍 HomePage: Fetching SmartFiltered recalls...');
       List<RecallData> smartFilteredRecalls = [];
+      List<String> smartFilterNames = [];
       try {
         final filterService = SavedFilterService();
         final filters = await filterService.fetchSavedFilters();
@@ -188,10 +215,13 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           // Get all recalls (FDA + USDA)
           final allRecalls = [...recentFdaRecalls, ...recentUsdaRecalls];
 
-          // Apply all saved filters and collect matching recalls
-          Set<String> matchingRecallIds = {};
+          // Apply all saved filters and collect matching recalls with filter names
+          Map<String, String> recallIdToFilterName = {}; // Maps recall ID to first matching filter name
           for (var filter in filters) {
             for (var recall in allRecalls) {
+              // Skip if already matched by another filter
+              if (recallIdToFilterName.containsKey(recall.id)) continue;
+
               // Check if recall matches any brand or product filter
               final matchesBrand = filter.brandFilters.any((brand) =>
                   recall.brandName.toLowerCase().contains(brand.toLowerCase()));
@@ -199,20 +229,24 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                   recall.productName.toLowerCase().contains(product.toLowerCase()));
 
               if (matchesBrand || matchesProduct) {
-                matchingRecallIds.add(recall.id);
+                recallIdToFilterName[recall.id] = filter.name;
               }
             }
           }
 
-          // Get the actual recall objects for matching IDs
-          smartFilteredRecalls = allRecalls
-              .where((r) => matchingRecallIds.contains(r.id))
-              .toList();
+          // Build parallel lists of recalls and their matching filter names
+          for (var recall in allRecalls) {
+            if (recallIdToFilterName.containsKey(recall.id)) {
+              smartFilteredRecalls.add(recall);
+              smartFilterNames.add(recallIdToFilterName[recall.id]!);
+            }
+          }
         }
         print('📊 HomePage: Got ${smartFilteredRecalls.length} SmartFiltered recalls');
       } catch (e) {
         print('❌ Error fetching SmartFiltered recalls: $e');
         smartFilteredRecalls = [];
+        smartFilterNames = [];
       }
 
       // Calculate category counts
@@ -257,6 +291,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           _rmcOpenRecalls = rmcOpenCount;
           _rmcRecallsList = rmcRecalls;
           _smartFilteredRecallsList = smartFilteredRecalls;
+          _smartFilterNamesList = smartFilterNames;
           _categoryCounts.clear();
           _categoryCounts.addAll(counts);
         });
@@ -278,6 +313,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
           _rmcOpenRecalls = 0;
           _rmcRecallsList = [];
           _smartFilteredRecallsList = [];
+          _smartFilterNamesList = [];
         });
       }
     }
@@ -527,43 +563,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         ),
                       ),
                     ],
-                  ),
-                ),
-
-                const SizedBox(height: 24),
-
-                // Test Button for USDA Recall Details V3
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: ElevatedButton(
-                    onPressed: () async {
-                      // Get a sample USDA recall to test with
-                      final usdaRecalls = await _recallService.getUsdaRecalls();
-                      if (usdaRecalls.isNotEmpty) {
-                        if (!mounted) return;
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => UsdaRecallDetailsPageV3(recall: usdaRecalls.first),
-                          ),
-                        );
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFEC7A2D),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      'Test USDA Recall Details V3',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
                   ),
                 ),
 
@@ -821,7 +820,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                             ],
                                           ),
                                           child: Image.asset(
-                                            'assets/images/FDA_button.png',
+                                            'assets/images/FDA_Button.png',
                                             fit: BoxFit.cover,
                                             width: double.infinity,
                                             height: double.infinity,
@@ -900,7 +899,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                             ],
                                           ),
                                           child: Image.asset(
-                                            'assets/images/USDA_button.png',
+                                            'assets/images/USDA_Button.png',
                                             fit: BoxFit.cover,
                                             width: double.infinity,
                                             height: double.infinity,
@@ -957,7 +956,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                 // Navigate to RMC page
                                 Navigator.of(context).push(
                                   MaterialPageRoute(
-                                    builder: (context) => const RmcPage(),
+                                    builder: (context) => RmcPage(key: UniqueKey()),
                                   ),
                                 );
                               },
@@ -978,7 +977,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               ),
                             ),
                           ),
-                          _buildRecallBadge(_rmcOpenRecalls),
                         ],
                       ),
 
@@ -1067,7 +1065,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         Opacity(
                           opacity: hasPremiumAccess ? 1.0 : 0.4,
                           child: SizedBox(
-                            height: 315,
+                            height: 345,
                             child: hasRecalls
                                 ? ScrollConfiguration(
                                     behavior: ScrollConfiguration.of(context).copyWith(
@@ -1089,6 +1087,9 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                             ignoring: !hasPremiumAccess,
                                             child: SmallMainPageRecallCard(
                                               recall: _smartFilteredRecallsList[index],
+                                              filterName: index < _smartFilterNamesList.length
+                                                  ? _smartFilterNamesList[index]
+                                                  : null,
                                             ),
                                           ),
                                         );
@@ -1137,7 +1138,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: Text(
-                            'Your Recall Management Recalls',
+                            'Your Recall Management Center Recalls',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -1150,7 +1151,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                         Opacity(
                           opacity: hasPremiumAccess ? 1.0 : 0.4,
                           child: SizedBox(
-                            height: 315,
+                            height: 345,
                             child: hasRecalls
                                 ? ScrollConfiguration(
                                     behavior: ScrollConfiguration.of(context).copyWith(
@@ -1172,6 +1173,23 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                             ignoring: !hasPremiumAccess,
                                             child: SmallMainPageRecallCard(
                                               recall: _rmcRecallsList[index],
+                                              currentStatus: index < _rmcStatusList.length
+                                                  ? _rmcStatusList[index]
+                                                  : null,
+                                              onTap: () async {
+                                                // Navigate to RMC Details page (active workflow page)
+                                                await Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (context) => RmcDetailsPage(
+                                                      recall: _rmcRecallsList[index],
+                                                      enrollment: _rmcEnrollmentsList[index],
+                                                    ),
+                                                  ),
+                                                );
+                                                // Reload data after returning to reflect any status changes
+                                                _loadRecallCounts();
+                                              },
                                             ),
                                           ),
                                         );

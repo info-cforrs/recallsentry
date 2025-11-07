@@ -459,12 +459,18 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
+        backgroundColor: const Color(0xFF2C3E50),
+        selectedItemColor: const Color(0xFF64B5F6),
+        unselectedItemColor: Colors.white54,
         currentIndex: _currentIndex,
+        elevation: 8,
+        selectedFontSize: 14,
+        unselectedFontSize: 12,
         onTap: (index) {
           switch (index) {
             case 0:
-              // Navigate to Home tab in main navigation
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 0),
                 ),
@@ -472,8 +478,8 @@ class _LoginPageState extends State<LoginPage> {
               );
               break;
             case 1:
-              // Navigate to Recalls tab in main navigation
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 1),
                 ),
@@ -481,8 +487,8 @@ class _LoginPageState extends State<LoginPage> {
               );
               break;
             case 2:
-              // Navigate to Settings tab in main navigation
-              Navigator.of(context).pushAndRemoveUntil(
+              Navigator.pushAndRemoveUntil(
+                context,
                 MaterialPageRoute(
                   builder: (context) => const MainNavigation(initialIndex: 2),
                 ),
@@ -491,26 +497,15 @@ class _LoginPageState extends State<LoginPage> {
               break;
           }
         },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF2C3E50), // Dark blue-grey background
-        selectedItemColor: const Color(0xFF64B5F6), // Light blue for selected
-        unselectedItemColor: Colors.grey.shade500, // Grey for unselected
-        selectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-        elevation: 8,
         items: const [
+
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.warning), label: 'Info'),
+          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',
           ),
+        
         ],
       ),
     );

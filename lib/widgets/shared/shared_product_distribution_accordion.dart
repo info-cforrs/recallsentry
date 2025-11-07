@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import '../premium_section_wrapper.dart';
 import '../../services/subscription_service.dart';
+import 'us_state_map.dart';
 
-class SharedProductDistributionAccordion extends StatefulWidget {
+class SharedProductDistributionAccordion extends StatelessWidget {
   final String productDistribution;
   final bool? isPremiumUser; // Optional override for premium status
 
@@ -12,18 +13,9 @@ class SharedProductDistributionAccordion extends StatefulWidget {
     super.key,
   });
 
-  @override
-  State<SharedProductDistributionAccordion> createState() =>
-      _SharedProductDistributionAccordionState();
-}
-
-class _SharedProductDistributionAccordionState
-    extends State<SharedProductDistributionAccordion> {
-  bool _expanded = false;
-
   Future<bool> _checkPremiumAccess() async {
-    if (widget.isPremiumUser != null) {
-      return widget.isPremiumUser!;
+    if (isPremiumUser != null) {
+      return isPremiumUser!;
     }
     final subscription = await SubscriptionService().getSubscriptionInfo();
     return subscription.hasPremiumAccess;
@@ -52,67 +44,111 @@ class _SharedProductDistributionAccordionState
           );
         }
 
-        // If premium, show normal accordion
-        return _buildAccordionContent();
+        // If premium, show normal section
+        return _buildSectionContent(context);
       },
     );
   }
 
-  Widget _buildAccordionContent() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2A4A5C),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: () {
-              setState(() {
-                _expanded = !_expanded;
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              child: Row(
+  void _showProductDistributionModal(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: EdgeInsets.zero,
+          child: Container(
+            width: MediaQuery.of(context).size.width,
+            height: MediaQuery.of(context).size.height,
+            color: const Color(0xFF2A4A5C),
+            child: SafeArea(
+              child: Column(
                 children: [
-                  Expanded(
-                    child: Text(
-                      'Product Distribution',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
+                  // Header with back button
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Product Distribution',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Icon(
-                    _expanded ? Icons.remove : Icons.add,
-                    color: Colors.white,
+                  const Divider(color: Colors.white24, height: 1),
+                  // Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(10),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // US State Map with 10px margin
+                          USStateMap(productDistribution: productDistribution),
+                          const SizedBox(height: 24),
+                          // Distribution text
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 6),
+                            child: Text(
+                              productDistribution.trim().isNotEmpty
+                                  ? productDistribution
+                                  : 'Not specified',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ],
               ),
             ),
           ),
-          if (_expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Padding(
-                  padding: const EdgeInsets.only(left: 16, right: 16),
-                  child: Text(
-                    widget.productDistribution.isNotEmpty
-                        ? widget.productDistribution
-                        : 'Not specified',
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSectionContent(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showProductDistributionModal(context),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 40, right: 4),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Product Distribution',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
             ),
-        ],
+            const Icon(
+              Icons.arrow_forward_ios,
+              color: Colors.white,
+              size: 18,
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../premium_section_wrapper.dart';
 import '../../services/subscription_service.dart';
 
-class SharedAdverseReactionsAccordion extends StatefulWidget {
+class SharedAdverseReactionsAccordion extends StatelessWidget {
   final String adverseReactions;
   final String adverseReactionDetails;
   final bool? isPremiumUser; // Optional override for premium status
@@ -14,20 +14,11 @@ class SharedAdverseReactionsAccordion extends StatefulWidget {
     super.key,
   });
 
-  @override
-  State<SharedAdverseReactionsAccordion> createState() =>
-      _SharedAdverseReactionsAccordionState();
-}
-
-class _SharedAdverseReactionsAccordionState
-    extends State<SharedAdverseReactionsAccordion> {
-  bool _expanded = false;
-
   Future<bool> _checkPremiumAccess() async {
     // If premium status is provided, use it
-    if (widget.isPremiumUser != null) {
-      print('🔒 [Adverse Reactions] Using provided premium status: ${widget.isPremiumUser}');
-      return widget.isPremiumUser!;
+    if (isPremiumUser != null) {
+      print('🔒 [Adverse Reactions] Using provided premium status: $isPremiumUser');
+      return isPremiumUser!;
     }
 
     // Otherwise, check via subscription service
@@ -68,123 +59,98 @@ class _SharedAdverseReactionsAccordionState
   }
 
   Widget _buildAccordionContent() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2A4A5C),
-        borderRadius: BorderRadius.circular(18),
-      ),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 40),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: () {
-              setState(() {
-                _expanded = !_expanded;
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Adverse Reactions',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
+            // Section Title
+            Text(
+              'Adverse Reactions',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Content (always shown)
+            Builder(
+              builder: (context) {
+                final hasReactions = adverseReactions
+                    .trim()
+                    .isNotEmpty;
+                final hasDetails = adverseReactionDetails
+                    .trim()
+                    .isNotEmpty;
+                if (!hasReactions && !hasDetails) {
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: const Text(
+                      'No adverse reactions specified.',
+                      style: TextStyle(color: Colors.white, fontSize: 15),
+                      textAlign: TextAlign.left,
+                    ),
+                  );
+                }
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Adverse Reactions:',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
-                  ),
-                  Icon(
-                    _expanded ? Icons.remove : Icons.add,
-                    color: Colors.white,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Builder(
-                builder: (context) {
-                  final hasReactions = widget.adverseReactions
-                      .trim()
-                      .isNotEmpty;
-                  final hasDetails = widget.adverseReactionDetails
-                      .trim()
-                      .isNotEmpty;
-                  if (!hasReactions && !hasDetails) {
-                    return Align(
+                    const SizedBox(height: 4),
+                    Align(
                       alignment: Alignment.centerLeft,
-                      child: const Text(
-                        'No adverse reactions specified.',
-                        style: TextStyle(color: Colors.white, fontSize: 15),
-                        textAlign: TextAlign.left,
-                      ),
-                    );
-                  }
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Adverse Reactions:',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
+                      child: Text(
+                        hasReactions
+                            ? adverseReactions
+                            : 'Not specified',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          hasReactions
-                              ? widget.adverseReactions
-                              : 'Not specified',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Adverse Reaction Details:',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          'Adverse Reaction Details:',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
+                    ),
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        hasDetails
+                            ? adverseReactionDetails
+                            : 'Not specified',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          hasDetails
-                              ? widget.adverseReactionDetails
-                              : 'Not specified',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                    ),
+                  ],
+                );
+              },
             ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
   }
 }
