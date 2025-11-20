@@ -1,19 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/recall_data.dart';
 import '../services/saved_recalls_service.dart';
 import '../pages/usda_recall_details_page.dart';
+import '../providers/data_providers.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 
-class UsdaRecallCard extends StatefulWidget {
+class UsdaRecallCard extends ConsumerStatefulWidget {
   final RecallData recall;
 
   const UsdaRecallCard({super.key, required this.recall});
 
   @override
-  State<UsdaRecallCard> createState() => _UsdaRecallCardState();
+  ConsumerState<UsdaRecallCard> createState() => _UsdaRecallCardState();
 }
 
-class _UsdaRecallCardState extends State<UsdaRecallCard> {
+class _UsdaRecallCardState extends ConsumerState<UsdaRecallCard> {
   // Section 2: Middle Row 1
   Widget usdaRecallCardMiddleRow1({
     required String riskLevel,
@@ -39,7 +42,7 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
                   Text(
                     '[Risk Level]',
                     style: TextStyle(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withValues(alpha: 0.7),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -70,7 +73,7 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
                   Text(
                     '[Negative Outcomes]',
                     style: TextStyle(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withValues(alpha: 0.7),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -97,7 +100,7 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
                   Text(
                     '[Recall Reason]',
                     style: TextStyle(
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withValues(alpha: 0.7),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -211,7 +214,7 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
                           ),
                           child: Icon(
                             isSaved ? Icons.favorite : Icons.favorite_border,
-                            color: isSaved ? Color(0xFF4CAF50) : Colors.white,
+                            color: isSaved ? AppColors.success : AppColors.textPrimary,
                             size: 18,
                           ),
                         ),
@@ -228,7 +231,7 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
         Text(
           'Reports of Injury:',
           style: TextStyle(
-            color: Colors.black.withOpacity(0.7),
+            color: Colors.black.withValues(alpha: 0.7),
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -316,7 +319,7 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: const Color(0xFF4CAF50),
+                color: AppColors.success,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: const Text(
@@ -353,7 +356,7 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
         Text(
           '[Brand Name]',
           style: TextStyle(
-            color: Colors.black.withOpacity(0.7),
+            color: Colors.black.withValues(alpha: 0.7),
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -372,7 +375,7 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
         Text(
           '[Product Name]',
           style: TextStyle(
-            color: Colors.black.withOpacity(0.7),
+            color: Colors.black.withValues(alpha: 0.7),
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -389,7 +392,7 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
         Text(
           '[Sold By/Distributor]',
           style: TextStyle(
-            color: Colors.black.withOpacity(0.7),
+            color: Colors.black.withValues(alpha: 0.7),
             fontSize: 12,
             fontWeight: FontWeight.w500,
           ),
@@ -406,9 +409,9 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.black.withOpacity(0.1), width: 1),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.1), width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -460,7 +463,7 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
             Text(
               '[USDA Recall ID]',
               style: TextStyle(
-                color: Colors.black.withOpacity(0.7),
+                color: Colors.black.withValues(alpha: 0.7),
                 fontSize: 12,
                 fontWeight: FontWeight.w500,
               ),
@@ -604,6 +607,9 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
     setState(() {
       _isSaved = !_isSaved;
     });
+    // Refresh provider so HomePage updates immediately
+    ref.refresh(savedRecallsProvider);
+    ref.refresh(safetyScoreProvider);
   }
 
   @override
@@ -623,11 +629,11 @@ class _UsdaRecallCardState extends State<UsdaRecallCard> {
         margin: const EdgeInsets.only(bottom: 16.0),
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFC107),
+          color: AppColors.warning,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 6,
               offset: const Offset(0, 3),
             ),

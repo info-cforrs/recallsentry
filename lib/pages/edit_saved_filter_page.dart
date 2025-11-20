@@ -253,9 +253,10 @@ class _EditSavedFilterPageState extends State<EditSavedFilterPage> {
                   const SizedBox(width: 8),
                   GestureDetector(
                       onTap: () async {
+                        final navigator = Navigator.of(context);
                         final shouldPop = await _onWillPop();
                         if (shouldPop && mounted) {
-                          Navigator.of(context).pop();
+                          navigator.pop();
                         }
                       },
                       child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),

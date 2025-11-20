@@ -17,18 +17,9 @@ class IntroPage2 extends StatelessWidget {
               const SizedBox(height: 60),
 
               // House with Magnifying Glass Icon
-              Container(
+              SizedBox(
                 width: 240,
                 height: 240,
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
                 child: Image.asset(
                   'assets/images/house-magnifier-blue-large.png',
                   width: 240,

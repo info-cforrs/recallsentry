@@ -3,9 +3,11 @@ import 'package:flutter_svg/flutter_svg.dart';
 
 class USStateMap extends StatelessWidget {
   final String productDistribution;
+  final String? distributionMapUrl;
 
   const USStateMap({
     required this.productDistribution,
+    this.distributionMapUrl,
     super.key,
   });
 
@@ -79,106 +81,130 @@ class USStateMap extends StatelessWidget {
           aspectRatio: 959 / 593,
           child: Stack(
             children: [
-              // Background US map SVG
+              // Display pre-rendered PNG if available, otherwise fall back to SVG
               Positioned.fill(
-                child: FutureBuilder<String>(
-                  future: DefaultAssetBundle.of(context).loadString('assets/images/us_map.svg'),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      String svgString = snapshot.data!;
-
-                      // First, set all states to light grey
-                      svgString = svgString.replaceAllMapped(
-                        RegExp('<path([^>]*?)id="([A-Z]{2})"([^>]*?)(/?)>', caseSensitive: false),
-                        (match) {
-                          final beforeId = match.group(1) ?? '';
-                          final stateId = match.group(2) ?? '';
-                          final afterId = match.group(3) ?? '';
-                          final selfClosing = match.group(4) ?? '';
-
-                          // Remove any existing fill or fill-opacity attributes
-                          String cleaned = (beforeId + afterId)
-                              .replaceAll(RegExp(r'\s*fill="[^"]*"'), '')
-                              .replaceAll(RegExp(r'\s*fill-opacity="[^"]*"'), '');
-
-                          // Add white fill for all states
-                          return '<path$cleaned id="$stateId" fill="#FFFFFF" fill-opacity="0.8"$selfClosing>';
-                        },
-                      );
-
-                      // Then, override with red for highlighted states
-                      for (final state in highlightedStates) {
-                        svgString = svgString.replaceAllMapped(
-                          RegExp('<path([^>]*?)id="$state"([^>]*?)(/?)>', caseSensitive: false),
-                          (match) {
-                            final beforeId = match.group(1) ?? '';
-                            final afterId = match.group(2) ?? '';
-                            final selfClosing = match.group(3) ?? '';
-
-                            // Remove any existing fill or fill-opacity attributes
-                            String cleaned = (beforeId + afterId)
-                                .replaceAll(RegExp(r'\s*fill="[^"]*"'), '')
-                                .replaceAll(RegExp(r'\s*fill-opacity="[^"]*"'), '');
-
-                            // Add red fill attributes
-                            return '<path$cleaned id="$state" fill="#E53935" fill-opacity="0.7"$selfClosing>';
-                          },
-                        );
-                      }
-
-                      return SvgPicture.string(
-                        svgString,
+                child: (distributionMapUrl != null && distributionMapUrl!.isNotEmpty)
+                    ? Image.network(
+                        distributionMapUrl!,
                         fit: BoxFit.contain,
-                      );
-                    } else if (snapshot.hasError) {
-                      return CustomPaint(
-                        painter: USMapPainter(highlightedStates: highlightedStates),
-                      );
-                    }
-                    return const Center(child: CircularProgressIndicator());
-                  },
-                ),
+                        loadingBuilder: (context, child, loadingProgress) {
+                          if (loadingProgress == null) return child;
+                          return const Center(child: CircularProgressIndicator());
+                        },
+                        errorBuilder: (context, error, stackTrace) {
+                          // Fallback to SVG if PNG fails to load
+                          return _buildSVGMap(context, highlightedStates);
+                        },
+                      )
+                    : _buildSVGMap(context, highlightedStates),
               ),
               // State count indicator badge at top
-              if (highlightedStates.isNotEmpty)
-                Positioned(
-                  top: 12,
-                  left: 12,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.7),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFE53935), width: 2),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFE53935),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          highlightedStates.length == 50
-                              ? 'All 50 States'
-                              : '${highlightedStates.length} ${highlightedStates.length == 1 ? 'State' : 'States'} Affected',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+              _buildStateBadge(highlightedStates),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  // Build SVG map with dynamic state coloring (fallback method)
+  Widget _buildSVGMap(BuildContext context, Set<String> highlightedStates) {
+    return FutureBuilder<String>(
+      future: DefaultAssetBundle.of(context).loadString('assets/images/us_map.svg'),
+      builder: (context, snapshot) {
+        if (snapshot.hasData) {
+          String svgString = snapshot.data!;
+
+          // First, set all states to white
+          svgString = svgString.replaceAllMapped(
+            RegExp('<path([^>]*?)id="([A-Z]{2})"([^>]*?)(/?)>', caseSensitive: false),
+            (match) {
+              final beforeId = match.group(1) ?? '';
+              final stateId = match.group(2) ?? '';
+              final afterId = match.group(3) ?? '';
+              final selfClosing = match.group(4) ?? '';
+
+              // Remove any existing fill or fill-opacity attributes
+              String cleaned = (beforeId + afterId)
+                  .replaceAll(RegExp(r'\s*fill="[^"]*"'), '')
+                  .replaceAll(RegExp(r'\s*fill-opacity="[^"]*"'), '');
+
+              // Add white fill for all states
+              return '<path$cleaned id="$stateId" fill="#FFFFFF" fill-opacity="0.8"$selfClosing>';
+            },
+          );
+
+          // Then, override with red for highlighted states
+          for (final state in highlightedStates) {
+            svgString = svgString.replaceAllMapped(
+              RegExp('<path([^>]*?)id="$state"([^>]*?)(/?)>', caseSensitive: false),
+              (match) {
+                final beforeId = match.group(1) ?? '';
+                final afterId = match.group(2) ?? '';
+                final selfClosing = match.group(3) ?? '';
+
+                // Remove any existing fill or fill-opacity attributes
+                String cleaned = (beforeId + afterId)
+                    .replaceAll(RegExp(r'\s*fill="[^"]*"'), '')
+                    .replaceAll(RegExp(r'\s*fill-opacity="[^"]*"'), '');
+
+                // Add red fill attributes
+                return '<path$cleaned id="$state" fill="#E53935" fill-opacity="0.7"$selfClosing>';
+              },
+            );
+          }
+
+          return SvgPicture.string(
+            svgString,
+            fit: BoxFit.contain,
+          );
+        } else if (snapshot.hasError) {
+          return CustomPaint(
+            painter: USMapPainter(highlightedStates: highlightedStates),
+          );
+        }
+        return const Center(child: CircularProgressIndicator());
+      },
+    );
+  }
+
+  // Build state count badge overlay
+  Widget _buildStateBadge(Set<String> highlightedStates) {
+    if (highlightedStates.isEmpty) return const SizedBox.shrink();
+
+    return Positioned(
+      top: 12,
+      left: 12,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.7),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE53935), width: 2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Color(0xFFE53935),
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              highlightedStates.length == 50
+                  ? 'All 50 States'
+                  : '${highlightedStates.length} ${highlightedStates.length == 1 ? 'State' : 'States'} Affected',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );

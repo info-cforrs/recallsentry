@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/recall_data.dart';
 import '../services/saved_recalls_service.dart';
 import '../pages/usda_recall_details_page.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 
 class SmallUsdaRmcCard extends StatefulWidget {
   final RecallData recall;
@@ -64,7 +65,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF2A4A5C),
+          color: AppColors.secondary,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -87,7 +88,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
                               ? widget.recall.brandName
                               : 'N/A',
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -100,7 +101,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
                         child: Text(
                           _getStateCount(),
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -114,7 +115,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
                         child: Text(
                           _formatDate(widget.recall.dateIssued),
                           style: const TextStyle(
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -153,7 +154,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
                             Text(
                               'Outcomes: ${_getNegativeOutcomes()}',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                                 fontSize: 12,
                               ),
                               maxLines: 1,
@@ -164,7 +165,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
                             Text(
                               'Reason: ${widget.recall.recallReason.isNotEmpty ? widget.recall.recallReason : 'N/A'}',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                                 fontSize: 12,
                               ),
                               maxLines: 2,
@@ -175,7 +176,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
                             Text(
                               'ID: ${widget.recall.usdaRecallId.isNotEmpty ? widget.recall.usdaRecallId : 'N/A'}',
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                                 fontSize: 12,
                               ),
                               maxLines: 1,
@@ -238,7 +239,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
                                   ),
                                   child: Icon(
                                     _isSaved ? Icons.favorite : Icons.favorite_border,
-                                    color: _isSaved ? Color(0xFF4CAF50) : Colors.white,
+                                    color: _isSaved ? AppColors.success : AppColors.textPrimary,
                                     size: 16,
                                   ),
                                 ),
@@ -257,7 +258,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               decoration: const BoxDecoration(
-                color: Color(0xFF0C5876),
+                color: AppColors.tertiary,
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(12),
                   bottomRight: Radius.circular(12),
@@ -269,7 +270,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
                   const Text(
                     'RMC Status:',
                     style: TextStyle(
-                      color: Colors.white70,
+                      color: AppColors.textSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -277,7 +278,7 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
                   Text(
                     widget.currentStatus ?? 'Not Started',
                     style: const TextStyle(
-                      color: Color(0xFF5DADE2),
+                      color: AppColors.accentBlueLight,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),

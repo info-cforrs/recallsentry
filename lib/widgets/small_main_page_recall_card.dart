@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recall_data.dart';
 import '../services/saved_recalls_service.dart';
-import '../pages/fda_recall_details_pagev2.dart';
+import '../pages/fda_recall_details_page.dart';
 import '../pages/usda_recall_details_page.dart';
+import '../providers/data_providers.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 
-class SmallMainPageRecallCard extends StatefulWidget {
+class SmallMainPageRecallCard extends ConsumerStatefulWidget {
   final RecallData recall;
   final String? currentStatus;
   final String? filterName;
@@ -19,10 +22,10 @@ class SmallMainPageRecallCard extends StatefulWidget {
   });
 
   @override
-  State<SmallMainPageRecallCard> createState() => _SmallMainPageRecallCardState();
+  ConsumerState<SmallMainPageRecallCard> createState() => _SmallMainPageRecallCardState();
 }
 
-class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
+class _SmallMainPageRecallCardState extends ConsumerState<SmallMainPageRecallCard> {
   final SavedRecallsService _savedRecallsService = SavedRecallsService();
   bool _isSaved = false;
 
@@ -51,6 +54,9 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
       setState(() {
         _isSaved = !_isSaved;
       });
+      // Refresh provider so HomePage updates immediately
+      ref.refresh(savedRecallsProvider);
+      ref.refresh(safetyScoreProvider);
     }
   }
 
@@ -101,14 +107,14 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => FdaRecallDetailsPageV2(recall: widget.recall),
+              builder: (context) => FdaRecallDetailsPage(recall: widget.recall),
             ),
           );
         }
       },
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF2A4A5C),
+          color: AppColors.secondary,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -123,7 +129,7 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
                       width: constraints.maxWidth,
                       height: constraints.maxWidth,
                       decoration: const BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         borderRadius: BorderRadius.only(
                           topLeft: Radius.circular(16),
                           topRight: Radius.circular(16),
@@ -173,7 +179,7 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
                           ),
                           child: Icon(
                             _isSaved ? Icons.favorite : Icons.favorite_border,
-                            color: _isSaved ? Color(0xFF4CAF50) : Colors.white,
+                            color: _isSaved ? AppColors.success : AppColors.textPrimary,
                             size: 20,
                           ),
                         ),
@@ -187,13 +193,13 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              color: const Color(0xFF0C5876),
+              color: AppColors.tertiary,
               child: Text(
                 widget.recall.category.isNotEmpty
                     ? widget.recall.category
                     : 'N/A',
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textPrimary,
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -206,11 +212,11 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                color: const Color(0xFF0C5876),
+                color: AppColors.tertiary,
                 child: Text(
                   widget.currentStatus!,
                   style: const TextStyle(
-                    color: Color(0xFF5DADE2),
+                    color: AppColors.accentBlueLight,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
@@ -224,13 +230,13 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                color: const Color(0xFF0C5876),
+                color: AppColors.tertiary,
                 child: Row(
                   children: [
                     const Text(
                       'Filter: ',
                       style: TextStyle(
-                        color: Colors.white70,
+                        color: AppColors.textSecondary,
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                       ),
@@ -239,7 +245,7 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
                       child: Text(
                         widget.filterName!,
                         style: const TextStyle(
-                          color: Color(0xFF5DADE2),
+                          color: AppColors.accentBlueLight,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                         ),
@@ -262,7 +268,7 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
                         ? widget.recall.brandName
                         : 'N/A',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                     ),
@@ -276,7 +282,7 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
                         ? widget.recall.productName
                         : 'N/A',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                       height: 1.3,
@@ -291,7 +297,7 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
                     child: Text(
                       _formatDate(widget.recall.dateIssued),
                       style: const TextStyle(
-                        color: Colors.white70,
+                        color: AppColors.textSecondary,
                         fontSize: 11,
                         fontWeight: FontWeight.w400,
                       ),
@@ -302,7 +308,7 @@ class _SmallMainPageRecallCardState extends State<SmallMainPageRecallCard> {
                   Text(
                     _getRecallId(),
                     style: const TextStyle(
-                      color: Colors.white70,
+                      color: AppColors.textSecondary,
                       fontSize: 9,
                       fontWeight: FontWeight.w400,
                     ),

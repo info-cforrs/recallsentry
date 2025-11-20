@@ -19,7 +19,7 @@ class InfoPage extends StatefulWidget {
 }
 
 class _InfoPageState extends State<InfoPage> {
-  SubscriptionTier _subscriptionTier = SubscriptionTier.guest;
+  SubscriptionTier _subscriptionTier = SubscriptionTier.free;
 
   @override
   void initState() {
@@ -98,6 +98,63 @@ class _InfoPageState extends State<InfoPage> {
     );
   }
 
+  void _showRmcUpgradeModal() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Row(
+            children: [
+              Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Upgrade Required',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Recall Management Center (RMC) is an exclusive RecallMatch feature. Upgrade to RecallMatch (\$4.99/month) to access step-by-step recall resolution workflows, household inventory tracking, SmartScan, and automated RecallMatch engine.',
+            style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54, fontSize: 16),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const SubscribePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD700),
+                foregroundColor: const Color(0xFF2A4A5C),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text(
+                'Upgrade to RecallMatch',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -131,7 +188,7 @@ class _InfoPageState extends State<InfoPage> {
                           width: 40,
                           height: 40,
                           child: Image.asset(
-                            'assets/images/shield_logo3.png',
+                            'assets/images/shield_logo4.png',
                             width: 40,
                             height: 40,
                             fit: BoxFit.contain,
@@ -226,12 +283,25 @@ class _InfoPageState extends State<InfoPage> {
                     ),
                     onSubmitted: (value) {
                       // Navigate to All Recalls page with search query
-                      // TODO: Implement search functionality
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const AllRecallsPage(),
-                        ),
-                      );
+                      if (value.trim().isNotEmpty) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => AllRecallsPage(
+                              initialSearchQuery: value.trim(),
+                              showBottomNavigation: false,
+                            ),
+                          ),
+                        );
+                      } else {
+                        // If search is empty, just navigate to All Recalls page without filter
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const AllRecallsPage(
+                              showBottomNavigation: false,
+                            ),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ),
@@ -401,26 +471,48 @@ class _InfoPageState extends State<InfoPage> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: ListTile(
-                    leading: const Icon(Icons.verified_user, color: Colors.white70),
-                    title: const Text(
+                    leading: Icon(
+                      Icons.verified_user,
+                      color: _subscriptionTier == SubscriptionTier.recallMatch
+                          ? Colors.white70
+                          : Colors.black54,
+                    ),
+                    title: Text(
                       'Recall Management Center',
-                      style: TextStyle(color: Colors.white),
+                      style: TextStyle(
+                        color: _subscriptionTier == SubscriptionTier.recallMatch
+                            ? Colors.white
+                            : Colors.black,
+                      ),
                     ),
-                    subtitle: const Text(
+                    subtitle: Text(
                       'Track and manage your recalls',
-                      style: TextStyle(color: Colors.white70),
+                      style: TextStyle(
+                        color: _subscriptionTier == SubscriptionTier.recallMatch
+                            ? Colors.white70
+                            : Colors.black54,
+                      ),
                     ),
-                    trailing: const Icon(
+                    trailing: Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
-                      color: Colors.white70,
+                      color: _subscriptionTier == SubscriptionTier.recallMatch
+                          ? Colors.white70
+                          : Colors.black54,
                     ),
+                    tileColor: _subscriptionTier == SubscriptionTier.recallMatch
+                        ? null
+                        : const Color(0xFFD1D1D1),
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const RmcPage(),
-                        ),
-                      );
+                      if (_subscriptionTier == SubscriptionTier.recallMatch) {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const RmcPage(),
+                          ),
+                        );
+                      } else {
+                        _showRmcUpgradeModal();
+                      }
                     },
                   ),
                 ),

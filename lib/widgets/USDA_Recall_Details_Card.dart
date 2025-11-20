@@ -1,584 +1,29 @@
 import 'package:flutter/material.dart';
 import '../models/recall_data.dart';
+import '../pages/manufacturer_retailer_page.dart';
+import '../pages/about_item_details_page.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 
 class USDARecallDetailsCard extends StatelessWidget {
   final RecallData recall;
   const USDARecallDetailsCard({super.key, required this.recall});
 
-  void _showManufacturerRetailerModal(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2A4A5C),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          title: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Manufacturer & Retailer Details',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Establishment Manufacturer
-                if (recall.establishmentManufacturer.isNotEmpty) ...[
-                  const Text(
-                    'Establishment/Manufacturer:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.establishmentManufacturer,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Manufacturer Contact Name
-                if (recall.establishmentManufacturerContactName.isNotEmpty) ...[
-                  const Text(
-                    'Contact Name:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.establishmentManufacturerContactName,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Manufacturer Contact Phone
-                if (recall.establishmentManufacturerContactPhone.isNotEmpty) ...[
-                  const Text(
-                    'Contact Phone:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.establishmentManufacturerContactPhone,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Manufacturer Contact Email
-                if (recall.establishmentManufacturerContactEmail.isNotEmpty) ...[
-                  const Text(
-                    'Contact Email:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.establishmentManufacturerContactEmail,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Retailer
-                if (recall.retailer1.isNotEmpty) ...[
-                  const Text(
-                    'Retailer:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.retailer1,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Retailer Contact Name
-                if (recall.retailer1ContactName.isNotEmpty) ...[
-                  const Text(
-                    'Retailer Contact Name:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.retailer1ContactName,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Retailer Contact Phone
-                if (recall.retailer1ContactPhone.isNotEmpty) ...[
-                  const Text(
-                    'Retailer Contact Phone:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.retailer1ContactPhone,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Retailer Contact Email
-                if (recall.retailer1ContactEmail.isNotEmpty) ...[
-                  const Text(
-                    'Retailer Contact Email:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.retailer1ContactEmail,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-                // Show message if no data
-                if (recall.establishmentManufacturer.isEmpty &&
-                    recall.establishmentManufacturerContactName.isEmpty &&
-                    recall.establishmentManufacturerContactPhone.isEmpty &&
-                    recall.establishmentManufacturerContactEmail.isEmpty &&
-                    recall.retailer1.isEmpty &&
-                    recall.retailer1ContactName.isEmpty &&
-                    recall.retailer1ContactPhone.isEmpty &&
-                    recall.retailer1ContactEmail.isEmpty)
-                  const Text(
-                    'No manufacturer or retailer details available.',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Close',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+  void _navigateToManufacturerRetailer(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ManufacturerRetailerPage(recall: recall),
+      ),
     );
   }
 
-  void _showProductDetailsModal(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2A4A5C),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          title: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Product Details',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Product Identification
-                if (recall.productIdentification.isNotEmpty) ...[
-                  const Text(
-                    'Product Identification:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.productIdentification,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // UPC
-                if (recall.upc.isNotEmpty && recall.upc != 'N/A') ...[
-                  const Text(
-                    'UPC Code:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.upc,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // SKU
-                if (recall.sku.isNotEmpty && recall.sku != 'N/A') ...[
-                  const Text(
-                    'SKU:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.sku,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Batch/Lot Code
-                if (recall.batchLotCode.isNotEmpty && recall.batchLotCode != 'N/A') ...[
-                  const Text(
-                    'Batch/Lot Code:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.batchLotCode,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Production Dates
-                if (recall.productionDateStart != null || recall.productionDateEnd != null) ...[
-                  const Text(
-                    'Production Dates:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'From: ${recall.productionDateStart != null ? _formatDate(recall.productionDateStart) : "N/A"}',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'To: ${recall.productionDateEnd != null ? _formatDate(recall.productionDateEnd) : "N/A"}',
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Expiration Date
-                if (recall.expDate.isNotEmpty && recall.expDate != 'N/A') ...[
-                  const Text(
-                    'Expiration Date:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.expDate,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Best Used By Date
-                if (recall.bestUsedByDate.isNotEmpty && recall.bestUsedByDate != 'N/A') ...[
-                  const Text(
-                    'Best Used By Date:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.bestUsedByDate,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Packaging Description
-                if (recall.packagingDesc.isNotEmpty) ...[
-                  const Text(
-                    'Packaging Info:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.packagingDesc,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-                // Show message if no data
-                if (recall.productIdentification.isEmpty &&
-                    (recall.upc.isEmpty || recall.upc == 'N/A') &&
-                    (recall.sku.isEmpty || recall.sku == 'N/A') &&
-                    (recall.batchLotCode.isEmpty || recall.batchLotCode == 'N/A') &&
-                    recall.productionDateStart == null &&
-                    recall.productionDateEnd == null &&
-                    (recall.expDate.isEmpty || recall.expDate == 'N/A') &&
-                    (recall.bestUsedByDate.isEmpty || recall.bestUsedByDate == 'N/A') &&
-                    recall.packagingDesc.isEmpty)
-                  const Text(
-                    'No product details available.',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Close',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
+  void _navigateToAboutItemDetails(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AboutItemDetailsPage(recall: recall),
+      ),
     );
   }
 
-  void _showAdverseReactionsModal(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF2A4A5C),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          title: Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
-                onPressed: () => Navigator.of(context).pop(),
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
-              const SizedBox(width: 8),
-              const Expanded(
-                child: Text(
-                  'Adverse Reactions',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Adverse Reactions
-                if (recall.adverseReactions.isNotEmpty) ...[
-                  const Text(
-                    'Adverse Reactions:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.adverseReactions,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // Negative Outcomes
-                if (recall.negativeOutcomes.isNotEmpty) ...[
-                  const Text(
-                    'Negative Outcomes:',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    recall.negativeOutcomes,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                    ),
-                  ),
-                ],
-                // Show message if no data
-                if (recall.adverseReactions.isEmpty && recall.negativeOutcomes.isEmpty)
-                  const Text(
-                    'No adverse reactions or negative outcomes reported.',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 15,
-                      fontStyle: FontStyle.italic,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text(
-                'Close',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -593,18 +38,8 @@ class USDARecallDetailsCard extends StatelessWidget {
         recall.soldBy.isNotEmpty ||
         recall.productQty.isNotEmpty;
 
-    bool hasDetailsGrid = (recall.upc.isNotEmpty && recall.upc != 'N/A') ||
-        (recall.sku.isNotEmpty && recall.sku != 'N/A') ||
-        (recall.batchLotCode.isNotEmpty && recall.batchLotCode != 'N/A') ||
-        (recall.sellByDate.isNotEmpty && recall.sellByDate != 'N/A');
-
-    bool hasDatesSection = (recall.expDate.isNotEmpty && recall.expDate != 'N/A') ||
-        (recall.bestUsedByDate.isNotEmpty && recall.bestUsedByDate != 'N/A');
-
     // Determine which is the last section
-    bool detailsFieldsIsLast = hasDetailsFields && !hasDetailsGrid && !hasDatesSection;
-    bool detailsGridIsLast = hasDetailsGrid && !hasDatesSection;
-    bool datesSectionIsLast = hasDatesSection;
+    bool detailsFieldsIsLast = hasDetailsFields;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -631,18 +66,6 @@ class USDARecallDetailsCard extends StatelessWidget {
           productQty: recall.productQty,
           isLast: detailsFieldsIsLast,
         ),
-        _buildDetailsGrid(
-          upc: recall.upc,
-          sku: recall.sku,
-          batchLotCode: recall.batchLotCode,
-          sellByDate: recall.sellByDate,
-          isLast: detailsGridIsLast,
-        ),
-        _buildDatesSection(
-          expDate: recall.expDate,
-          bestUsedByDate: recall.bestUsedByDate,
-          isLast: datesSectionIsLast,
-        ),
       ],
     );
   }
@@ -654,7 +77,7 @@ class USDARecallDetailsCard extends StatelessWidget {
   }) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFF2A4A5C),
+        color: AppColors.secondary,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(18),
           topRight: Radius.circular(18),
@@ -669,7 +92,7 @@ class USDARecallDetailsCard extends StatelessWidget {
           Text(
             _formatDate(dateIssued),
             style: const TextStyle(
-              color: Colors.white,
+              color: AppColors.textPrimary,
               fontWeight: FontWeight.normal,
               fontSize: 16,
             ),
@@ -678,13 +101,13 @@ class USDARecallDetailsCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             decoration: BoxDecoration(
-              color: const Color(0xFF4CAF50),
+              color: AppColors.success,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               agency,
               style: const TextStyle(
-                color: Colors.white,
+                color: AppColors.textPrimary,
                 fontWeight: FontWeight.bold,
                 fontSize: 15,
               ),
@@ -701,7 +124,7 @@ class USDARecallDetailsCard extends StatelessWidget {
     required dynamic stateCount,
   }) {
     return Container(
-      color: const Color(0xFF2A4A5C),
+      color: AppColors.secondary,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -723,13 +146,13 @@ class USDARecallDetailsCard extends StatelessWidget {
                             'public health alert',
                           )
                           ? Colors.purple
-                          : Color(0xFFE53935),
+                          : AppColors.error,
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
                       riskLevel,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                       ),
@@ -759,7 +182,7 @@ class USDARecallDetailsCard extends StatelessWidget {
                   : Text(
                       '$stateCount States',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -785,41 +208,15 @@ class USDARecallDetailsCard extends StatelessWidget {
   }) {
     List<Widget> children = [];
 
-    // Format dates if they exist
-    String? formattedStartDate = productionDateStart != null ? _formatDate(productionDateStart) : null;
-    String? formattedEndDate = productionDateEnd != null ? _formatDate(productionDateEnd) : null;
-
-    // Negative Outcomes / Adverse Reactions - only show if not empty (with arrow and modal trigger)
+    // Negative Outcomes / Adverse Reactions - only show if not empty
     if (negativeOutcomes.isNotEmpty) {
-      children.add(Builder(
-        builder: (context) {
-          return GestureDetector(
-            onTap: () => _showAdverseReactionsModal(context),
-            child: Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Expanded(
-                    child: Text(
-                      negativeOutcomes,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const Icon(
-                    Icons.arrow_forward_ios,
-                    color: Colors.white,
-                    size: 18,
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+      children.add(Text(
+        negativeOutcomes,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+        ),
       ));
       children.add(const SizedBox(height: 16));
     }
@@ -833,12 +230,44 @@ class USDARecallDetailsCard extends StatelessWidget {
       children.add(const SizedBox(height: 16));
     }
 
+    // Reports of Injury - show without title as a separate row
+    if (recall.reportsOfInjury.isNotEmpty && recall.reportsOfInjury != 'N/A') {
+      children.add(Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Image.asset(
+            'assets/images/Reports_of_Injury_icon.png',
+            width: 20,
+            height: 20,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              recall.reportsOfInjury,
+              style: const TextStyle(color: Colors.white, fontSize: 15),
+            ),
+          ),
+        ],
+      ));
+      children.add(const SizedBox(height: 16));
+    }
+
+    // 1px line above brand name
+    if (brandName.isNotEmpty) {
+      children.add(Container(
+        height: 1,
+        color: AppColors.textPrimary.withValues(alpha: 0.2),
+      ));
+      children.add(const SizedBox(height: 16));
+    }
+
     // Brand Name - only show if not empty (with arrow and modal trigger)
     if (brandName.isNotEmpty) {
       children.add(Builder(
         builder: (context) {
           return GestureDetector(
-            onTap: () => _showManufacturerRetailerModal(context),
+            onTap: () => _navigateToManufacturerRetailer(context),
             child: Padding(
               padding: const EdgeInsets.only(right: 4),
               child: Row(
@@ -848,15 +277,15 @@ class USDARecallDetailsCard extends StatelessWidget {
                     child: Text(
                       brandName,
                       style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
+                        color: AppColors.textPrimary,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   const Icon(
                     Icons.arrow_forward_ios,
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     size: 18,
                   ),
                 ],
@@ -868,30 +297,52 @@ class USDARecallDetailsCard extends StatelessWidget {
       children.add(const SizedBox(height: 16));
     }
 
-    // Product Name - only show if not empty (with arrow and modal trigger)
+    // Product Name - only show if not empty
     if (productName.isNotEmpty) {
+      children.add(Text(
+        productName,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ));
+      children.add(const SizedBox(height: 16));
+    }
+
+    // "About this Item" section - show if any of the three fields have data
+    if (packagingDesc.isNotEmpty || productQty.isNotEmpty || soldBy.isNotEmpty) {
+      // Section title with navigation
       children.add(Builder(
         builder: (context) {
           return GestureDetector(
-            onTap: () => _showProductDetailsModal(context),
-            child: Padding(
-              padding: const EdgeInsets.only(right: 4),
+            onTap: () => _navigateToAboutItemDetails(context),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: Text(
-                      productName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    children: const [
+                      Icon(Icons.info_outline, color: Colors.white, size: 20),
+                      SizedBox(width: 12),
+                      Text(
+                        'About this Item',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
                       ),
-                    ),
+                    ],
                   ),
                   const Icon(
                     Icons.arrow_forward_ios,
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     size: 18,
                   ),
                 ],
@@ -900,336 +351,105 @@ class USDARecallDetailsCard extends StatelessWidget {
           );
         },
       ));
-      children.add(const SizedBox(height: 16));
-    }
+      children.add(const SizedBox(height: 12));
 
-    // Packaging Desc - only show if not empty
-    if (packagingDesc.isNotEmpty) {
-      children.add(Text(
-        packagingDesc,
-        style: const TextStyle(color: Colors.white, fontSize: 15),
-      ));
-      children.add(const SizedBox(height: 16));
-    }
-
-    // Production Dates - only show if at least one is not null
-    if (formattedStartDate != null || formattedEndDate != null) {
-      children.add(const Text(
-        'Produced:',
-        style: TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-        ),
-      ));
-      children.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            'From:',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            formattedStartDate ?? "N/A",
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-          ),
-          const SizedBox(width: 16),
-          const Text(
-            'To:',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            formattedEndDate ?? "N/A",
-            style: const TextStyle(color: Colors.white, fontSize: 14),
-          ),
-        ],
-      ));
-      children.add(const SizedBox(height: 16));
-    }
-
-    // Sold By - only show if not empty
-    if (soldBy.isNotEmpty) {
-      children.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            'Sold By:',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              soldBy,
-              style: const TextStyle(color: Colors.white, fontSize: 14),
-            ),
-          ),
-        ],
-      ));
-      children.add(const SizedBox(height: 16));
-    }
-
-    // Product Qty - only show if not empty
-    if (productQty.isNotEmpty) {
-      children.add(Text(
-        productQty,
-        style: const TextStyle(
-          color: Colors.white,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-        ),
-      ));
-    }
-
-    // Only show container if there are children to display
-    if (children.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF2A4A5C),
-        borderRadius: isLast
-            ? const BorderRadius.only(
-                bottomLeft: Radius.circular(18),
-                bottomRight: Radius.circular(18),
-              )
-            : null,
-      ),
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
-    );
-  }
-
-
-  Widget _buildDetailsGrid({
-    required String upc,
-    required String sku,
-    required String batchLotCode,
-    required String sellByDate,
-    required bool isLast,
-  }) {
-    List<Widget> children = [];
-
-    // UPC and SKU row
-    bool hasUpc = upc.isNotEmpty && upc != 'N/A';
-    bool hasSku = sku.isNotEmpty && sku != 'N/A';
-
-    if (hasUpc || hasSku) {
-      children.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (hasUpc)
-            Expanded(
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: 'UPC Code: ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    TextSpan(
-                      text: upc,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          if (hasUpc && hasSku) const SizedBox(width: 16),
-          if (hasSku)
-            Expanded(
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: 'SKU: ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    TextSpan(
-                      text: sku,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ));
-      children.add(const SizedBox(height: 10));
-    }
-
-    // Batch/Lot Code - only show if not empty
-    if (batchLotCode.isNotEmpty && batchLotCode != 'N/A') {
-      children.add(RichText(
-        text: TextSpan(
+      // Row 1: Packaging Description
+      if (packagingDesc.isNotEmpty) {
+        children.add(Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const TextSpan(
-              text: 'Batch/Lot Code: ',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
+            const SizedBox(
+              width: 160,
+              child: Text(
+                'Packaging Description:',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
-            TextSpan(
-              text: batchLotCode,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                packagingDesc,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                ),
               ),
             ),
           ],
-        ),
-      ));
-      children.add(const SizedBox(height: 10));
-    }
+        ));
+        children.add(const SizedBox(height: 12));
+      }
 
-    // Sell By Date - only show if not empty
-    if (sellByDate.isNotEmpty && sellByDate != 'N/A') {
-      children.add(RichText(
-        text: TextSpan(
+      // Row 2: Product Quantity
+      if (productQty.isNotEmpty) {
+        children.add(Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const TextSpan(
-              text: 'Sell By Date: ',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
+            const SizedBox(
+              width: 160,
+              child: Text(
+                'Product Quantity:',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
-            TextSpan(
-              text: sellByDate,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                productQty,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                ),
               ),
             ),
           ],
-        ),
-      ));
-    }
+        ));
+        children.add(const SizedBox(height: 12));
+      }
 
-    // Only show container if there are children to display
-    if (children.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF2A4A5C),
-        borderRadius: isLast
-            ? const BorderRadius.only(
-                bottomLeft: Radius.circular(18),
-                bottomRight: Radius.circular(18),
-              )
-            : null,
-      ),
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
-    );
-  }
-
-
-  Widget _buildDatesSection({
-    required String expDate,
-    required String bestUsedByDate,
-    required bool isLast,
-  }) {
-    List<Widget> children = [];
-
-    // Exp Date and Best Used By Date row
-    bool hasExpDate = expDate.isNotEmpty && expDate != 'N/A';
-    bool hasBestUsedBy = bestUsedByDate.isNotEmpty && bestUsedByDate != 'N/A';
-
-    if (hasExpDate || hasBestUsedBy) {
-      children.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (hasExpDate)
-            Expanded(
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: 'Exp Date: ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    TextSpan(
-                      text: expDate,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
+      // Row 3: Sold By/Distributor
+      if (soldBy.isNotEmpty) {
+        children.add(Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(
+              width: 160,
+              child: Text(
+                'Sold By/Distributor:',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
                 ),
               ),
             ),
-          if (hasExpDate && hasBestUsedBy) const SizedBox(width: 16),
-          if (hasBestUsedBy)
+            const SizedBox(width: 16),
             Expanded(
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: 'Best Used By: ',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    TextSpan(
-                      text: bestUsedByDate,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
+              child: Text(
+                soldBy,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
                 ),
               ),
             ),
-        ],
-      ));
+          ],
+        ));
+        children.add(const SizedBox(height: 12));
+      }
+
+      children.add(const SizedBox(height: 4));
     }
 
     // Add recall ID at the bottom if this is the last section and recall number exists
@@ -1255,7 +475,7 @@ class USDARecallDetailsCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF2A4A5C),
+        color: AppColors.secondary,
         borderRadius: isLast
             ? const BorderRadius.only(
                 bottomLeft: Radius.circular(18),

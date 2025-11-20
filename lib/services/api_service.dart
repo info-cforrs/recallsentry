@@ -1,13 +1,63 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import '../models/recall_data.dart';
 import '../models/recommended_product.dart';
 import '../models/rmc_enrollment.dart';
 import '../config/app_config.dart';
+import '../constants/rmc_status.dart';
+import '../exceptions/api_exceptions.dart';
+import '../utils/api_utils.dart';
+import '../utils/retry_helper.dart';
 import 'auth_service.dart';
+import 'security_service.dart';
+import 'error_logger.dart';
 
 class ApiService {
   final String baseUrl = AppConfig.apiBaseUrl;
+  final http.Client _httpClient = SecurityService().createSecureHttpClient();
+
+  // Default timeout for API requests
+  static const Duration _defaultTimeout = Duration(seconds: 30);
+
+  /// Wraps HTTP requests with timeout and error logging
+  Future<T> _withTimeout<T>(
+    Future<T> Function() operation, {
+    Duration? timeout,
+    String? context,
+  }) async {
+    try {
+      return await operation().timeout(
+        timeout ?? _defaultTimeout,
+        onTimeout: () {
+          final error = NetworkException(
+            'Request timeout after ${(timeout ?? _defaultTimeout).inSeconds} seconds',
+          );
+          ErrorLogger.log(
+            message: 'Request timeout',
+            service: 'ApiService',
+            method: context,
+            error: error,
+            reportToAnalytics: true,
+          );
+          throw error;
+        },
+      );
+    } catch (e, stack) {
+      // Log error if it's not already an ApiException (those are logged at a higher level)
+      if (e is! ApiException) {
+        ErrorLogger.log(
+          message: 'API request failed',
+          service: 'ApiService',
+          method: context,
+          error: e,
+          stackTrace: stack,
+          reportToAnalytics: true,
+        );
+      }
+      rethrow;
+    }
+  }
 
   /// Fetch all recalls from the API
   Future<List<RecallData>> fetchAllRecalls({
@@ -36,78 +86,91 @@ class ApiService {
         '$baseUrl${AppConfig.apiRecallsEndpoint}',
       ).replace(queryParameters: queryParams);
 
-      print('🌐 Fetching recalls from: $uri');
+      final response = await _httpClient.get(uri);
 
-      final response = await http.get(uri);
+      // Check response status and throw appropriate exceptions
+      ApiUtils.checkResponse(response, context: 'Fetch all recalls');
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        final results = jsonData['results'] as List;
+      // Parse response using utility
+      final results = ApiUtils.parseJsonList(response.body);
 
-        print('✅ Successfully fetched ${results.length} recalls');
-
-        return results
-            .map((json) => _convertFromApi(json as Map<String, dynamic>))
-            .toList();
-      } else {
-        print('❌ Error fetching recalls: ${response.statusCode}');
-        throw Exception('Failed to load recalls: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('❌ Exception fetching recalls: $e');
+      return results
+          .map((json) => _convertFromApi(json as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
       rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to fetch recalls',
+        originalException: e,
+        stackTrace: stack,
+      );
     }
   }
 
   /// Fetch FDA recalls only
-  Future<List<RecallData>> fetchFdaRecalls() async {
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> fetchFdaRecalls({
+    int? limit,
+    int? offset,
+  }) async {
     try {
-      final uri = Uri.parse('$baseUrl${AppConfig.apiFdaEndpoint}');
-      print('🌐 Fetching FDA recalls from: $uri');
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (limit != null) queryParams['limit'] = limit.toString();
+      if (offset != null) queryParams['offset'] = offset.toString();
 
-      final response = await http.get(uri);
+      final uri = Uri.parse('$baseUrl${AppConfig.apiFdaEndpoint}')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        final results = jsonData['results'] as List;
+      final response = await _httpClient.get(uri);
+      ApiUtils.checkResponse(response, context: 'Fetch FDA recalls');
 
-        print('✅ Successfully fetched ${results.length} FDA recalls');
-
-        return results
-            .map((json) => _convertFromApi(json as Map<String, dynamic>))
-            .toList();
-      } else {
-        throw Exception('Failed to load FDA recalls: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('❌ Exception fetching FDA recalls: $e');
+      final results = ApiUtils.parseJsonList(response.body);
+      return results
+          .map((json) => _convertFromApi(json as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
       rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to fetch FDA recalls',
+        originalException: e,
+        stackTrace: stack,
+      );
     }
   }
 
   /// Fetch USDA recalls only
-  Future<List<RecallData>> fetchUsdaRecalls() async {
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> fetchUsdaRecalls({
+    int? limit,
+    int? offset,
+  }) async {
     try {
-      final uri = Uri.parse('$baseUrl${AppConfig.apiUsdaEndpoint}');
-      print('🌐 Fetching USDA recalls from: $uri');
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (limit != null) queryParams['limit'] = limit.toString();
+      if (offset != null) queryParams['offset'] = offset.toString();
 
-      final response = await http.get(uri);
+      final uri = Uri.parse('$baseUrl${AppConfig.apiUsdaEndpoint}')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        final results = jsonData['results'] as List;
+      final response = await _httpClient.get(uri);
+      ApiUtils.checkResponse(response, context: 'Fetch USDA recalls');
 
-        print('✅ Successfully fetched ${results.length} USDA recalls');
-
-        return results
-            .map((json) => _convertFromApi(json as Map<String, dynamic>))
-            .toList();
-      } else {
-        throw Exception('Failed to load USDA recalls: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('❌ Exception fetching USDA recalls: $e');
+      final results = ApiUtils.parseJsonList(response.body);
+      return results
+          .map((json) => _convertFromApi(json as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
       rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to fetch USDA recalls',
+        originalException: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -115,26 +178,21 @@ class ApiService {
   Future<List<RecallData>> fetchActiveRecalls() async {
     try {
       final uri = Uri.parse('$baseUrl${AppConfig.apiRecallsEndpoint}active_recalls/');
-      print('🌐 Fetching active recalls from: $uri');
+      final response = await _httpClient.get(uri);
+      ApiUtils.checkResponse(response, context: 'Fetch active recalls');
 
-      final response = await http.get(uri);
-
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        final results = jsonData['results'] as List;
-
-        print('✅ Successfully fetched ${results.length} active recalls');
-
-        return results
-            .map((json) => _convertFromApi(json as Map<String, dynamic>))
-            .toList();
-      } else {
-        print('❌ Error fetching active recalls: ${response.statusCode}');
-        throw Exception('Failed to load active recalls: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('❌ Exception fetching active recalls: $e');
+      final results = ApiUtils.parseJsonList(response.body);
+      return results
+          .map((json) => _convertFromApi(json as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
       rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to fetch active recalls',
+        originalException: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -142,21 +200,19 @@ class ApiService {
   Future<RecallData> fetchRecallById(int id) async {
     try {
       final uri = Uri.parse('$baseUrl${AppConfig.apiRecallsEndpoint}$id/');
-      print('🌐 Fetching recall $id from: $uri');
+      final response = await _httpClient.get(uri);
+      ApiUtils.checkResponse(response, context: 'Fetch recall by ID');
 
-      final response = await http.get(uri);
-
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        print('✅ Successfully fetched recall $id');
-
-        return _convertFromApi(jsonData as Map<String, dynamic>);
-      } else {
-        throw Exception('Failed to load recall $id: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('❌ Exception fetching recall $id: $e');
+      final jsonData = ApiUtils.parseJsonMap(response.body);
+      return _convertFromApi(jsonData);
+    } on ApiException {
       rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to fetch recall $id',
+        originalException: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -164,20 +220,22 @@ class ApiService {
   Future<Map<String, dynamic>> fetchStats() async {
     try {
       final uri = Uri.parse('$baseUrl${AppConfig.apiStatsEndpoint}');
-      print('🌐 Fetching stats from: $uri');
 
-      final response = await http.get(uri);
+      final response = await _httpClient.get(uri);
 
-      if (response.statusCode == 200) {
-        final jsonData = json.decode(response.body);
-        print('✅ Successfully fetched stats');
-        return jsonData as Map<String, dynamic>;
-      } else {
-        throw Exception('Failed to load stats: ${response.statusCode}');
-      }
-    } catch (e) {
-      print('❌ Exception fetching stats: $e');
+      // Check response status and throw appropriate exceptions
+      ApiUtils.checkResponse(response, context: 'Fetch stats');
+
+      final jsonData = json.decode(response.body);
+      return jsonData as Map<String, dynamic>;
+    } on ApiException {
       rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to fetch stats',
+        originalException: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -192,10 +250,6 @@ class ApiService {
     final isUsda = recallId.startsWith('USDA');
 
     // Debug logging
-    print('=== API Response for $recallId ===');
-    print('remedy_return: ${json['remedy_return']} (${json['remedy_return'].runtimeType})');
-    print('remedy_repair: ${json['remedy_repair']} (${json['remedy_repair'].runtimeType})');
-    print('remedy_replace: ${json['remedy_replace']} (${json['remedy_replace'].runtimeType})');
 
     return RecallData(
       // Use the recall_id as the main ID for Flutter app
@@ -347,7 +401,6 @@ class ApiService {
     }
 
     try {
-      print('🌐 Updating recall ${recall.databaseId} status to: $newStatus');
 
       // Try the update_status custom endpoint
       final response = await AuthService().authenticatedRequest(
@@ -360,16 +413,11 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        print('✅ Successfully updated recall ${recall.databaseId} status');
-        print('📦 Response recall_resolution_status: ${jsonData['recall_resolution_status']}');
         return _convertFromApi(jsonData as Map<String, dynamic>);
       } else{
-        print('❌ Error updating recall status: ${response.statusCode}');
-        print('Response body: ${response.body}');
         throw Exception('Failed to update recall status: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception updating recall status: $e');
       rethrow;
     }
   }
@@ -382,7 +430,6 @@ class ApiService {
     }
 
     try {
-      print('🌐 Enrolling recall ${recall.databaseId} in RMC');
 
       final response = await AuthService().authenticatedRequest(
         'POST',
@@ -391,15 +438,11 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        print('✅ Successfully enrolled recall ${recall.databaseId} in RMC');
         return _convertFromApi(jsonData as Map<String, dynamic>);
       } else {
-        print('❌ Error enrolling recall in RMC: ${response.statusCode}');
-        print('Response body: ${response.body}');
         throw Exception('Failed to enroll recall in RMC: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception enrolling recall in RMC: $e');
       rethrow;
     }
   }
@@ -411,7 +454,6 @@ class ApiService {
   /// Fetch all RMC enrollments for the authenticated user
   Future<List<RmcEnrollment>> fetchRmcEnrollments() async {
     try {
-      print('🌐 Fetching RMC enrollments');
 
       final response = await AuthService().authenticatedRequest(
         'GET',
@@ -421,14 +463,11 @@ class ApiService {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final results = jsonData['results'] as List;
-        print('✅ Successfully fetched ${results.length} RMC enrollments');
         return results.map((json) => RmcEnrollment.fromJson(json as Map<String, dynamic>)).toList();
       } else {
-        print('❌ Error fetching RMC enrollments: ${response.statusCode}');
         throw Exception('Failed to fetch RMC enrollments: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception fetching RMC enrollments: $e');
       rethrow;
     }
   }
@@ -436,7 +475,6 @@ class ApiService {
   /// Fetch active RMC enrollments (excluding "Not Active" status)
   Future<List<RmcEnrollment>> fetchActiveRmcEnrollments() async {
     try {
-      print('🌐 Fetching active RMC enrollments');
 
       final response = await AuthService().authenticatedRequest(
         'GET',
@@ -445,14 +483,11 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body) as List;
-        print('✅ Successfully fetched ${jsonData.length} active RMC enrollments');
         return jsonData.map((json) => RmcEnrollment.fromJson(json as Map<String, dynamic>)).toList();
       } else {
-        print('❌ Error fetching active RMC enrollments: ${response.statusCode}');
         throw Exception('Failed to fetch active RMC enrollments: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception fetching active RMC enrollments: $e');
       rethrow;
     }
   }
@@ -460,10 +495,9 @@ class ApiService {
   /// Fetch RMC enrollments by status
   Future<List<RmcEnrollment>> fetchRmcEnrollmentsByStatus(String status) async {
     try {
-      print('🌐 Fetching RMC enrollments with status: $status');
 
       final uri = Uri.parse('${AppConfig.apiBaseUrl}/rmc-enrollments/').replace(
-        queryParameters: {'status': status},
+        queryParameters: {'rmc_status': status},
       );
 
       final response = await AuthService().authenticatedRequest(
@@ -474,14 +508,11 @@ class ApiService {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final results = jsonData['results'] as List;
-        print('✅ Successfully fetched ${results.length} RMC enrollments with status $status');
         return results.map((json) => RmcEnrollment.fromJson(json as Map<String, dynamic>)).toList();
       } else {
-        print('❌ Error fetching RMC enrollments by status: ${response.statusCode}');
         throw Exception('Failed to fetch RMC enrollments: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception fetching RMC enrollments by status: $e');
       rethrow;
     }
   }
@@ -489,18 +520,23 @@ class ApiService {
   /// Enroll a recall in RMC for the authenticated user
   Future<RmcEnrollment> enrollRecallInRmc({
     required int recallId,
-    String status = 'Not Active',
+    String rmcStatus = 'Not Active',
     String? lotNumber,
     String? purchaseDate,
     String? purchaseLocation,
     double? estimatedValue,
   }) async {
     try {
-      print('🌐 Enrolling recall $recallId in RMC with status: $status');
+      // Validate status value
+      if (!RmcStatus.isValid(rmcStatus)) {
+        rmcStatus = RmcStatus.notActive;
+      }
 
+
+      // BACKEND REQUIREMENT: Backend API must accept 'rmc_status' field
       final body = <String, dynamic>{
         'recall_id': recallId,
-        'status': status,
+        'rmc_status': rmcStatus,
       };
 
       if (lotNumber != null && lotNumber.isNotEmpty) {
@@ -524,15 +560,11 @@ class ApiService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final jsonData = json.decode(response.body);
-        print('✅ Successfully enrolled recall $recallId in RMC');
         return RmcEnrollment.fromJson(jsonData as Map<String, dynamic>);
       } else {
-        print('❌ Error enrolling recall in RMC: ${response.statusCode}');
-        print('Response body: ${response.body}');
         throw Exception('Failed to enroll recall in RMC: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception enrolling recall in RMC: $e');
       rethrow;
     }
   }
@@ -540,25 +572,70 @@ class ApiService {
   /// Update RMC enrollment status
   Future<RmcEnrollment> updateRmcEnrollmentStatus(int enrollmentId, String newStatus) async {
     try {
-      print('🌐 Updating RMC enrollment $enrollmentId status to: $newStatus');
+      // Validate status value
+      if (!RmcStatus.isValid(newStatus)) {
+        throw ArgumentError('Invalid RMC status: $newStatus. Must be one of: ${RmcStatus.allValidStatuses.join(", ")}');
+      }
 
+
+      // BACKEND REQUIREMENT: Backend API must accept 'rmc_status' field
       final response = await AuthService().authenticatedRequest(
         'POST',
         '/rmc-enrollments/$enrollmentId/update_status/',
-        body: {'status': newStatus},
+        body: {'rmc_status': newStatus},
       );
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        print('✅ Successfully updated RMC enrollment $enrollmentId status');
         return RmcEnrollment.fromJson(jsonData as Map<String, dynamic>);
       } else {
-        print('❌ Error updating RMC enrollment status: ${response.statusCode}');
-        print('Response body: ${response.body}');
         throw Exception('Failed to update RMC enrollment status: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception updating RMC enrollment status: $e');
+      rethrow;
+    }
+  }
+
+  /// Update RMC enrollment with multiple fields (status, branch, etc.)
+  Future<RmcEnrollment> updateRmcEnrollment({
+    required int enrollmentId,
+    String? status,
+    String? resolutionBranch,
+    String? notes,
+  }) async {
+    try {
+
+      final Map<String, dynamic> body = {};
+
+      if (status != null) {
+        // Validate status value
+        if (!RmcStatus.isValid(status)) {
+          throw ArgumentError('Invalid RMC status: $status');
+        }
+        body['rmc_status'] = status;
+      }
+
+      if (resolutionBranch != null) {
+        body['resolution_branch'] = resolutionBranch;
+      }
+
+      if (notes != null) {
+        body['notes'] = notes;
+      }
+
+      final response = await AuthService().authenticatedRequest(
+        'PATCH',
+        '/rmc-enrollments/$enrollmentId/',
+        body: body,
+      );
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return RmcEnrollment.fromJson(jsonData as Map<String, dynamic>);
+      } else {
+        throw Exception('Failed to update RMC enrollment: ${response.statusCode}');
+      }
+    } catch (e) {
       rethrow;
     }
   }
@@ -566,7 +643,6 @@ class ApiService {
   /// Get a specific RMC enrollment by ID
   Future<RmcEnrollment> fetchRmcEnrollmentById(int enrollmentId) async {
     try {
-      print('🌐 Fetching RMC enrollment $enrollmentId');
 
       final response = await AuthService().authenticatedRequest(
         'GET',
@@ -575,14 +651,11 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        print('✅ Successfully fetched RMC enrollment $enrollmentId');
         return RmcEnrollment.fromJson(jsonData as Map<String, dynamic>);
       } else {
-        print('❌ Error fetching RMC enrollment: ${response.statusCode}');
         throw Exception('Failed to fetch RMC enrollment: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception fetching RMC enrollment: $e');
       rethrow;
     }
   }
@@ -590,19 +663,15 @@ class ApiService {
   /// Get RMC enrollment for a specific recall (if exists)
   Future<RmcEnrollment?> fetchRmcEnrollmentForRecall(int recallId) async {
     try {
-      print('🌐 Fetching RMC enrollment for recall $recallId');
 
       final enrollments = await fetchRmcEnrollmentsByRecallFilter(recallId);
 
       if (enrollments.isNotEmpty) {
-        print('✅ Found RMC enrollment for recall $recallId');
         return enrollments.first;
       } else {
-        print('ℹ️ No RMC enrollment found for recall $recallId');
         return null;
       }
     } catch (e) {
-      print('❌ Exception fetching RMC enrollment for recall: $e');
       return null;
     }
   }
@@ -610,7 +679,6 @@ class ApiService {
   /// Fetch RMC enrollments filtered by recall ID
   Future<List<RmcEnrollment>> fetchRmcEnrollmentsByRecallFilter(int recallId) async {
     try {
-      print('🌐 Fetching RMC enrollments for recall $recallId');
 
       final uri = Uri.parse('${AppConfig.apiBaseUrl}/rmc-enrollments/').replace(
         queryParameters: {'recall': recallId.toString()},
@@ -624,14 +692,11 @@ class ApiService {
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final results = jsonData['results'] as List;
-        print('✅ Successfully fetched ${results.length} RMC enrollments for recall $recallId');
         return results.map((json) => RmcEnrollment.fromJson(json as Map<String, dynamic>)).toList();
       } else {
-        print('❌ Error fetching RMC enrollments for recall: ${response.statusCode}');
         throw Exception('Failed to fetch RMC enrollments: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception fetching RMC enrollments for recall: $e');
       rethrow;
     }
   }

@@ -3,9 +3,19 @@ class AppConfig {
   // Choose between REST API (recommended) or Google Sheets
   static const DataSource dataSource = DataSource.restApi;
 
-  // REST API Configuration (Production - recommended)
+  // REST API Configuration
+  // CRITICAL: HTTPS is REQUIRED for app store submission
+  // SSL Certificate: Let's Encrypt (valid until Feb 3, 2026)
+  // Certificate Subject: api.centerforrecallsafety.com
+
+  // CURRENT: Using production domain (points to staging server 18.218.174.62)
+  // This ensures SSL certificate validation works correctly
   static const String apiBaseUrl = 'https://api.centerforrecallsafety.com/api';
-  static const String mediaBaseUrl = 'https://api.centerforrecallsafety.com'; // For images/media files
+  static const String mediaBaseUrl = 'https://api.centerforrecallsafety.com';
+
+  // DEPRECATED: Direct IP access (causes SSL certificate mismatch)
+  // static const String apiBaseUrl = 'https://18.218.174.62/api';
+  // static const String mediaBaseUrl = 'https://18.218.174.62';
   static const String apiRecallsEndpoint = '/recalls/';
   static const String apiFdaEndpoint = '/recalls/fda/';
   static const String apiUsdaEndpoint = '/recalls/usda/';

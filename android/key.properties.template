@@ -1,0 +1,24 @@
+# RecallSentry Android Release Signing Configuration
+# IMPORTANT: This is a TEMPLATE file. Do NOT commit the actual key.properties file!
+#
+# Instructions:
+# 1. Copy this file to 'key.properties' in the same directory
+# 2. Generate a keystore (see KEYSTORE_GENERATION.md)
+# 3. Fill in the actual values below
+# 4. NEVER commit key.properties to version control (already in .gitignore)
+
+# Path to your keystore file (relative to android/ directory or absolute path)
+# Example: ../recallsentry-release.jks or C:/secure/recallsentry-release.jks
+storeFile=../recallsentry-release.jks
+
+# Password for the keystore file
+# SECURITY: Use a strong password with letters, numbers, and symbols
+storePassword=YOUR_STORE_PASSWORD_HERE
+
+# Alias of the key in the keystore
+# This should match the alias used when creating the keystore
+keyAlias=recallsentry-key
+
+# Password for the key
+# SECURITY: Use a strong password (can be same as storePassword or different)
+keyPassword=YOUR_KEY_PASSWORD_HERE

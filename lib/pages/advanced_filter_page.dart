@@ -23,7 +23,7 @@ class AdvancedFilterPage extends StatefulWidget {
 class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
   final int _currentIndex = 1; // Recalls tab
   final FilterStateService _filterStateService = FilterStateService();
-  SubscriptionTier _subscriptionTier = SubscriptionTier.guest;
+  SubscriptionTier _subscriptionTier = SubscriptionTier.free;
 
   // Brand filter state
   final List<String> _selectedBrands = [];
@@ -32,6 +32,9 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
   // Product Name filter state
   final List<String> _selectedProductNames = [];
   final TextEditingController _productController = TextEditingController();
+
+  // State filter state
+  final List<String> _selectedStates = [];
 
   @override
   void initState() {
@@ -62,6 +65,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
       setState(() {
         _selectedBrands.clear();
         _selectedProductNames.clear();
+        _selectedStates.clear();
       });
       return;
     }
@@ -73,6 +77,8 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
       _selectedBrands.addAll(filterState.brandFilters);
       _selectedProductNames.clear();
       _selectedProductNames.addAll(filterState.productFilters);
+      _selectedStates.clear();
+      _selectedStates.addAll(filterState.stateFilters);
     });
   }
 
@@ -81,15 +87,29 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
     await _filterStateService.saveFilterState(
       brandFilters: _selectedBrands,
       productFilters: _selectedProductNames,
+      stateFilters: _selectedStates,
     );
   }
 
-  // Helper method to get total filter count
+  // Helper method to get total filter count (brands + products only, states don't count toward 3-filter limit)
   int get _totalFilterCount =>
       _selectedBrands.length + _selectedProductNames.length;
 
   // Helper method to check if user can add more filters
   bool get _canAddMoreFilters => _totalFilterCount < 3;
+
+  // Get state filter limit based on tier
+  // All tiers can access state filters: FREE: 1 state, SMART: 3 states, RECALL: unlimited
+  int get _stateFilterLimit {
+    switch (_subscriptionTier) {
+      case SubscriptionTier.recallMatch:
+        return 999; // Unlimited
+      case SubscriptionTier.smartFiltering:
+        return 3;
+      case SubscriptionTier.free:
+        return 1;
+    }
+  }
 
   // Method to show upgrade dialog for 3-filter limit
   void _showUpgradeDialog() {
@@ -273,7 +293,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/shield_logo3.png',
+                        'assets/images/shield_logo4.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -397,11 +417,17 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                       },
                     ),
 
+                    const SizedBox(height: 24),
+
+                    // State Filter Section (Premium Feature)
+                    _buildStateFilterSection(),
+
                     const SizedBox(height: 32),
 
                     // Filter Summary
                     if (_selectedBrands.isNotEmpty ||
-                        _selectedProductNames.isNotEmpty)
+                        _selectedProductNames.isNotEmpty ||
+                        _selectedStates.isNotEmpty)
                       Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
@@ -442,6 +468,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                                       setState(() {
                                         _selectedBrands.clear();
                                         _selectedProductNames.clear();
+                                        _selectedStates.clear();
                                       });
                                     },
                                     child: const Text(
@@ -473,6 +500,16 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                                     fontSize: 14,
                                   ),
                                 ),
+                                const SizedBox(height: 8),
+                              ],
+                              if (_selectedStates.isNotEmpty) ...[
+                                Text(
+                                  'States (${_selectedStates.length}): ${_selectedStates.join(', ')}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 14,
+                                  ),
+                                ),
                               ],
                             ],
                           ),
@@ -493,23 +530,26 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                               return;
                             }
 
+                            final navigator = Navigator.of(context);
                             final result = await showDialog<SavedFilter>(
                               context: context,
                               builder: (BuildContext context) {
                                 return SaveFilterDialog(
                                   brandFilters: _selectedBrands,
                                   productFilters: _selectedProductNames,
+                                  stateFilters: _selectedStates,
                                 );
                               },
                             );
 
                             // Navigate to filtered recalls page if filter was saved
                             if (result != null && mounted) {
-                              Navigator.of(context).push(
+                              navigator.push(
                                 MaterialPageRoute(
                                   builder: (context) => OnlyAdvancedFilteredRecallsPage(
                                     brandFilters: result.brandFilters,
                                     productFilters: result.productFilters,
+                                    stateFilters: result.stateFilters,
                                   ),
                                 ),
                               );
@@ -550,16 +590,18 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                       child: ElevatedButton.icon(
                         onPressed: () async {
                           // Save current filter state
+                          final navigator = Navigator.of(context);
                           await _saveFilters();
 
                           // Navigate to filtered recalls page with filter criteria
                           if (mounted) {
-                            Navigator.of(context).push(
+                            navigator.push(
                               MaterialPageRoute(
                                 builder: (context) =>
                                     OnlyAdvancedFilteredRecallsPage(
                                       brandFilters: _selectedBrands,
                                       productFilters: _selectedProductNames,
+                                      stateFilters: _selectedStates,
                                     ),
                               ),
                             );
@@ -572,9 +614,10 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                         ),
                         label: Text(
                           _selectedBrands.isEmpty &&
-                                  _selectedProductNames.isEmpty
+                                  _selectedProductNames.isEmpty &&
+                                  _selectedStates.isEmpty
                               ? 'Show All Recalls'
-                              : 'Show Filtered Recalls (${_selectedBrands.length + _selectedProductNames.length} filters)',
+                              : 'Show Filtered Recalls (${_selectedBrands.length + _selectedProductNames.length + _selectedStates.length} filters)',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -808,5 +851,150 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
         ),
       ),
     );
+  }
+
+  // Build State Filter Section with tier-based access
+  Widget _buildStateFilterSection() {
+    final int stateLimit = _stateFilterLimit;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A4A5C),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Section Header
+            Row(
+              children: [
+                const Icon(
+                  Icons.location_on,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Filter by State',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // Description/Limit Text
+            Text(
+              stateLimit == 999
+                  ? 'Select states (unlimited)'
+                  : 'Select up to $stateLimit state${stateLimit == 1 ? '' : 's'}',
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // State FilterChips
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _getUsStates().map((state) {
+                final isSelected = _selectedStates.contains(state);
+                final canSelect = isSelected || _selectedStates.length < stateLimit;
+
+                return FilterChip(
+                  label: Text(state),
+                  selected: isSelected,
+                  onSelected: canSelect
+                      ? (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedStates.add(state);
+                            } else {
+                              _selectedStates.remove(state);
+                            }
+                          });
+                        }
+                      : null, // Disabled when limit reached
+                  selectedColor: const Color(0xFF64B5F6),
+                  backgroundColor: const Color(0xFF1D3547),
+                  labelStyle: TextStyle(
+                    color: isSelected ? Colors.white : Colors.white70,
+                    fontSize: 12,
+                  ),
+                  disabledColor: Colors.grey.withValues(alpha: 0.3),
+                );
+              }).toList(),
+            ),
+
+            // Limit reached message - show upgrade prompt when limit is reached
+            if (_selectedStates.length >= stateLimit && stateLimit != 999) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1D3547),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.info_outline, color: Color(0xFF64B5F6), size: 16),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        _subscriptionTier == SubscriptionTier.free
+                            ? 'Upgrade to SmartFiltering for 3 states or RecallMatch for unlimited'
+                            : 'Upgrade to RecallMatch for unlimited state filters',
+                        style: const TextStyle(color: Colors.white70, fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            // Selected states count
+            if (_selectedStates.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 12.0),
+                child: Text(
+                  '${_selectedStates.length} state${_selectedStates.length == 1 ? '' : 's'} selected',
+                  style: const TextStyle(
+                    color: Color(0xFF64B5F6),
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Get list of US states (abbreviations)
+  List<String> _getUsStates() {
+    return [
+      'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
+      'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
+      'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
+      'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
+      'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+    ];
   }
 }

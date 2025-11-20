@@ -3,7 +3,9 @@ import '../models/recall_data.dart';
 import '../models/rmc_enrollment.dart';
 import '../services/api_service.dart';
 import '../widgets/rmc_enrollment_card.dart';
+import '../constants/rmc_status.dart';
 import 'rmc_details_page.dart';
+import 'completed_rmc_details_page.dart';
 import 'main_navigation.dart';
 
 class RmcStatusPage extends StatefulWidget {
@@ -51,6 +53,8 @@ class _RmcStatusPageState extends State<RmcStatusPage> with WidgetsBindingObserv
   }
 
   Future<void> _loadActiveEnrollments() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
@@ -69,10 +73,14 @@ class _RmcStatusPageState extends State<RmcStatusPage> with WidgetsBindingObserv
 
         // Apply appropriate filtering based on page title and status filter
         if (widget.pageTitle == 'In Progress') {
-          // Apply "In Progress" filter: exclude Completed, Closed, and Not Started
+          // Apply "In Progress" filter: exclude Completed, Closed, Not Started, and pre-step statuses
           enrollments = allEnrollments.where((e) {
             final status = e.status.trim().toLowerCase();
-            return status != 'closed' && status != 'completed' && status != 'not started';
+            return status != 'closed' &&
+                   status != 'completed' &&
+                   status != 'not started' &&
+                   status != 'stopped using' &&
+                   status != 'mfr contacted';
           }).toList();
         } else if (widget.pageTitle == 'Completed') {
           // Apply "Completed" filter: include both Completed and Closed
@@ -81,13 +89,17 @@ class _RmcStatusPageState extends State<RmcStatusPage> with WidgetsBindingObserv
             return status == 'completed' || status == 'closed';
           }).toList();
         } else if (widget.statusFilter != null) {
-          // Apply exact status filter
-          enrollments = allEnrollments.where((e) => e.status == widget.statusFilter).toList();
+          // Apply exact status filter (case-insensitive)
+          enrollments = allEnrollments.where((e) =>
+            e.status.trim().toLowerCase() == widget.statusFilter!.trim().toLowerCase()
+          ).toList();
         } else {
           // No filter, show all
           enrollments = allEnrollments;
         }
       }
+
+      if (!mounted) return;
 
       setState(() {
         _enrollments = enrollments;
@@ -95,6 +107,8 @@ class _RmcStatusPageState extends State<RmcStatusPage> with WidgetsBindingObserv
         _hasLoadedOnce = true;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _error = 'Failed to load RMC enrollments: $e';
         _isLoading = false;
@@ -176,7 +190,7 @@ class _RmcStatusPageState extends State<RmcStatusPage> with WidgetsBindingObserv
                         child: Column(
                           children: [
                             // Instructional text for "Not Started" status
-                            if (widget.statusFilter == 'Not Started')
+                            if (widget.statusFilter?.trim().toLowerCase() == 'not started')
                               Container(
                                 width: double.infinity,
                                 padding: const EdgeInsets.all(16),
@@ -285,26 +299,33 @@ class _RmcStatusPageState extends State<RmcStatusPage> with WidgetsBindingObserv
           recall: recall,
           enrollment: enrollment,
           onTap: () async {
-            // Check if enrollment is completed or closed
-            final status = enrollment.status.trim().toLowerCase();
-            final isCompleted = status == 'completed' || status == 'closed';
+            // Check if enrollment is completed or closed using helper method
+            final isCompleted = RmcStatus.isCompletion(enrollment.status);
 
             if (isCompleted) {
-              // For completed enrollments, just show the recall details
-              // Don't navigate to workflow page as it would cause errors
-              return;
+              // Navigate to Completed RMC Details page (timeline view)
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => CompletedRmcDetailsPage(
+                    recall: recall,
+                    enrollment: enrollment,
+                  ),
+                ),
+              );
+            } else {
+              // Navigate to RMC Details page (active workflow page) for active enrollments
+              await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => RmcDetailsPage(
+                    recall: recall,
+                    enrollment: enrollment,
+                  ),
+                ),
+              );
             }
 
-            // Navigate to RMC Details page (active workflow page) for active enrollments
-            await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => RmcDetailsPage(
-                  recall: recall,
-                  enrollment: enrollment,
-                ),
-              ),
-            );
             // Reload data after returning to reflect any status changes
             await _loadActiveEnrollments();
           },

@@ -1,101 +1,48 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'main_navigation.dart';
 import 'only_advanced_filtered_recalls_page.dart';
 import 'advanced_filter_page.dart';
 import 'subscribe_page.dart';
 import 'edit_saved_filter_page.dart';
 import '../models/saved_filter.dart';
-import '../services/saved_filter_service.dart';
 import '../services/subscription_service.dart';
 import '../widgets/custom_back_button.dart';
+import '../providers/data_providers.dart';
+import '../providers/service_providers.dart';
 
 /// Saved SmartFilters Page - Cloud-synced filter presets
 /// Premium feature with tier limits: Free (0), SmartFiltering (10), RecallMatch (unlimited)
-class SavedFiltersPage extends StatefulWidget {
+class SavedFiltersPage extends ConsumerStatefulWidget {
   const SavedFiltersPage({super.key});
 
   @override
-  State<SavedFiltersPage> createState() => _SavedFiltersPageState();
+  ConsumerState<SavedFiltersPage> createState() => _SavedFiltersPageState();
 }
 
-class _SavedFiltersPageState extends State<SavedFiltersPage> {
+class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> {
   final int _currentIndex = 1; // Recalls tab
-  final SavedFilterService _filterService = SavedFilterService();
-  final SubscriptionService _subscriptionService = SubscriptionService();
-
-  List<SavedFilter> _filters = [];
-  bool _isLoading = true;
-  String? _error;
-  SubscriptionInfo? _subscription;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  /// Load subscription info and filters from API
-  Future<void> _loadData() async {
-    try {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-      });
-
-      // Load subscription info and filters in parallel
-      final results = await Future.wait([
-        _subscriptionService.getSubscriptionInfo(),
-        _filterService.fetchSavedFilters(),
-      ]);
-
-      if (mounted) {
-        setState(() {
-          _subscription = results[0] as SubscriptionInfo;
-          _filters = results[1] as List<SavedFilter>;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-          _isLoading = false;
-        });
-      }
-    }
-  }
+  // No more service instantiations - using providers!
+  // No more manual state management - providers handle this!
 
   int get _maxFiltersForTier {
-    if (_subscription == null) return 0;
-    return _subscription!.getSavedFilterLimit();
+    final subscriptionInfo = ref.watch(subscriptionInfoProvider).valueOrNull;
+    if (subscriptionInfo == null) return 0;
+    return subscriptionInfo.getSavedFilterLimit();
   }
 
   String get _tierDisplayName {
-    return _subscription?.getTierDisplayName() ?? 'Guest';
+    final subscriptionInfo = ref.watch(subscriptionInfoProvider).valueOrNull;
+    return subscriptionInfo?.getTierDisplayName() ?? 'Guest';
   }
 
   /// Apply a saved filter - marks as used and navigates to filtered recalls
   Future<void> _applyFilter(SavedFilter filter) async {
     try {
-      print('🔍 _applyFilter called for: ${filter.name}');
-      print('🔍 Brand filters: ${filter.brandFilters}');
-      print('🔍 Product filters: ${filter.productFilters}');
+      final filterService = ref.read(savedFilterServiceProvider);
 
       // Update last_used_at via API
-      final updatedFilter = await _filterService.applySavedFilter(filter.id);
-
-      print('🔍 Updated filter brand filters: ${updatedFilter.brandFilters}');
-      print('🔍 Updated filter product filters: ${updatedFilter.productFilters}');
-
-      // Update the filter in the local list
-      if (mounted) {
-        setState(() {
-          final index = _filters.indexWhere((f) => f.id == filter.id);
-          if (index != -1) {
-            _filters[index] = updatedFilter;
-          }
-        });
-      }
+      final updatedFilter = await filterService.applySavedFilter(filter.id);
 
       // Navigate to filtered recalls page
       if (mounted) {
@@ -109,10 +56,8 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
           ),
         );
 
-        // Reload filters when returning to ensure we have latest data
-        if (mounted) {
-          _loadData();
-        }
+        // Invalidate provider to refresh filters when returning
+        ref.invalidate(savedFiltersProvider);
       }
     } catch (e) {
       if (mounted) {
@@ -128,11 +73,6 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
 
   /// Navigate to edit page for a filter
   Future<void> _editFilter(SavedFilter filter) async {
-    print('🔍 _editFilter called for: ${filter.name}');
-    print('🔍 Filter ID: ${filter.id}');
-    print('🔍 Brand filters: ${filter.brandFilters}');
-    print('🔍 Product filters: ${filter.productFilters}');
-
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -148,19 +88,19 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
 
     // Reload if filter was updated or deleted
     if (result == true && mounted) {
-      _loadData();
+      ref.invalidate(savedFiltersProvider);
     }
   }
 
   /// Delete a saved filter
   Future<void> _deleteFilter(SavedFilter filter) async {
     try {
-      await _filterService.deleteSavedFilter(filter.id);
+      final filterService = ref.read(savedFilterServiceProvider);
+      await filterService.deleteSavedFilter(filter.id);
 
       if (mounted) {
-        setState(() {
-          _filters.removeWhere((f) => f.id == filter.id);
-        });
+        // Invalidate provider to refresh filter list
+        ref.invalidate(savedFiltersProvider);
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -184,7 +124,10 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
 
   /// Navigate to Advanced Filters to create new filter
   void _createNewFilter() {
-    if (_filters.length >= _maxFiltersForTier) {
+    final filtersAsync = ref.read(savedFiltersProvider);
+    final filters = filtersAsync.valueOrNull ?? [];
+
+    if (filters.length >= _maxFiltersForTier) {
       _showUpgradeDialog();
       return;
     }
@@ -197,14 +140,14 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
         ),
       ),
     ).then((_) {
-      // Reload filters when returning from Advanced Filters
-      _loadData();
+      // Invalidate provider when returning from Advanced Filters
+      ref.invalidate(savedFiltersProvider);
     });
   }
 
   void _showUpgradeDialog() {
-    String message = _subscription?.tier == SubscriptionTier.free ||
-            _subscription?.tier == SubscriptionTier.guest
+    final subscriptionInfo = ref.read(subscriptionInfoProvider).valueOrNull;
+    String message = subscriptionInfo?.tier == SubscriptionTier.free
         ? 'Saved SmartFilters is a premium feature. Upgrade to SmartFiltering to save up to 10 filters, or RecallMatch for unlimited filters.'
         : 'You\'ve reached the maximum of $_maxFiltersForTier saved filters for $_tierDisplayName. Upgrade to RecallMatch for unlimited filters.';
 
@@ -271,6 +214,10 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch providers - automatic loading and rebuilds
+    final filtersAsync = ref.watch(savedFiltersProvider);
+    final subscriptionAsync = ref.watch(subscriptionInfoProvider);
+
     return Scaffold(
       backgroundColor: const Color(0xFF1D3547),
       body: SafeArea(
@@ -298,7 +245,7 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/shield_logo3.png',
+                        'assets/images/shield_logo4.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -372,66 +319,77 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
             ),
 
             // Tier info banner
-            if (!_isLoading && _subscription != null)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A4A5C),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.info_outline, color: Color(0xFF64B5F6), size: 20),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _subscription!.tier == SubscriptionTier.free ||
-                                _subscription!.tier == SubscriptionTier.guest
-                            ? 'Saved SmartFilters is a premium feature. Upgrade to save filters.'
-                            : '$_tierDisplayName: ${_filters.length}/${_maxFiltersForTier == 999 ? '∞' : _maxFiltersForTier} saved filters',
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+            subscriptionAsync.when(
+              data: (subscription) {
+                final filters = filtersAsync.valueOrNull ?? [];
+
+                return Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF2A4A5C),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline, color: Color(0xFF64B5F6), size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          subscription.tier == SubscriptionTier.free
+                              ? 'Saved SmartFilters is a premium feature. Upgrade to save filters.'
+                              : '$_tierDisplayName: ${filters.length}/${_maxFiltersForTier == 999 ? '∞' : _maxFiltersForTier} saved filters',
+                          style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                    ],
+                  ),
+                );
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
 
             const SizedBox(height: 16),
 
             // Content area
             Expanded(
-              child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF64B5F6)),
-                    )
-                  : _error != null
-                      ? _buildErrorState()
-                      : _filters.isEmpty
-                          ? _buildEmptyState()
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              itemCount: _filters.length,
-                              itemBuilder: (context, index) {
-                                final filter = _filters[index];
-                                return _buildFilterCard(filter);
-                              },
-                            ),
+              child: filtersAsync.when(
+                data: (filters) {
+                  if (filters.isEmpty) {
+                    return _buildEmptyState();
+                  }
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: filters.length,
+                    itemBuilder: (context, index) {
+                      final filter = filters[index];
+                      return _buildFilterCard(filter);
+                    },
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(color: Color(0xFF64B5F6)),
+                ),
+                error: (error, _) => _buildErrorState(error.toString()),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: !_isLoading
-          ? FloatingActionButton.extended(
-              onPressed: _createNewFilter,
-              backgroundColor: const Color(0xFF64B5F6),
-              icon: const Icon(Icons.add, color: Colors.white),
-              label: const Text(
-                'New SmartFilter',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-              ),
-            )
-          : null,
+      floatingActionButton: filtersAsync.when(
+        data: (_) => FloatingActionButton.extended(
+          onPressed: _createNewFilter,
+          backgroundColor: const Color(0xFF64B5F6),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text(
+            'New SmartFilter',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+          ),
+        ),
+        loading: () => null,
+        error: (_, __) => null,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         backgroundColor: const Color(0xFF2C3E50),
         selectedItemColor: const Color(0xFF64B5F6),
@@ -483,7 +441,7 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
     );
   }
 
-  Widget _buildErrorState() {
+  Widget _buildErrorState(String errorMessage) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -502,13 +460,13 @@ class _SavedFiltersPageState extends State<SavedFiltersPage> {
             ),
             const SizedBox(height: 8),
             Text(
-              _error ?? 'An unknown error occurred',
+              errorMessage,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.white70, fontSize: 14),
             ),
             const SizedBox(height: 24),
             ElevatedButton(
-              onPressed: _loadData,
+              onPressed: () => ref.invalidate(savedFiltersProvider),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF64B5F6),
               ),

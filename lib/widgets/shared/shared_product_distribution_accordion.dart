@@ -5,10 +5,12 @@ import 'us_state_map.dart';
 
 class SharedProductDistributionAccordion extends StatelessWidget {
   final String productDistribution;
+  final String? distributionMapUrl; // Pre-generated map image URL
   final bool? isPremiumUser; // Optional override for premium status
 
   const SharedProductDistributionAccordion({
     required this.productDistribution,
+    this.distributionMapUrl,
     this.isPremiumUser,
     super.key,
   });
@@ -29,7 +31,7 @@ class SharedProductDistributionAccordion extends StatelessWidget {
         // While loading, show grey locked button by default
         if (snapshot.connectionState == ConnectionState.waiting) {
           return PremiumSectionWrapper(
-            sectionTitle: 'Product Distribution',
+            sectionTitle: 'Product Distribution (States)',
             isPremium: false,
           );
         }
@@ -39,7 +41,7 @@ class SharedProductDistributionAccordion extends StatelessWidget {
         // If not premium, show grey locked button
         if (!hasPremium) {
           return PremiumSectionWrapper(
-            sectionTitle: 'Product Distribution',
+            sectionTitle: 'Product Distribution (States)',
             isPremium: false,
           );
         }
@@ -78,7 +80,7 @@ class SharedProductDistributionAccordion extends StatelessWidget {
                         const SizedBox(width: 12),
                         const Expanded(
                           child: Text(
-                            'Product Distribution',
+                            'Product Distribution (States)',
                             style: TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.bold,
@@ -97,8 +99,11 @@ class SharedProductDistributionAccordion extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // US State Map with 10px margin
-                          USStateMap(productDistribution: productDistribution),
+                          // US State Map - widget handles PNG vs SVG internally
+                          USStateMap(
+                            productDistribution: productDistribution,
+                            distributionMapUrl: distributionMapUrl,
+                          ),
                           const SizedBox(height: 24),
                           // Distribution text
                           Padding(
@@ -135,7 +140,7 @@ class SharedProductDistributionAccordion extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const Text(
-              'Product Distribution',
+              'Product Distribution (States)',
               style: TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,

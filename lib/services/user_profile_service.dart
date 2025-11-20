@@ -2,179 +2,81 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'auth_service.dart';
 import '../config/app_config.dart';
+import '../utils/http_helper.dart';
+import '../utils/api_utils.dart';
+import 'security_service.dart';
 
 class UserProfileService {
   final AuthService _authService = AuthService();
   final String baseUrl = AppConfig.apiBaseUrl;
+  final http.Client _httpClient = SecurityService().createSecureHttpClient();
 
   /// Get current user's profile
+  /// SECURITY: Uses certificate pinning
   Future<UserProfile?> getUserProfile() async {
-    try {
-      final token = await _authService.getAccessToken();
-      if (token == null || token.isEmpty) {
-        print('🔐 No auth token found - user not logged in');
-        return null;
-      }
-
-      print('🔐 Fetching user profile with token...');
-      final response = await http.get(
+    return await HttpHelper.withTokenRefreshAndParse<UserProfile>(
+      _httpClient,
+      (token) => _httpClient.get(
         Uri.parse('$baseUrl/user/'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        print('✅ User profile loaded successfully');
-        return UserProfile.fromJson(data);
-      } else if (response.statusCode == 401) {
-        print('⚠️ Token expired, attempting refresh...');
-        // Try to refresh token
-        final newToken = await _authService.refreshAccessToken();
-        if (newToken != null) {
-          final retryResponse = await http.get(
-            Uri.parse('$baseUrl/user/'),
-            headers: {
-              'Authorization': 'Bearer $newToken',
-              'Content-Type': 'application/json',
-            },
-          );
-          if (retryResponse.statusCode == 200) {
-            final data = json.decode(retryResponse.body);
-            print('✅ User profile loaded with refreshed token');
-            return UserProfile.fromJson(data);
-          }
-        }
-        print('❌ Token refresh failed - user needs to login again');
-        // Clear invalid tokens
-        await _authService.logout();
-        return null;
-      }
-
-      print('❌ Failed to load user profile: ${response.statusCode}');
-      return null;
-    } catch (e) {
-      print('❌ Error getting user profile: $e');
-      return null;
-    }
+        headers: ApiUtils.authHeaders(token),
+      ),
+      (response) => UserProfile.fromJson(json.decode(response.body)),
+      authService: _authService,
+    );
   }
 
   /// Update user profile
+  /// SECURITY: Uses certificate pinning
   Future<UserProfile?> updateUserProfile({
     String? firstName,
     String? lastName,
     String? email,
   }) async {
-    try {
-      final token = await _authService.getAccessToken();
-      if (token == null) {
-        throw Exception('Not authenticated');
-      }
+    final Map<String, dynamic> body = {};
+    if (firstName != null) body['first_name'] = firstName;
+    if (lastName != null) body['last_name'] = lastName;
+    if (email != null) body['email'] = email;
 
-      final Map<String, dynamic> body = {};
-      if (firstName != null) body['first_name'] = firstName;
-      if (lastName != null) body['last_name'] = lastName;
-      if (email != null) body['email'] = email;
-
-      final response = await http.patch(
+    return await HttpHelper.withTokenRefreshAndParse<UserProfile>(
+      _httpClient,
+      (token) => _httpClient.patch(
         Uri.parse('$baseUrl/user/'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
+        headers: ApiUtils.authHeaders(token),
         body: json.encode(body),
-      );
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return UserProfile.fromJson(data);
-      } else if (response.statusCode == 401) {
-        // Try to refresh token
-        final newToken = await _authService.refreshAccessToken();
-        if (newToken != null) {
-          final retryResponse = await http.patch(
-            Uri.parse('$baseUrl/user/'),
-            headers: {
-              'Authorization': 'Bearer $newToken',
-              'Content-Type': 'application/json',
-            },
-            body: json.encode(body),
-          );
-          if (retryResponse.statusCode == 200) {
-            final data = json.decode(retryResponse.body);
-            return UserProfile.fromJson(data);
-          }
-        }
-      }
-
-      throw Exception('Failed to update profile: ${response.statusCode} ${response.body}');
-    } catch (e) {
-      print('Error updating user profile: $e');
-      return null;
-    }
+      ),
+      (response) => UserProfile.fromJson(json.decode(response.body)),
+      authService: _authService,
+    );
   }
 
   /// Change user password
+  /// SECURITY: Uses certificate pinning
   Future<PasswordChangeResult> changePassword({
     required String oldPassword,
     required String newPassword,
   }) async {
     try {
-      final token = await _authService.getAccessToken();
-      if (token == null) {
-        return PasswordChangeResult(
-          success: false,
-          message: 'Not authenticated',
-        );
-      }
-
-      final response = await http.post(
-        Uri.parse('$baseUrl/change-password/'),
-        headers: {
-          'Authorization': 'Bearer $token',
-          'Content-Type': 'application/json',
-        },
-        body: json.encode({
-          'old_password': oldPassword,
-          'new_password': newPassword,
-        }),
+      final response = await HttpHelper.withTokenRefresh(
+        _httpClient,
+        (token) => _httpClient.post(
+          Uri.parse('$baseUrl/change-password/'),
+          headers: ApiUtils.authHeaders(token),
+          body: json.encode({
+            'old_password': oldPassword,
+            'new_password': newPassword,
+          }),
+        ),
+        authService: _authService,
       );
 
       if (response.statusCode == 200) {
+        // SECURITY: Force re-login after password change to invalidate all existing tokens
+        await _authService.logout();
         return PasswordChangeResult(
           success: true,
-          message: 'Password changed successfully',
+          message: 'Password changed successfully. Please log in again.',
+          requiresRelogin: true,
         );
-      } else if (response.statusCode == 401) {
-        // Try to refresh token
-        final newToken = await _authService.refreshAccessToken();
-        if (newToken != null) {
-          final retryResponse = await http.post(
-            Uri.parse('$baseUrl/change-password/'),
-            headers: {
-              'Authorization': 'Bearer $newToken',
-              'Content-Type': 'application/json',
-            },
-            body: json.encode({
-              'old_password': oldPassword,
-              'new_password': newPassword,
-            }),
-          );
-          if (retryResponse.statusCode == 200) {
-            return PasswordChangeResult(
-              success: true,
-              message: 'Password changed successfully',
-            );
-          } else {
-            final errorData = json.decode(retryResponse.body);
-            return PasswordChangeResult(
-              success: false,
-              message: _extractErrorMessage(errorData),
-            );
-          }
-        }
       } else {
         final errorData = json.decode(response.body);
         return PasswordChangeResult(
@@ -182,13 +84,7 @@ class UserProfileService {
           message: _extractErrorMessage(errorData),
         );
       }
-
-      return PasswordChangeResult(
-        success: false,
-        message: 'Failed to change password',
-      );
     } catch (e) {
-      print('Error changing password: $e');
       return PasswordChangeResult(
         success: false,
         message: 'An error occurred: ${e.toString()}',
@@ -209,6 +105,81 @@ class UserProfileService {
     }
     return 'An error occurred';
   }
+
+  /// Export all user data (GDPR Article 20 - Right to Data Portability)
+  /// SECURITY: Uses certificate pinning
+  Future<DataExportResult> exportUserData() async {
+    try {
+      final response = await HttpHelper.withTokenRefresh(
+        _httpClient,
+        (token) => _httpClient.get(
+          Uri.parse('$baseUrl/user/export-data/'),
+          headers: ApiUtils.authHeaders(token),
+        ),
+        authService: _authService,
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body) as Map<String, dynamic>;
+        return DataExportResult(
+          success: true,
+          message: 'Data exported successfully',
+          data: data,
+        );
+      } else {
+        final errorData = json.decode(response.body);
+        return DataExportResult(
+          success: false,
+          message: _extractErrorMessage(errorData),
+        );
+      }
+    } catch (e) {
+      return DataExportResult(
+        success: false,
+        message: 'Failed to export data: ${e.toString()}',
+      );
+    }
+  }
+
+  /// Delete user account (GDPR Article 17 - Right to Erasure)
+  /// SECURITY: Uses certificate pinning, requires password re-authentication
+  Future<AccountDeletionResult> deleteAccount({
+    required String password,
+  }) async {
+    try {
+      final response = await HttpHelper.withTokenRefresh(
+        _httpClient,
+        (token) => _httpClient.delete(
+          Uri.parse('$baseUrl/user/delete-account/'),
+          headers: ApiUtils.authHeaders(token),
+          body: json.encode({
+            'password': password,
+          }),
+        ),
+        authService: _authService,
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        // Account deleted successfully - clear local data
+        await _authService.logout();
+        return AccountDeletionResult(
+          success: true,
+          message: 'Account deleted successfully',
+        );
+      } else {
+        final errorData = json.decode(response.body);
+        return AccountDeletionResult(
+          success: false,
+          message: _extractErrorMessage(errorData),
+        );
+      }
+    } catch (e) {
+      return AccountDeletionResult(
+        success: false,
+        message: 'Failed to delete account: ${e.toString()}',
+      );
+    }
+  }
 }
 
 /// User Profile Model
@@ -218,6 +189,7 @@ class UserProfile {
   final String email;
   final String firstName;
   final String lastName;
+  final String subscriptionPlan;
 
   UserProfile({
     required this.id,
@@ -225,6 +197,7 @@ class UserProfile {
     required this.email,
     required this.firstName,
     required this.lastName,
+    required this.subscriptionPlan,
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
@@ -234,6 +207,7 @@ class UserProfile {
       email: json['email'] ?? '',
       firstName: json['first_name'] ?? '',
       lastName: json['last_name'] ?? '',
+      subscriptionPlan: json['subscription_plan'] ?? 'Free/All Notifications',
     );
   }
 
@@ -249,8 +223,34 @@ class UserProfile {
 class PasswordChangeResult {
   final bool success;
   final String message;
+  final bool requiresRelogin;
 
   PasswordChangeResult({
+    required this.success,
+    required this.message,
+    this.requiresRelogin = false,
+  });
+}
+
+/// Data Export Result (GDPR Article 20 - Right to Data Portability)
+class DataExportResult {
+  final bool success;
+  final String message;
+  final Map<String, dynamic>? data;
+
+  DataExportResult({
+    required this.success,
+    required this.message,
+    this.data,
+  });
+}
+
+/// Account Deletion Result (GDPR Article 17 - Right to Erasure)
+class AccountDeletionResult {
+  final bool success;
+  final String message;
+
+  AccountDeletionResult({
     required this.success,
     required this.message,
   });

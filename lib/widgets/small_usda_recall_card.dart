@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recall_data.dart';
 import '../services/saved_recalls_service.dart';
 import '../pages/usda_recall_details_page.dart';
+import '../pages/subscribe_page.dart';
+import '../providers/data_providers.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 
-class SmallUsdaRecallCard extends StatefulWidget {
+class SmallUsdaRecallCard extends ConsumerStatefulWidget {
   final RecallData recall;
 
   const SmallUsdaRecallCard({super.key, required this.recall});
 
   @override
-  State<SmallUsdaRecallCard> createState() => _SmallUsdaRecallCardState();
+  ConsumerState<SmallUsdaRecallCard> createState() => _SmallUsdaRecallCardState();
 }
 
-class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
+class _SmallUsdaRecallCardState extends ConsumerState<SmallUsdaRecallCard> {
   final SavedRecallsService _savedRecallsService = SavedRecallsService();
   bool _isSaved = false;
 
@@ -34,14 +38,138 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
   Future<void> _toggleSave() async {
     if (_isSaved) {
       await _savedRecallsService.removeSavedRecall(widget.recall.id);
+      if (mounted) {
+        setState(() {
+          _isSaved = false;
+        });
+        // Refresh provider so HomePage updates immediately
+        ref.refresh(savedRecallsProvider);
+        ref.refresh(safetyScoreProvider);
+      }
     } else {
-      await _savedRecallsService.saveRecall(widget.recall);
+      try {
+        await _savedRecallsService.saveRecall(widget.recall);
+        if (mounted) {
+          setState(() {
+            _isSaved = true;
+          });
+          // Refresh provider so HomePage updates immediately
+          ref.refresh(savedRecallsProvider);
+          ref.refresh(safetyScoreProvider);
+        }
+      } on SavedRecallsLimitException catch (e) {
+        // Show upgrade dialog when limit is reached
+        if (mounted) {
+          _showUpgradeDialog(e);
+        }
+      } catch (e) {
+        // Handle other errors
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving recall: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
     }
-    if (mounted) {
-      setState(() {
-        _isSaved = !_isSaved;
-      });
-    }
+  }
+
+  void _showUpgradeDialog(SavedRecallsLimitException exception) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.secondary,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Row(
+            children: [
+              Icon(Icons.workspace_premium, color: AppColors.premium, size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Saved Recalls Limit Reached',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You have reached your saved recalls limit (${exception.limit}).',
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 16, height: 1.4),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'Upgrade your plan to save more recalls:',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              _buildPlanOption('Free Plan', '5 recalls'),
+              _buildPlanOption('SmartFiltering Plan', '15 recalls'),
+              _buildPlanOption('RecallMatch Plan', '50 recalls'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54, fontSize: 16),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const SubscribePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentBlue,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text(
+                'View Plans',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildPlanOption(String planName, String limit) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle, color: AppColors.success, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            '$planName: ',
+            style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+          ),
+          Text(
+            limit,
+            style: const TextStyle(
+              color: AppColors.accentBlue,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -57,7 +185,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF2A4A5C),
+          color: AppColors.secondary,
           borderRadius: BorderRadius.circular(12),
         ),
         padding: const EdgeInsets.all(16),
@@ -75,7 +203,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
                         ? widget.recall.brandName
                         : 'N/A',
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
@@ -88,7 +216,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
                   child: Text(
                     _getStateCount(),
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -102,7 +230,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
                   child: Text(
                     _formatDate(widget.recall.dateIssued),
                     style: const TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
                     ),
@@ -129,7 +257,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
                             ? widget.recall.productName
                             : 'N/A',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 14,
                           fontWeight: FontWeight.w600,
                         ),
@@ -141,7 +269,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
                       Text(
                         'Outcomes: ${_getNegativeOutcomes()}',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 12,
                         ),
                         maxLines: 1,
@@ -152,7 +280,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
                       Text(
                         'Reason: ${widget.recall.recallReason.isNotEmpty ? widget.recall.recallReason : 'N/A'}',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 12,
                         ),
                         maxLines: 2,
@@ -163,7 +291,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
                       Text(
                         'ID: ${widget.recall.usdaRecallId.isNotEmpty ? widget.recall.usdaRecallId : 'N/A'}',
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 12,
                         ),
                         maxLines: 1,
@@ -182,7 +310,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
                         width: double.infinity,
                         height: 100,
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: widget.recall.imageUrl.isNotEmpty
@@ -226,7 +354,7 @@ class _SmallUsdaRecallCardState extends State<SmallUsdaRecallCard> {
                             ),
                             child: Icon(
                               _isSaved ? Icons.favorite : Icons.favorite_border,
-                              color: _isSaved ? Color(0xFF4CAF50) : Colors.white,
+                              color: _isSaved ? AppColors.success : AppColors.textPrimary,
                               size: 16,
                             ),
                           ),

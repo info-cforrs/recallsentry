@@ -1,47 +1,61 @@
 import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../models/recall_data.dart';
 import '../config/app_config.dart';
+import '../utils/api_utils.dart';
 import 'auth_service.dart';
 import 'usage_service.dart';
+import 'subscription_service.dart';
+import 'gamification_service.dart';
+
+/// Exception thrown when saved recalls limit is reached
+class SavedRecallsLimitException implements Exception {
+  final String message;
+  final int currentCount;
+  final int limit;
+  final SubscriptionTier currentTier;
+
+  SavedRecallsLimitException({
+    required this.message,
+    required this.currentCount,
+    required this.limit,
+    required this.currentTier,
+  });
+
+  @override
+  String toString() => message;
+}
 
 class SavedRecallsService {
   static const String _savedRecallsKey = 'saved_recalls';
   final AuthService _authService = AuthService();
   final UsageService _usageService = UsageService();
+  final GamificationService _gamificationService = GamificationService();
   final String baseUrl = AppConfig.apiBaseUrl;
+  final _secureStorage = const FlutterSecureStorage();
 
   // Get all saved recalls
   Future<List<RecallData>> getSavedRecalls() async {
     try {
       // Check if user is logged in
-      print('🔍 SavedRecallsService.getSavedRecalls() called');
       final isLoggedIn = await _authService.isLoggedIn();
-      print('   isLoggedIn: $isLoggedIn');
 
       if (!isLoggedIn) {
         // Fall back to local storage if not logged in
-        print('   ⚠️ User not logged in, using local storage');
         return _getLocalSavedRecalls();
       }
 
       // Fetch from API
-      print('   📡 Fetching from API: /saved-recalls/');
       final response = await _authService.authenticatedRequest(
         'GET',
         '/saved-recalls/',
       );
-      print('   API Response: ${response.statusCode}');
 
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
-        print('   Response data type: ${responseData.runtimeType}');
 
-        // Handle paginated response
-        final List<dynamic> jsonList = responseData is List
-            ? responseData
-            : (responseData['results'] ?? []);
-        print('   📊 Got ${jsonList.length} saved recalls from API');
+        // Use ApiUtils to extract results list
+        final List<dynamic> jsonList = ApiUtils.extractResultsList(responseData);
 
         final recalls = jsonList.map((json) {
           // The API returns the recall data nested in 'recall' field
@@ -49,25 +63,21 @@ class SavedRecallsService {
           return RecallData.fromJson(recallJson);
         }).toList();
 
-        print('   ✅ Returning ${recalls.length} saved recalls');
         return recalls;
       } else {
-        print('❌ Failed to fetch saved recalls from API: ${response.statusCode}');
-        print('   Response body: ${response.body}');
         return _getLocalSavedRecalls();
       }
     } catch (e) {
-      print('❌ Error getting saved recalls from API: $e');
       // Fall back to local storage on error
       return _getLocalSavedRecalls();
     }
   }
 
   // Get saved recalls from local storage (fallback)
+  // SECURITY: Now uses FlutterSecureStorage for encryption
   Future<List<RecallData>> _getLocalSavedRecalls() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? savedRecallsJson = prefs.getString(_savedRecallsKey);
+      final String? savedRecallsJson = await _secureStorage.read(key: _savedRecallsKey);
 
       if (savedRecallsJson == null) {
         return [];
@@ -76,7 +86,6 @@ class SavedRecallsService {
       final List<dynamic> savedRecallsList = jsonDecode(savedRecallsJson);
       return savedRecallsList.map((json) => RecallData.fromJson(json)).toList();
     } catch (e) {
-      print('❌ Error getting local saved recalls: $e');
       return [];
     }
   }
@@ -104,60 +113,68 @@ class SavedRecallsService {
       );
 
       if (response.statusCode == 201) {
-        print('✅ Saved recall to API: ${recall.id} - ${recall.productName}');
         // Clear usage cache to force refresh
         _usageService.clearCache();
+        // Record gamification action (updates SafetyScore)
+        await _gamificationService.recordAction(GamificationService.actionSaveRecall);
         // Also save locally for offline access
         await _saveRecallLocally(recall);
         return true;
       } else if (response.statusCode == 400) {
         // Likely already saved
-        print('ℹ️ Recall ${recall.id} already saved on server');
         return true;
       } else {
-        print('❌ Failed to save recall to API: ${response.statusCode}');
-        print('❌ API Response: ${response.body}');
         // If authentication failed, fall back to local storage
         return _saveRecallLocally(recall);
       }
     } catch (e) {
-      print('❌ Error saving recall to API: $e');
       return _saveRecallLocally(recall);
     }
   }
 
   // Save recall to local storage
+  // SECURITY: Now uses FlutterSecureStorage for encryption
   Future<bool> _saveRecallLocally(RecallData recall) async {
     try {
       final savedRecalls = await _getLocalSavedRecalls();
 
       // Check if already saved
       if (savedRecalls.any((saved) => saved.id == recall.id)) {
-        print('ℹ️ Recall ${recall.id} already saved locally');
         return true;
+      }
+
+      // Check saved recalls limit based on subscription tier
+      final subscriptionService = SubscriptionService();
+      final subscriptionInfo = await subscriptionService.getSubscriptionInfo();
+      final limit = subscriptionInfo.getSavedRecallsLimit();
+
+      // Enforce limit (only for new saves, not existing)
+      if (savedRecalls.length >= limit) {
+        throw SavedRecallsLimitException(
+          message: 'You have reached your saved recalls limit of $limit. Upgrade your plan to save more recalls.',
+          currentCount: savedRecalls.length,
+          limit: limit,
+          currentTier: subscriptionInfo.tier,
+        );
       }
 
       // Add to saved list
       savedRecalls.add(recall);
 
-      // Save to SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
+      // Save to FlutterSecureStorage (encrypted)
       final String savedRecallsJson = jsonEncode(
         savedRecalls.map((r) => r.toJson()).toList(),
       );
 
-      final bool success = await prefs.setString(
-        _savedRecallsKey,
-        savedRecallsJson,
+      await _secureStorage.write(
+        key: _savedRecallsKey,
+        value: savedRecallsJson,
       );
 
-      if (success) {
-        print('✅ Saved recall locally: ${recall.id} - ${recall.productName}');
-      }
-
-      return success;
+      return true;
+    } on SavedRecallsLimitException {
+      rethrow; // Re-throw limit exception for UI to handle
     } catch (e) {
-      print('❌ Error saving recall locally: $e');
       return false;
     }
   }
@@ -182,10 +199,8 @@ class SavedRecallsService {
       if (response.statusCode == 200) {
         final responseData = jsonDecode(response.body);
 
-        // Handle paginated response
-        final List<dynamic> jsonList = responseData is List
-            ? responseData
-            : (responseData['results'] ?? []);
+        // Use ApiUtils to extract results list
+        final List<dynamic> jsonList = ApiUtils.extractResultsList(responseData);
 
         // Find the saved recall with matching recall_id
         final savedRecall = jsonList.firstWhere(
@@ -203,30 +218,29 @@ class SavedRecallsService {
           );
 
           if (deleteResponse.statusCode == 204) {
-            print('✅ Removed saved recall from API: $recallId');
             // Clear usage cache to force refresh
             _usageService.clearCache();
+            // Clear gamification cache (SafetyScore will update on next fetch)
+            _gamificationService.clearCache();
             // Also remove locally
             await _removeRecallLocally(recallId);
             return true;
           } else {
-            print('❌ Failed to remove recall from API: ${deleteResponse.statusCode}');
             return _removeRecallLocally(recallId);
           }
         } else {
-          print('ℹ️ Recall $recallId not found on server');
           return _removeRecallLocally(recallId);
         }
       } else {
         return _removeRecallLocally(recallId);
       }
     } catch (e) {
-      print('❌ Error removing saved recall from API: $e');
       return _removeRecallLocally(recallId);
     }
   }
 
   // Remove recall from local storage
+  // SECURITY: Now uses FlutterSecureStorage for encryption
   Future<bool> _removeRecallLocally(String recallId) async {
     try {
       final savedRecalls = await _getLocalSavedRecalls();
@@ -234,24 +248,18 @@ class SavedRecallsService {
       // Remove from list
       savedRecalls.removeWhere((recall) => recall.id == recallId);
 
-      // Save updated list to SharedPreferences
-      final prefs = await SharedPreferences.getInstance();
+      // Save updated list to FlutterSecureStorage (encrypted)
       final String savedRecallsJson = jsonEncode(
         savedRecalls.map((r) => r.toJson()).toList(),
       );
 
-      final bool success = await prefs.setString(
-        _savedRecallsKey,
-        savedRecallsJson,
+      await _secureStorage.write(
+        key: _savedRecallsKey,
+        value: savedRecallsJson,
       );
 
-      if (success) {
-        print('✅ Removed saved recall locally: $recallId');
-      }
-
-      return success;
+      return true;
     } catch (e) {
-      print('❌ Error removing saved recall locally: $e');
       return false;
     }
   }
@@ -262,25 +270,51 @@ class SavedRecallsService {
       final savedRecalls = await getSavedRecalls();
       return savedRecalls.any((recall) => recall.id == recallId);
     } catch (e) {
-      print('❌ Error checking if recall is saved: $e');
       return false;
     }
   }
 
   // Clear all saved recalls
+  // SECURITY: Now uses FlutterSecureStorage for encryption
   Future<bool> clearAllSavedRecalls() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final bool success = await prefs.remove(_savedRecallsKey);
+      await _secureStorage.delete(key: _savedRecallsKey);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
 
-      if (success) {
-        print('✅ Cleared all saved recalls');
+  /// Clean up saved recalls older than 6 months
+  /// Should be called on app initialization
+  /// Returns the number of recalls removed
+  Future<int> cleanupOldSavedRecalls() async {
+    try {
+      final savedRecalls = await _getLocalSavedRecalls();
+      final sixMonthsAgo = DateTime.now().subtract(const Duration(days: 180));
+
+      // Filter out recalls older than 6 months
+      final beforeCount = savedRecalls.length;
+      final cleanedRecalls = savedRecalls.where((recall) {
+        return recall.dateIssued.isAfter(sixMonthsAgo);
+      }).toList();
+
+      // Only update storage if we actually removed recalls
+      final removedCount = beforeCount - cleanedRecalls.length;
+      if (removedCount > 0) {
+        final String savedRecallsJson = jsonEncode(
+          cleanedRecalls.map((r) => r.toJson()).toList(),
+        );
+
+        await _secureStorage.write(
+          key: _savedRecallsKey,
+          value: savedRecallsJson,
+        );
       }
 
-      return success;
+      return removedCount;
     } catch (e) {
-      print('❌ Error clearing saved recalls: $e');
-      return false;
+      return 0;
     }
   }
 }

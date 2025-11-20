@@ -1,7 +1,7 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import '../models/recall_data.dart';
 import '../models/rmc_enrollment.dart';
-import '../services/api_service.dart';
+import '../services/rmc_sync_service.dart';
 import 'rmc_status_page.dart';
 import 'main_navigation.dart';
 import '../widgets/custom_back_button.dart';
@@ -19,18 +19,37 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
   String? _error;
   String _selectedTimePeriod = 'ALL';
   bool _hasLoadedOnce = false;
+  bool _isOnline = true;
+  final _syncService = RmcSyncService();
+  StreamSubscription<SyncStatus>? _syncStatusSubscription;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initializeSyncService();
     _loadEnrollments();
   }
 
   @override
   void dispose() {
+    _syncStatusSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  /// Initialize sync service and listen to sync status
+  Future<void> _initializeSyncService() async {
+    // Listen to sync status changes
+    _syncStatusSubscription = _syncService.syncStatusStream.listen((status) {
+      if (!mounted) return;
+      setState(() {
+        _isOnline = status != SyncStatus.offline;
+      });
+    });
+
+    // Initialize sync service (will auto-sync if online)
+    await _syncService.initialize();
   }
 
   @override
@@ -42,14 +61,18 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
   }
 
   Future<void> _loadEnrollments() async {
+    if (!mounted) return;
+
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      // Fetch active enrollments (excludes "Not Active" status)
-      final enrollments = await ApiService().fetchActiveRmcEnrollments();
+      // Use sync service - automatically handles offline/online mode
+      final enrollments = await _syncService.fetchActiveEnrollments();
+
+      if (!mounted) return;
 
       setState(() {
         _enrollments = enrollments;
@@ -57,6 +80,8 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
         _hasLoadedOnce = true;
       });
     } catch (e) {
+      if (!mounted) return;
+
       setState(() {
         _error = 'Failed to load RMC enrollments: $e';
         _isLoading = false;
@@ -68,19 +93,19 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
   // New status counters based on RMC enrollment statuses
   int _getNotStartedCount() {
     return _enrollments
-        .where((e) => e.status == 'Not Started')
+        .where((e) => e.status.trim().toLowerCase() == 'not started')
         .length;
   }
 
   int _getDiscontinuedUseCount() {
     return _enrollments
-        .where((e) => e.status == 'In Progress - Discontinued Use')
+        .where((e) => e.status.trim().toLowerCase() == 'stopped using')
         .length;
   }
 
   int _getContactedManufacturerCount() {
     return _enrollments
-        .where((e) => e.status == 'In Progress - Contacted Manufacturer')
+        .where((e) => e.status.trim().toLowerCase() == 'mfr contacted')
         .length;
   }
 
@@ -92,8 +117,8 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
           return status != 'closed' &&
                  status != 'completed' &&
                  status != 'not started' &&
-                 status != 'in progress - discontinued use' &&
-                 status != 'in progress - contacted manufacturer';
+                 status != 'stopped using' &&
+                 status != 'mfr contacted';
         })
         .length;
   }
@@ -111,9 +136,31 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
     return _enrollments
         .where((e) {
           final status = e.status.trim().toLowerCase();
-          return status != 'closed' && status != 'completed' && status != 'not started';
+          return status != 'closed' &&
+                 status != 'completed' &&
+                 status != 'not started' &&
+                 status != 'stopped using' &&
+                 status != 'mfr contacted';
         })
         .toList();
+  }
+
+  /// Helper method to get estimated value from enrollment's recall data
+  double? _getEstimatedValueFromRecallData(RmcEnrollment enrollment) {
+    if (enrollment.recallData == null) {
+      return null;
+    }
+
+    // Use lowercase field name to match API response
+    final estValue = enrollment.recallData!['est_item_value'];
+    if (estValue == null || estValue == '') {
+      return null;
+    }
+
+    // Try to parse the value - it might be a string like "$25.99" or "25.99"
+    String valueStr = estValue.toString().replaceAll('\$', '').replaceAll(',', '').trim();
+    final parsedValue = double.tryParse(valueStr);
+    return parsedValue;
   }
 
   double _calculateTotalRecallValue() {
@@ -144,14 +191,24 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
 
     // Sum estimated_value for completed enrollments within the time period
     double total = 0.0;
+
     for (var enrollment in _enrollments) {
-      if (enrollment.status == 'Completed') {
+      final status = enrollment.status.trim().toLowerCase();
+      if (status == 'completed' || status == 'closed') {
         // Check if enrollment is within the selected time period
-        if (startDate == null ||
-            (enrollment.completedAt != null && enrollment.completedAt!.isAfter(startDate))) {
-          // Use the user's estimated value from the enrollment
-          if (enrollment.estimatedValue != null) {
-            total += enrollment.estimatedValue!;
+        if (startDate == null) {
+          // "ALL" selected - include all completed/closed enrollments
+          final estValue = _getEstimatedValueFromRecallData(enrollment);
+          if (estValue != null) {
+            total += estValue;
+          }
+        } else {
+          // Specific time period selected - only include if completedAt is within range
+          if (enrollment.completedAt != null && enrollment.completedAt!.isAfter(startDate)) {
+            final estValue = _getEstimatedValueFromRecallData(enrollment);
+            if (estValue != null) {
+              total += estValue;
+            }
           }
         }
       }
@@ -162,7 +219,7 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
 
   List<RmcEnrollment> _getEnrollmentsByStatus(String status) {
     return _enrollments
-        .where((e) => e.status == status)
+        .where((e) => e.status.trim().toLowerCase() == status.trim().toLowerCase())
         .toList();
   }
 
@@ -219,7 +276,7 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/shield_logo3.png',
+                        'assets/images/shield_logo4.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -267,6 +324,31 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
                       overflow: TextOverflow.visible,
                     ),
                   ),
+                  // Offline indicator
+                  if (!_isOnline)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange, width: 1),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.cloud_off, color: Colors.orange, size: 16),
+                          SizedBox(width: 4),
+                          Text(
+                            'Offline',
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -336,8 +418,8 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
                                 _getDiscontinuedUseCount(),
                                 () => _navigateToStatusList(
                                   'Discontinued Use',
-                                  'In Progress - Discontinued Use',
-                                  _getEnrollmentsByStatus('In Progress - Discontinued Use'),
+                                  'Stopped Using',
+                                  _getEnrollmentsByStatus('Stopped Using'),
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -347,8 +429,8 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
                                 _getContactedManufacturerCount(),
                                 () => _navigateToStatusList(
                                   'Contacted Manufacturer',
-                                  'In Progress - Contacted Manufacturer',
-                                  _getEnrollmentsByStatus('In Progress - Contacted Manufacturer'),
+                                  'Mfr Contacted',
+                                  _getEnrollmentsByStatus('Mfr Contacted'),
                                 ),
                               ),
                               const SizedBox(height: 12),

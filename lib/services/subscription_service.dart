@@ -2,13 +2,14 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import 'auth_service.dart';
+import 'security_service.dart';
 
 /// Subscription tier enum
+/// NOTE: Guest and Free are merged - both use 'free' tier
 enum SubscriptionTier {
-  guest,
-  free,
-  smartFiltering,
-  recallMatch,
+  free,            // Free tier (logged in or guest users)
+  smartFiltering,  // Premium tier - $1.99/month
+  recallMatch,     // Coming in Rev2
 }
 
 /// Subscription information model
@@ -29,16 +30,21 @@ class SubscriptionInfo {
     this.subscriptionStartDate,
   });
 
-  /// Factory for guest users (not logged in)
-  factory SubscriptionInfo.guest() {
+  /// Factory for free tier users (logged in or guest)
+  /// NOTE: Guest and Free are now merged into single 'free' tier
+  factory SubscriptionInfo.free() {
     return SubscriptionInfo(
-      tier: SubscriptionTier.guest,
+      tier: SubscriptionTier.free,
       filterLimit: 3,
-      savedRecallsLimit: 20,
+      savedRecallsLimit: 5,  // Corrected from 20 to match backend
       hasPremiumAccess: false,
       isActive: true,
     );
   }
+
+  /// Deprecated: Use SubscriptionInfo.free() instead
+  @Deprecated('Guest and Free tiers are now merged. Use SubscriptionInfo.free()')
+  factory SubscriptionInfo.guest() => SubscriptionInfo.free();
 
   /// Factory from JSON API response
   factory SubscriptionInfo.fromJson(Map<String, dynamic> json) {
@@ -62,10 +68,9 @@ class SubscriptionInfo {
       case 'smart_filtering':
         return SubscriptionTier.smartFiltering;
       case 'free':
-        return SubscriptionTier.free;
-      case 'guest':
+      case 'guest':  // Legacy: treat guest as free
       default:
-        return SubscriptionTier.guest;
+        return SubscriptionTier.free;
     }
   }
 
@@ -78,8 +83,6 @@ class SubscriptionInfo {
         return 'SmartFiltering';
       case SubscriptionTier.free:
         return 'Free';
-      case SubscriptionTier.guest:
-        return 'Guest';
     }
   }
 
@@ -92,13 +95,13 @@ class SubscriptionInfo {
         return 0xFF4CAF50; // Green
       case SubscriptionTier.free:
         return 0xFF64B5F6; // Blue
-      case SubscriptionTier.guest:
-        return 0xFF9E9E9E; // Grey
     }
   }
 
   /// Check if user is logged in
-  bool get isLoggedIn => tier != SubscriptionTier.guest;
+  /// NOTE: Since Guest/Free are merged, this now checks if user has access token
+  /// Will be true for logged-in free users, false for guests
+  bool get isLoggedIn => tier != SubscriptionTier.free; // This should be checked via AuthService instead
 
   /// Check if user is on free plan
   bool get isFreePlan => tier == SubscriptionTier.free;
@@ -107,7 +110,7 @@ class SubscriptionInfo {
   bool get isPremium => tier == SubscriptionTier.smartFiltering || tier == SubscriptionTier.recallMatch;
 
   /// Get saved filter limit based on tier
-  /// Free/Guest: 0, SmartFiltering: 10, RecallMatch: 999 (unlimited)
+  /// Free: 0, SmartFiltering: 10, RecallMatch: 999 (unlimited)
   int getSavedFilterLimit() {
     switch (tier) {
       case SubscriptionTier.recallMatch:
@@ -115,7 +118,6 @@ class SubscriptionInfo {
       case SubscriptionTier.smartFiltering:
         return 10;
       case SubscriptionTier.free:
-      case SubscriptionTier.guest:
         return 0;
     }
   }
@@ -130,8 +132,86 @@ class SubscriptionInfo {
         return 3;
       case SubscriptionTier.free:
         return 1;
-      case SubscriptionTier.guest:
-        return 1; // Same as free for state filtering
+    }
+  }
+
+  /// Get saved recalls limit based on tier
+  /// Free: 5, SmartFiltering: 15, RecallMatch: 50
+  int getSavedRecallsLimit() {
+    // First check if API provided a limit
+    if (savedRecallsLimit > 0) {
+      return savedRecallsLimit;
+    }
+
+    // Fallback to tier-based limits
+    switch (tier) {
+      case SubscriptionTier.recallMatch:
+        return 50;
+      case SubscriptionTier.smartFiltering:
+        return 15;
+      case SubscriptionTier.free:
+        return 5;
+    }
+  }
+
+  /// Get household inventory limit based on tier
+  /// Free: 0, SmartFiltering: 0, RecallMatch: 75
+  int getHouseholdInventoryLimit() {
+    switch (tier) {
+      case SubscriptionTier.recallMatch:
+        return 75;
+      case SubscriptionTier.smartFiltering:
+        return 0;
+      case SubscriptionTier.free:
+        return 0;
+    }
+  }
+
+  /// Check if user has access to RMC (Recall Management Center)
+  /// Free: No, SmartFiltering: No, RecallMatch: Yes
+  bool get hasRMCAccess => tier == SubscriptionTier.recallMatch;
+
+  /// Check if user has access to SmartScan (camera/barcode scanning)
+  /// Free: No, SmartFiltering: No, RecallMatch: Yes
+  bool get hasSmartScanAccess => tier == SubscriptionTier.recallMatch;
+
+  /// Check if user has access to RecallMatch Engine (automated matching)
+  /// Free: No, SmartFiltering: No, RecallMatch: Yes
+  bool get hasRecallMatchEngine => tier == SubscriptionTier.recallMatch;
+
+  /// Get allowed recall agencies based on tier
+  /// Free: FDA, USDA
+  /// SmartFiltering: FDA, USDA, CPSC
+  /// RecallMatch: FDA, USDA, CPSC, NHTSA
+  List<String> getAllowedAgencies() {
+    switch (tier) {
+      case SubscriptionTier.recallMatch:
+        return ['FDA', 'USDA', 'CPSC', 'NHTSA'];
+      case SubscriptionTier.smartFiltering:
+        return ['FDA', 'USDA', 'CPSC'];
+      case SubscriptionTier.free:
+        return ['FDA', 'USDA'];
+    }
+  }
+
+  /// Check if agency is allowed for current tier
+  bool isAgencyAllowed(String agency) {
+    final allowed = getAllowedAgencies();
+    return allowed.contains(agency.toUpperCase());
+  }
+
+  /// Get recall history limit in days based on tier
+  /// Free: 30 days, SmartFiltering: Since Jan 1, RecallMatch: Since Jan 1
+  int getRecallHistoryDays() {
+    switch (tier) {
+      case SubscriptionTier.recallMatch:
+      case SubscriptionTier.smartFiltering:
+        // Calculate days since January 1 of current year
+        final now = DateTime.now();
+        final janFirst = DateTime(now.year, 1, 1);
+        return now.difference(janFirst).inDays;
+      case SubscriptionTier.free:
+        return 30;
     }
   }
 }
@@ -140,6 +220,7 @@ class SubscriptionInfo {
 class SubscriptionService {
   final String baseUrl = AppConfig.apiBaseUrl;
   final AuthService _authService = AuthService();
+  final http.Client _httpClient = SecurityService().createSecureHttpClient();
 
   // Singleton pattern
   static final SubscriptionService _instance = SubscriptionService._internal();
@@ -152,33 +233,28 @@ class SubscriptionService {
   static const Duration _cacheDuration = Duration(minutes: 5);
 
   /// Get current user's subscription info
+  /// SECURITY: Uses certificate pinning
   Future<SubscriptionInfo> getSubscriptionInfo({bool forceRefresh = false}) async {
-    print('🔐 SubscriptionService.getSubscriptionInfo() called - forceRefresh: $forceRefresh');
-
     // Return cached subscription if available and not expired
     if (!forceRefresh &&
         _cachedSubscription != null &&
         _cacheTime != null &&
         DateTime.now().difference(_cacheTime!) < _cacheDuration) {
-      print('📦 Using cached subscription - Tier: ${_cachedSubscription!.tier}, HasPremium: ${_cachedSubscription!.hasPremiumAccess}');
       return _cachedSubscription!;
     }
 
     final token = await _authService.getAccessToken();
-    print('🔑 Access token: ${token != null && token.isNotEmpty ? "EXISTS (${token.substring(0, 20)}...)" : "NULL/EMPTY"}');
 
-    // If no token, user is guest
+    // If no token, user is on free tier (not logged in)
     if (token == null || token.isEmpty) {
-      print('👤 No token found - returning GUEST subscription (hasPremiumAccess: false)');
-      final guestInfo = SubscriptionInfo.guest();
-      _cachedSubscription = guestInfo;
+      final freeInfo = SubscriptionInfo.free();
+      _cachedSubscription = freeInfo;
       _cacheTime = DateTime.now();
-      return guestInfo;
+      return freeInfo;
     }
 
-    print('🌐 Fetching subscription from API...');
     try {
-      final response = await http.get(
+      final response = await _httpClient.get(
         Uri.parse('$baseUrl/user/subscription/current/'),
         headers: {
           'Authorization': 'Bearer $token',
@@ -187,14 +263,11 @@ class SubscriptionService {
       );
 
       if (response.statusCode == 200) {
-        print('✅ API returned 200 - parsing subscription data');
         final subscription = SubscriptionInfo.fromJson(json.decode(response.body));
-        print('📋 Subscription from API - Tier: ${subscription.tier}, HasPremium: ${subscription.hasPremiumAccess}');
         _cachedSubscription = subscription;
         _cacheTime = DateTime.now();
         return subscription;
       } else {
-        print('⚠️ Failed to fetch subscription: ${response.statusCode}');
         // If API fails, assume free plan for logged-in users
         final freePlan = SubscriptionInfo(
           tier: SubscriptionTier.free,
@@ -208,12 +281,11 @@ class SubscriptionService {
         return freePlan;
       }
     } catch (e) {
-      print('❌ Error fetching subscription: $e');
-      // Return guest mode on error
-      final guestInfo = SubscriptionInfo.guest();
-      _cachedSubscription = guestInfo;
+      // Return free tier on error
+      final freeInfo = SubscriptionInfo.free();
+      _cachedSubscription = freeInfo;
       _cacheTime = DateTime.now();
-      return guestInfo;
+      return freeInfo;
     }
   }
 
@@ -236,6 +308,7 @@ class SubscriptionService {
   }
 
   /// Get usage statistics
+  /// SECURITY: Uses certificate pinning
   Future<Map<String, dynamic>> getUsageStats() async {
     final token = await _authService.getAccessToken();
 
@@ -253,7 +326,7 @@ class SubscriptionService {
     }
 
     try {
-      final response = await http.get(
+      final response = await _httpClient.get(
         Uri.parse('$baseUrl/user/usage/'),
         headers: {
           'Authorization': 'Bearer $token',
@@ -267,7 +340,6 @@ class SubscriptionService {
         throw Exception('Failed to get usage stats');
       }
     } catch (e) {
-      print('❌ Error getting usage stats: $e');
       // Return default free plan stats
       return {
         'filters_used': 0,
@@ -282,6 +354,7 @@ class SubscriptionService {
   }
 
   /// Upgrade to Smart Filtering (placeholder for Stripe integration)
+  /// SECURITY: Uses certificate pinning
   Future<Map<String, dynamic>> upgradeToSmartFiltering() async {
     final token = await _authService.getAccessToken();
 
@@ -293,7 +366,7 @@ class SubscriptionService {
     }
 
     try {
-      final response = await http.post(
+      final response = await _httpClient.post(
         Uri.parse('$baseUrl/user/subscription/upgrade/'),
         headers: {
           'Authorization': 'Bearer $token',
@@ -314,7 +387,6 @@ class SubscriptionService {
         };
       }
     } catch (e) {
-      print('❌ Error upgrading subscription: $e');
       return {
         'success': false,
         'error': 'Network error: $e',

@@ -38,7 +38,7 @@ class _SubscribePageState extends State<SubscribePage> {
                     width: 40,
                     height: 40,
                     child: Image.asset(
-                      'assets/images/shield_logo3.png',
+                      'assets/images/shield_logo4.png',
                       width: 40,
                       height: 40,
                       fit: BoxFit.contain,
@@ -92,17 +92,6 @@ class _SubscribePageState extends State<SubscribePage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Subscription Section Header
-                    const Text(
-                      'Subscription',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
                     // Current Plan Section
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,7 +106,7 @@ class _SubscribePageState extends State<SubscribePage> {
                         ),
                         const SizedBox(height: 4),
                         const Text(
-                          'Free/All Notifications',
+                          'Free',
                           style: TextStyle(fontSize: 14, color: Colors.white70),
                         ),
                       ],
@@ -125,12 +114,12 @@ class _SubscribePageState extends State<SubscribePage> {
 
                     const SizedBox(height: 32),
 
-                    // All Notifications Plan Card
+                    // Free Plan Card
                     Container(
                       width: double.infinity,
                       margin: const EdgeInsets.symmetric(
                         horizontal: 20,
-                      ), // Add 10px margin on each side (total 20px narrower)
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade200,
                         borderRadius: BorderRadius.circular(16),
@@ -158,7 +147,7 @@ class _SubscribePageState extends State<SubscribePage> {
                             child: Column(
                               children: [
                                 const Text(
-                                  'All Notifications',
+                                  'Free',
                                   style: TextStyle(
                                     fontSize: 22,
                                     fontWeight: FontWeight.bold,
@@ -225,19 +214,23 @@ class _SubscribePageState extends State<SubscribePage> {
 
                                 // Features List
                                 _buildFeatureItem(
-                                  'Real-time recall alerts from the FDA and USDA',
+                                  'Real-time alerts from FDA & USDA',
                                 ),
                                 const SizedBox(height: 16),
                                 _buildFeatureItem(
-                                  'Standard Filtering: 3 Brand and Product Name Filters',
+                                  'Save up to 5 recalls',
                                 ),
                                 const SizedBox(height: 16),
                                 _buildFeatureItem(
-                                  'Standard Recall Saving: Save up to 20 Recalls',
+                                  'Filter by 1 state',
                                 ),
                                 const SizedBox(height: 16),
                                 _buildFeatureItem(
-                                  'Level 1 Recall Detail Fields',
+                                  'Basic recall information',
+                                ),
+                                const SizedBox(height: 16),
+                                _buildFeatureItem(
+                                  'Last 30 days of recall history',
                                 ),
                               ],
                             ),
@@ -290,7 +283,7 @@ class _SubscribePageState extends State<SubscribePage> {
                                 ),
                                 const SizedBox(height: 4),
                                 const Text(
-                                  'Filter recall alerts for products you care about',
+                                  'Stay Organized',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: Colors.white70,
@@ -348,19 +341,31 @@ class _SubscribePageState extends State<SubscribePage> {
 
                                 // Features List
                                 _buildFeatureItem(
-                                  'Everything in All Notifications',
+                                  'Everything in Free, plus:',
                                 ),
                                 const SizedBox(height: 16),
                                 _buildFeatureItem(
-                                  'SmartFiltering: Up to 10 Brand and Product Name Filters',
+                                  'CPSC alerts (consumer products)',
                                 ),
                                 const SizedBox(height: 16),
                                 _buildFeatureItem(
-                                  'Expanded Recall Saving: Save up to 30 Recalls',
+                                  'Save up to 10 custom SmartFilters',
                                 ),
                                 const SizedBox(height: 16),
                                 _buildFeatureItem(
-                                  'Level 2 Recall Detail Fields including Recommendations',
+                                  'Save up to 15 recalls',
+                                ),
+                                const SizedBox(height: 16),
+                                _buildFeatureItem(
+                                  'Filter by up to 3 states',
+                                ),
+                                const SizedBox(height: 16),
+                                _buildFeatureItem(
+                                  'Premium recall details (adverse reactions, recommendations, distribution)',
+                                ),
+                                const SizedBox(height: 16),
+                                _buildFeatureItem(
+                                  'Full recall history since January 1',
                                 ),
                                 const SizedBox(height: 24),
 
@@ -399,6 +404,142 @@ class _SubscribePageState extends State<SubscribePage> {
                                   ),
                                 ),
                               ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 40),
+
+                    // RecallMatch Plan Card (Coming Soon)
+                    Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.symmetric(horizontal: 20),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Stack(
+                        children: [
+                          // Greyed out content
+                          Opacity(
+                            opacity: 0.5,
+                            child: Column(
+                              children: [
+                                // Header section
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF8B7355), // Bronze/Gold header
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: Radius.circular(16),
+                                      topRight: Radius.circular(16),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      const Text(
+                                        'RecallMatch',
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Text(
+                                        'Protect Your Home',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: Colors.white70,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+
+                                // Content section
+                                Padding(
+                                  padding: const EdgeInsets.all(20),
+                                  child: Column(
+                                    children: [
+                                      // Features List
+                                      _buildFeatureItem(
+                                        'Everything in SmartFiltering, plus:',
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildFeatureItem(
+                                        '📷 SmartScan: Camera & barcode scanning',
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildFeatureItem(
+                                        '🏠 Household Inventory (up to 75 items)',
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildFeatureItem(
+                                        '🤖 RecallMatch Engine: Automated daily matching of YOUR items',
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildFeatureItem(
+                                        '✅ Recall Management Center (RMC): Step-by-step resolution',
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildFeatureItem(
+                                        '🚗 NHTSA alerts (vehicle/auto recalls)',
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildFeatureItem(
+                                        'Unlimited SmartFilters & state filtering',
+                                      ),
+                                      const SizedBox(height: 16),
+                                      _buildFeatureItem(
+                                        'Save up to 50 recalls',
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          // Coming Soon Badge
+                          Positioned.fill(
+                            child: Center(
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFD700),
+                                  borderRadius: BorderRadius.circular(8),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.2),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Text(
+                                  'COMING IN REV2',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.black,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ],

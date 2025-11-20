@@ -3,6 +3,13 @@
 import 'recommended_product.dart';
 import '../config/app_config.dart';
 
+/// Image size context for optimized image selection
+enum ImageSize {
+  thumbnail,  // 240x240 WebP for list views (~15-25 KB)
+  medium,     // 600x600 WebP for detail pages (~40-70 KB)
+  highRes,    // 1200x1200 WebP for full-screen (~80-150 KB)
+}
+
 // Model for images uploaded via admin panel
 class RecallImage {
   final int id;
@@ -65,6 +72,13 @@ class RecallData {
   final String imageUrl3;
   final String imageUrl4;
   final String imageUrl5;
+  final String distributionMapUrl; // Auto-generated distribution map image
+
+  // Optimized image URLs (WebP format, generated from imageUrl)
+  final String imageThumbnail; // 240x240 WebP (~15-25 KB) for list views
+  final String imageMedium; // 600x600 WebP (~40-70 KB) for detail pages
+  final String imageHighRes; // 1200x1200 WebP (~80-150 KB) for full-screen viewing
+
   final List<RecallImage> images; // Images uploaded via admin panel
   final List<RecommendedProduct> recommendations; // Recommended replacement products
   final int stateCount;
@@ -171,6 +185,10 @@ class RecallData {
     this.imageUrl3 = '',
     this.imageUrl4 = '',
     this.imageUrl5 = '',
+    this.distributionMapUrl = '',
+    this.imageThumbnail = '',
+    this.imageMedium = '',
+    this.imageHighRes = '',
     this.images = const [],
     this.recommendations = const [],
     this.stateCount = 0,
@@ -282,6 +300,10 @@ class RecallData {
       imageUrl3: json['image_url3'] ?? json['Image_URL3'] ?? '',
       imageUrl4: json['image_url4'] ?? json['Image_URL4'] ?? '',
       imageUrl5: json['image_url5'] ?? json['Image_URL5'] ?? '',
+      distributionMapUrl: _makeAbsoluteUrl(json['distribution_map_url'] ?? ''),
+      imageThumbnail: _makeAbsoluteUrl(json['image_thumbnail'] ?? ''),
+      imageMedium: _makeAbsoluteUrl(json['image_medium'] ?? ''),
+      imageHighRes: _makeAbsoluteUrl(json['image_high_res'] ?? ''),
       images: (json['images'] as List<dynamic>?)
           ?.whereType<Map<String, dynamic>>()
           .map((img) => RecallImage.fromJson(img))
@@ -434,6 +456,10 @@ class RecallData {
       'image_url3': imageUrl3,
       'image_url4': imageUrl4,
       'image_url5': imageUrl5,
+      'distribution_map_url': distributionMapUrl,
+      'image_thumbnail': imageThumbnail,
+      'image_medium': imageMedium,
+      'image_high_res': imageHighRes,
       'state_count': stateCount,
       'negative_outcomes': negativeOutcomes,
       'packaging_desc': packagingDesc,
@@ -504,29 +530,37 @@ class RecallData {
   /// Get the primary image URL, prioritizing uploaded images from admin panel
   /// Falls back to CSV image URLs if no uploaded images exist
   String getPrimaryImageUrl() {
-    print('🖼️ getPrimaryImageUrl() for $id - images.length: ${images.length}, imageUrl: "$imageUrl"');
-
     // Priority 1: Use uploaded images from admin panel
     if (images.isNotEmpty) {
       final url = _makeAbsoluteUrl(images.first.imageUrl);
-      print('   ✅ Using uploaded image: $url');
       return url;
     }
 
     // Priority 2: Use image_url field (from CSV or direct entry)
     if (imageUrl.isNotEmpty) {
       final url = _makeAbsoluteUrl(imageUrl);
-      print('   ✅ Using imageUrl field: $url');
       return url;
     }
 
     // No images available
-    print('   ❌ No images available');
     return '';
   }
 
+  /// Get optimized image URL for specific context
+  /// Returns thumbnail, medium, or high-res version with fallback to original
+  String getImageUrlForContext(ImageSize size) {
+    switch (size) {
+      case ImageSize.thumbnail:
+        return imageThumbnail.isNotEmpty ? imageThumbnail : imageUrl;
+      case ImageSize.medium:
+        return imageMedium.isNotEmpty ? imageMedium : imageUrl;
+      case ImageSize.highRes:
+        return imageHighRes.isNotEmpty ? imageHighRes : imageUrl;
+    }
+  }
+
   /// Convert relative URLs to absolute URLs
-  String _makeAbsoluteUrl(String url) {
+  static String _makeAbsoluteUrl(String url) {
     if (url.isEmpty) return '';
 
     // If already absolute, return as-is
@@ -553,19 +587,10 @@ class RecallData {
   List<String> getAllImageUrls() {
     List<String> urls = [];
 
-    print('🖼️ getAllImageUrls() called for recall: $productName');
-    print('   - Admin images count: ${images.length}');
-    print('   - imageUrl: "$imageUrl"');
-    print('   - imageUrl2: "$imageUrl2"');
-    print('   - imageUrl3: "$imageUrl3"');
-    print('   - imageUrl4: "$imageUrl4"');
-    print('   - imageUrl5: "$imageUrl5"');
-
     // Add all uploaded images first
     for (var img in images) {
       if (img.imageUrl.isNotEmpty) {
         final absoluteUrl = _makeAbsoluteUrl(img.imageUrl);
-        print('   ✅ Adding admin image: $absoluteUrl');
         urls.add(absoluteUrl);
       }
     }
@@ -573,33 +598,23 @@ class RecallData {
     // Add CSV image URLs
     if (imageUrl.isNotEmpty) {
       final absoluteUrl = _makeAbsoluteUrl(imageUrl);
-      print('   ✅ Adding imageUrl: $absoluteUrl');
       urls.add(absoluteUrl);
     }
     if (imageUrl2.isNotEmpty) {
       final absoluteUrl = _makeAbsoluteUrl(imageUrl2);
-      print('   ✅ Adding imageUrl2: $absoluteUrl');
       urls.add(absoluteUrl);
     }
     if (imageUrl3.isNotEmpty) {
       final absoluteUrl = _makeAbsoluteUrl(imageUrl3);
-      print('   ✅ Adding imageUrl3: $absoluteUrl');
       urls.add(absoluteUrl);
     }
     if (imageUrl4.isNotEmpty) {
       final absoluteUrl = _makeAbsoluteUrl(imageUrl4);
-      print('   ✅ Adding imageUrl4: $absoluteUrl');
       urls.add(absoluteUrl);
     }
     if (imageUrl5.isNotEmpty) {
       final absoluteUrl = _makeAbsoluteUrl(imageUrl5);
-      print('   ✅ Adding imageUrl5: $absoluteUrl');
       urls.add(absoluteUrl);
-    }
-
-    print('   📊 Total image URLs: ${urls.length}');
-    if (urls.isEmpty) {
-      print('   ⚠️ WARNING: No images found for this recall!');
     }
 
     return urls;

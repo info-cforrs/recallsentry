@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import '../models/recall_data.dart';
 import '../widgets/shared/shared_image_carousel.dart';
-import '../widgets/shared/shared_adverse_reactions_accordion.dart';
 import '../widgets/shared/shared_recommendations_accordion.dart';
-import '../widgets/shared/shared_remedy_section.dart';
 import '../widgets/shared/shared_product_distribution_accordion.dart';
 import '../widgets/shared/shared_recommended_products_accordion.dart';
-import '../widgets/USDA_Recall_Details_Card.dart';
+import '../widgets/usda_recall_details_card.dart';
 import '../widgets/shared/shared_usda_resources_section.dart';
 import '../services/recall_data_service.dart';
 import '../services/api_service.dart';
+import '../services/recall_sharing_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'main_navigation.dart';
 import 'rmc_details_page.dart';
+import '../models/rmc_enrollment.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
+import 'package:rs_flutter/widgets/custom_loading_indicator.dart';
+import '../services/subscription_service.dart';
+import 'subscribe_page.dart';
 
 class UsdaRecallDetailsPage extends StatefulWidget {
   final RecallData recall;
@@ -39,17 +43,14 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
       _error = null;
     });
     try {
-      print('🔄 Fetching fresh USDA recalls with forceRefresh=true...');
       final recalls = await RecallDataService().getUsdaRecalls(
         forceRefresh: true,
       );
       final id = widget.recall.usdaRecallId;
-      print('🔍 Looking for recall with USDA ID: $id');
       final fresh = recalls.firstWhere(
         (r) => r.usdaRecallId == id,
         orElse: () => widget.recall,
       );
-      print('📦 Found recall with ${fresh.recommendations.length} recommendations');
       setState(() {
         _freshRecall = fresh;
         _isLoading = false;
@@ -66,35 +67,28 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF1D3547),
-        appBar: AppBar(
-          backgroundColor: const Color(0xFF1D3547),
-          title: const Text(
-            'USDA Recall Details V3',
-            style: TextStyle(color: Colors.white),
-          ),
-          iconTheme: const IconThemeData(color: Colors.white),
-          elevation: 0,
+      return const Scaffold(
+        body: FullPageLoadingIndicator(
+          title: 'USDA Recall Details',
+          message: 'Loading recall information...',
         ),
-        body: const Center(child: CircularProgressIndicator()),
       );
     }
 
     if (_error != null) {
       return Scaffold(
-        backgroundColor: const Color(0xFF1D3547),
+        backgroundColor: AppColors.primary,
         appBar: AppBar(
-          backgroundColor: const Color(0xFF1D3547),
+          backgroundColor: AppColors.primary,
           title: const Text(
-            'USDA Recall Details V3',
-            style: TextStyle(color: Colors.white),
+            'USDA Recall Details',
+            style: TextStyle(color: AppColors.textPrimary),
           ),
-          iconTheme: const IconThemeData(color: Colors.white),
+          iconTheme: const IconThemeData(color: AppColors.textPrimary),
           elevation: 0,
         ),
         body: Center(
-          child: Text(_error!, style: const TextStyle(color: Colors.red)),
+          child: Text(_error!, style: const TextStyle(color: AppColors.error)),
         ),
       );
     }
@@ -103,16 +97,27 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1D3547),
-        title: const Text(
-          'USDA Recall Details V3',
-          style: TextStyle(color: Colors.white),
+        backgroundColor: AppColors.primary,
+        leading: Semantics(
+          label: 'Back',
+          button: true,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            tooltip: 'Go back',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
         ),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: Semantics(
+          header: true,
+          child: const Text(
+            'USDA Recall Details',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
+        ),
         elevation: 0,
       ),
       body: Container(
-        color: const Color(0xFF1D3547),
+        color: AppColors.primary,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -125,43 +130,49 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
                 height: 220,
                 width: double.infinity,
                 borderRadius: 18,
+                onShareTap: () {
+                  RecallSharingService().showShareDialog(context, recall);
+                },
               ),
               const SizedBox(height: 18),
               // USDA Recall Details Card
               USDARecallDetailsCard(recall: recall),
               const SizedBox(height: 16),
-              // Start Recall Process button (always visible)
-              _buildStartRecallProcessButton(context, recall),
-              const SizedBox(height: 12),
-              if (recall.recallPhaReason.trim().isNotEmpty)
+
+              // Estimated Value (moved from card)
+              if (recall.estItemValue.trim().isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 40),
-                  child: Column(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Reason for Recall:',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
+                      const SizedBox(
+                        width: 160,
+                        child: Text(
+                          'Estimated Value (each):',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        recall.recallPhaReason,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.normal,
-                          fontSize: 15,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          recall.estItemValue,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
+                          ),
                         ),
                       ),
                     ],
                   ),
                 ),
-              SharedProductDistributionAccordion(
-                productDistribution: recall.productDistribution,
-              ),
+
+              // 1. Product Identification
               Padding(
                 padding: const EdgeInsets.only(bottom: 40),
                 child: Column(
@@ -170,7 +181,7 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
                     const Text(
                       'Product Identification:',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.bold,
                         fontSize: 15,
                       ),
@@ -181,7 +192,7 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
                           ? recall.productIdentification
                           : 'Not specified',
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontWeight: FontWeight.normal,
                         fontSize: 15,
                       ),
@@ -189,18 +200,153 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
                   ],
                 ),
               ),
-              // Accordions
-              SharedAdverseReactionsAccordion(
-                adverseReactions: recall.adverseReactions,
-                adverseReactionDetails: recall.adverseReactionDetails,
+
+              // 2. Reason for Recall (moved from below)
+              if (recall.recallPhaReason.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Reason for Recall:',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        recall.recallPhaReason,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 3. Product Distribution (States) - Premium Feature
+              _buildPremiumDetailSection(
+                title: 'Product Distribution',
+                premiumContent: SharedProductDistributionAccordion(
+                  productDistribution: recall.productDistribution,
+                  distributionMapUrl: recall.distributionMapUrl,
+                ),
               ),
-              SharedRecommendationsAccordion(
-                recommendationsActions: recall.recommendationsActions,
-                remedy: recall.remedy,
+
+              // 4. Adverse Reactions
+              if (recall.adverseReactions.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Adverse Reactions:',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        recall.adverseReactions,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 5. Adverse Reaction Details
+              if (recall.adverseReactionDetails.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Adverse Reaction Details:',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        recall.adverseReactionDetails,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 6. Recommendations - Premium Feature
+              _buildPremiumDetailSection(
+                title: 'Recommendations',
+                premiumContent: SharedRecommendationsAccordion(
+                  recommendationsActions: recall.recommendationsActions,
+                  remedy: recall.remedy,
+                ),
               ),
-              SharedRemedySection(recall: recall),
-              // Recommended Replacement Items Section
-              SharedRecommendedProductsAccordion(recall: recall),
+
+              // 5. Resolution - Consumer Actions
+              _buildResolutionSection(recall),
+
+              // 6. Remedy
+              if (recall.remedy.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Remedy:',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        recall.remedy,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 7. I have this Recalled Item
+              _buildStartRecallProcessButton(context, recall),
+              const SizedBox(height: 12),
+
+              // 9. Recall Process
+              _buildRecallProcessSection(context),
+
+              // 10. Recommended Replacement Items - Premium Feature
+              _buildPremiumDetailSection(
+                title: 'Recommended Replacement Items',
+                premiumContent: SharedRecommendedProductsAccordion(recall: recall),
+              ),
+
               // USDA Resources Section (from original page)
               SharedUsdaResourcesSection(recall: recall),
               const SizedBox(height: 24),
@@ -208,56 +354,64 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFFEC7A2D),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  Semantics(
+                    label: 'Open USDA Recall Alert Link',
+                    button: true,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: const Color(0xFFEC7A2D),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                    ),
-                    onPressed: () async {
-                      if (recall.recallUrl.isNotEmpty) {
-                        final url = Uri.parse(recall.recallUrl);
-                        if (await canLaunchUrl(url)) {
-                          await launchUrl(
-                            url,
-                            mode: LaunchMode.externalApplication,
-                          );
+                      onPressed: () async {
+                        if (recall.recallUrl.isNotEmpty) {
+                          final url = Uri.parse(recall.recallUrl);
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(
+                              url,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
                         }
-                      }
-                    },
-                    child: const Text(
-                      'USDA Recall/Alert Link',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.normal,
-                        fontSize: 18,
+                      },
+                      child: const Text(
+                        'USDA Recall/Alert Link',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 18,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                   const SizedBox(height: 40),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      backgroundColor: const Color(0xFF00B6FF),
-                      padding: const EdgeInsets.symmetric(vertical: 18),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  Semantics(
+                    label: 'Subscribe for recall details',
+                    button: true,
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: const Color(0xFF00B6FF),
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                    ),
-                    onPressed: () {
-                      Navigator.of(context).pushNamed('/subscribe');
-                    },
-                    child: const Text(
-                      'SUBSCRIBE FOR DETAILS',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        letterSpacing: 1.1,
+                      onPressed: () {
+                        Navigator.of(context).pushNamed('/subscribe');
+                      },
+                      child: const Text(
+                        'SUBSCRIBE FOR DETAILS',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                          letterSpacing: 1.1,
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                      textAlign: TextAlign.center,
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -269,10 +423,7 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
                 children: [
                   Text(
                     recall.usdaRecallId,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
                   ),
                 ],
               ),
@@ -282,9 +433,9 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
+        backgroundColor: AppColors.secondary,
+        selectedItemColor: AppColors.accentBlue,
+        unselectedItemColor: AppColors.textTertiary,
         currentIndex: 1, // Recalls tab selected
         elevation: 8,
         selectedFontSize: 14,
@@ -332,177 +483,554 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> {
     );
   }
 
-  Widget _buildStartRecallProcessButton(BuildContext context, RecallData recall) {
-    return FutureBuilder<List>(
-      future: ApiService().fetchRmcEnrollmentsByRecallFilter(recall.databaseId!),
+  Future<Map<String, dynamic>> _getEnrollmentForCurrentUser(int recallId) async {
+    try {
+      // Fetch ONLY the current user's enrollments (not all users)
+      final enrollments = await ApiService().fetchRmcEnrollments();
+
+      // Filter to find the enrollment for this specific recall
+      final userEnrollment = enrollments.where((e) => e.recallId == recallId).firstOrNull;
+
+      return {'enrollment': userEnrollment};
+    } catch (e) {
+      return {'enrollment': null};
+    }
+  }
+
+  // Helper widget to wrap premium detail sections
+  Widget _buildPremiumDetailSection({
+    required String title,
+    required Widget premiumContent,
+  }) {
+    return FutureBuilder<SubscriptionInfo>(
+      future: SubscriptionService().getSubscriptionInfo(),
       builder: (context, snapshot) {
-        final bool hasEnrollment = snapshot.hasData && snapshot.data!.isNotEmpty;
-        final String statusText = hasEnrollment
-            ? 'Tap to manage recall'
-            : 'Start Recall Process';
+        final hasPremiumAccess = snapshot.data?.isPremium ?? false;
 
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: !hasEnrollment ? () {
-            // Only show confirmation dialog if not started
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                  backgroundColor: const Color(0xFF2A4A5C),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  title: const Text(
-                    'Start Recall Process',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  content: const Text(
-                    'Are you ready to start managing this recall? This will activate the Recall Management Center for this item.',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: Colors.white70),
+        if (hasPremiumAccess) {
+          // Show the actual premium content
+          return premiumContent;
+        } else {
+          // Show locked/greyed-out version
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFD1D1D1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                onTap: () => _showPremiumDetailsUpgradeModal(),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[400],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.lock,
+                          color: Colors.black54,
+                          size: 24,
+                        ),
                       ),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4CAF50),
-                      ),
-                      onPressed: () async {
-                        // Enroll recall in RMC with new enrollment system
-                        try {
-                          // Create RMC enrollment with "Not Started" status
-                          final enrollment = await ApiService().enrollRecallInRmc(
-                            recallId: recall.databaseId!,
-                            status: 'Not Started',
-                          );
-
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-
-                          // Navigate to RMC Details workflow page
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => RmcDetailsPage(
-                                recall: recall,
-                                enrollment: enrollment,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          );
-                        } catch (e) {
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to enroll recall in RMC: $e'),
-                              backgroundColor: Colors.red,
-                              duration: const Duration(seconds: 3),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Upgrade to SmartFiltering or RecallMatch for details',
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontSize: 13,
+                              ),
                             ),
-                          );
-                        }
-                      },
-                      child: const Text(
-                        'Start Process',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          } : () async {
-            // If already enrolled, fetch enrollment and navigate to RMC workflow page
-            try {
-              final enrollments = await ApiService().fetchRmcEnrollmentsByRecallFilter(recall.databaseId!);
-              if (enrollments.isNotEmpty) {
-                if (!mounted) return;
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => RmcDetailsPage(
-                      recall: recall,
-                      enrollment: enrollments.first,
-                    ),
-                  ),
-                );
-              }
-            } catch (e) {
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to load enrollment: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00B6FF),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.list_alt,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        !hasEnrollment
-                            ? 'I have this recalled item'
-                            : 'Recall Management Center',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        statusText,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.black54,
+                        size: 18,
                       ),
                     ],
                   ),
                 ),
-                const Icon(
-                  Icons.arrow_forward_ios,
+              ),
+            ),
+          );
+        }
+      },
+    );
+  }
+
+  void _showPremiumDetailsUpgradeModal() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Row(
+            children: [
+              Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Upgrade Required',
+                style: TextStyle(
                   color: Colors.white,
-                  size: 18,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-              ],
+              ),
+            ],
+          ),
+          content: const Text(
+            'Premium recall details including Product Distribution, Recommendations, and Recommended Replacement Items are available with SmartFiltering (\$1.99/month) or RecallMatch (\$4.99/month).',
+            style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54, fontSize: 16),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SubscribePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD700),
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text(
+                'Upgrade',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showRmcUpgradeModal() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Row(
+            children: [
+              Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Upgrade Required',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Recall Management Center (RMC) is an exclusive RecallMatch feature. Upgrade to RecallMatch (\$4.99/month) to access step-by-step recall resolution workflows, household inventory tracking, SmartScan, and automated RecallMatch engine.',
+            style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54, fontSize: 16),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const SubscribePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD700),
+                foregroundColor: const Color(0xFF2A4A5C),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text(
+                'Upgrade',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildStartRecallProcessButton(
+    BuildContext context,
+    RecallData recall,
+  ) {
+    return FutureBuilder<SubscriptionInfo>(
+      future: SubscriptionService().getSubscriptionInfo(),
+      builder: (context, subscriptionSnapshot) {
+        final hasRmcAccess = subscriptionSnapshot.data?.hasRMCAccess ?? false;
+
+        return FutureBuilder<Map<String, dynamic>>(
+          future: _getEnrollmentForCurrentUser(recall.databaseId!),
+          builder: (context, snapshot) {
+            final bool hasEnrollment =
+                snapshot.hasData && snapshot.data!['enrollment'] != null;
+            final String statusText;
+
+            if (hasEnrollment) {
+              // Show the current enrollment status
+              final RmcEnrollment enrollment = snapshot.data!['enrollment'] as RmcEnrollment;
+              final rmcStatus = enrollment.status;
+              statusText = 'Status: $rmcStatus';
+            } else {
+              statusText = 'Start Recall Process';
+            }
+
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: hasRmcAccess ? null : const Color(0xFFD1D1D1),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: !hasRmcAccess
+                      ? () {
+                          // Show upgrade modal for non-RecallMatch users
+                          _showRmcUpgradeModal();
+                        }
+                      : !hasEnrollment
+                  ? () {
+                      // Only show confirmation dialog if not started
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            backgroundColor: AppColors.secondary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            title: const Text(
+                              'Start Recall Process',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            content: const Text(
+                              'Are you ready to start managing this recall? This will activate the Recall Management Center for this item.',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text(
+                                  'Cancel',
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.success,
+                                ),
+                                onPressed: () async {
+                                  // Enroll recall in RMC with new enrollment system
+                                  final navigator = Navigator.of(context);
+                                  final scaffoldMessenger = ScaffoldMessenger.of(context);
+
+                                  try {
+                                    // Create RMC enrollment with "Not Started" status
+                                    final enrollment = await ApiService()
+                                        .enrollRecallInRmc(
+                                          recallId: recall.databaseId!,
+                                          rmcStatus: 'Not Started',
+                                        );
+
+                                    if (!mounted) return;
+                                    navigator.pop();
+
+                                    // Navigate to RMC Details workflow page
+                                    navigator.push(
+                                      MaterialPageRoute(
+                                        builder: (context) => RmcDetailsPage(
+                                          recall: recall,
+                                          enrollment: enrollment,
+                                        ),
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    navigator.pop();
+                                    scaffoldMessenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Failed to enroll recall in RMC: $e',
+                                        ),
+                                        backgroundColor: Colors.red,
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text(
+                                  'Start Process',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    }
+                  : () async {
+                      // If already enrolled, use enrollment from snapshot and navigate to RMC workflow page
+                      if (snapshot.hasData && snapshot.data!['enrollment'] != null) {
+                        final enrollment = snapshot.data!['enrollment'] as RmcEnrollment;
+                        if (!mounted) return;
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => RmcDetailsPage(
+                              recall: recall,
+                              enrollment: enrollment,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 20,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: hasRmcAccess ? const Color(0xFF00B6FF) : Colors.grey[400],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.list_alt,
+                        color: hasRmcAccess ? AppColors.textPrimary : Colors.black54,
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            !hasEnrollment
+                                ? 'I have this recalled item'
+                                : 'Recall Management Center',
+                            style: TextStyle(
+                              color: hasRmcAccess ? AppColors.textPrimary : Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            hasRmcAccess ? statusText : 'RecallMatch exclusive feature',
+                            style: TextStyle(
+                              color: hasRmcAccess ? AppColors.textSecondary : Colors.black54,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      hasRmcAccess ? Icons.arrow_forward_ios : Icons.lock,
+                      color: hasRmcAccess ? AppColors.textPrimary : Colors.black54,
+                      size: 18,
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
+        );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildRecallProcessSection(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 40),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.secondary,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Title and Learn More link
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recall Process',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
+              ),
+              GestureDetector(
+                onTap: () async {
+                  // Open the Recall-Process.png image or navigate to a learn more page
+                  // For now, you can add navigation logic here
+                },
+                child: const Text(
+                  'Learn More',
+                  style: TextStyle(
+                    color: AppColors.accentBlue,
+                    fontSize: 14,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          // Row 2: Four equally spaced columns with icons and text
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildProcessStep(
+                'assets/images/Identify_Affected_Item.png',
+                'Identify\nAffected Item',
+              ),
+              _buildProcessStep(
+                'assets/images/Follow_Recall_Steps.png',
+                'Follow Recall\nSteps',
+              ),
+              _buildProcessStep(
+                'assets/images/Choose_Path.png',
+                'Choose\nPath',
+              ),
+              _buildProcessStep(
+                'assets/images/Receive_Resolution.png',
+                'Resolution',
+              ),
+            ],
+          ),
+        ],
       ),
     );
-      },
+  }
+
+  Widget _buildProcessStep(String iconPath, String label) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(iconPath, width: 60, height: 60, fit: BoxFit.contain),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildResolutionSection(RecallData recall) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          const Text(
+            'Resolution – Consumer Actions',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 10),
+          // Five equally spaced circular icons with labels
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildRemedyCheckbox('Return', recall.remedyReturn),
+              _buildRemedyCheckbox('Repair', recall.remedyRepair),
+              _buildRemedyCheckbox('Replace', recall.remedyReplace),
+              _buildRemedyCheckbox('Dispose', recall.remedyDispose),
+              _buildRemedyCheckbox('N/A', recall.remedyNA),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRemedyCheckbox(String label, String value) {
+    bool isChecked = value.toUpperCase() == 'Y';
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            isChecked
+                ? 'assets/images/Check_Circle_LightBG.png'
+                : 'assets/images/Blank_Circle_LightBG.png',
+            width: 60,
+            height: 60,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textPrimary, fontSize: 12),
+          ),
+        ],
+      ),
     );
   }
 }

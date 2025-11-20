@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
 class SharedImageCarousel extends StatefulWidget {
   final List<String> imageUrls;
@@ -6,12 +7,14 @@ class SharedImageCarousel extends StatefulWidget {
   final double height;
   final double width;
   final double borderRadius;
+  final VoidCallback? onShareTap;
   const SharedImageCarousel({
     required this.imageUrls,
     this.showIndicators = false,
     this.height = 240,
     this.width = 240,
     this.borderRadius = 24,
+    this.onShareTap,
     super.key,
   });
 
@@ -50,46 +53,87 @@ class _SharedImageCarouselState extends State<SharedImageCarousel> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Main image area
-        SizedBox(
-          height: widget.height,
-          width: widget.width,
-          child: PageView.builder(
-            controller: _controller,
-            itemCount: imageUrls.length,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemBuilder: (context, index) {
-              final url = imageUrls[index];
-              return GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => _FullScreenImageView(imageUrl: url),
-                      fullscreenDialog: true,
+        // Main image area with share button overlay
+        Stack(
+          children: [
+            SizedBox(
+              height: widget.height,
+              width: widget.width,
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: imageUrls.length,
+                onPageChanged: (index) {
+                  setState(() {
+                    _currentPage = index;
+                  });
+                },
+                itemBuilder: (context, index) {
+                  final url = imageUrls[index];
+                  return GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => _FullScreenImageView(imageUrl: url),
+                          fullscreenDialog: true,
+                        ),
+                      );
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(widget.borderRadius),
+                      child: CachedNetworkImage(
+                        imageUrl: url,
+                        fit: BoxFit.contain,
+                        placeholder: (context, url) => Center(
+                          child: CircularProgressIndicator(
+                            color: Colors.white54,
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Center(
+                          child: Icon(
+                            Icons.broken_image,
+                            size: 80,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                      ),
                     ),
                   );
                 },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(widget.borderRadius),
-                  child: Image.network(
-                    url,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Center(
-                      child: Icon(
-                        Icons.broken_image,
-                        size: 80,
-                        color: Colors.grey[400],
+              ),
+            ),
+            // Share button overlay in upper right corner
+            if (widget.onShareTap != null)
+              Positioned(
+                top: 12,
+                right: 12,
+                child: Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: widget.onShareTap,
+                    borderRadius: BorderRadius.circular(20),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2C3E50).withValues(alpha: 0.9),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.share,
+                        color: Colors.white,
+                        size: 22,
                       ),
                     ),
                   ),
                 ),
-              );
-            },
-          ),
+              ),
+          ],
         ),
         // Thumbnail previews (only show if more than 1 image)
         if (imageUrls.length > 1)
@@ -123,10 +167,20 @@ class _SharedImageCarouselState extends State<SharedImageCarousel> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(6),
-                        child: Image.network(
-                          url,
+                        child: CachedNetworkImage(
+                          imageUrl: url,
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) => Center(
+                          placeholder: (context, url) => Center(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white54,
+                              ),
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => Center(
                             child: Icon(
                               Icons.broken_image,
                               size: 24,
@@ -186,10 +240,15 @@ class _FullScreenImageView extends StatelessWidget {
       ),
       body: Center(
         child: InteractiveViewer(
-          child: Image.network(
-            imageUrl,
+          child: CachedNetworkImage(
+            imageUrl: imageUrl,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => Center(
+            placeholder: (context, url) => Center(
+              child: CircularProgressIndicator(
+                color: Colors.white,
+              ),
+            ),
+            errorWidget: (context, url, error) => Center(
               child: Icon(
                 Icons.broken_image,
                 size: 80,

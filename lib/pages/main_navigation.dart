@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 import 'home_page.dart';
 import 'info_page.dart';
 import 'settings_page.dart';
@@ -43,37 +45,80 @@ class _MainNavigationState extends State<MainNavigation> {
       const SettingsPage(),
     ];
 
-    return Scaffold(
-      body: pages[_currentIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          _changeTab(index);
-        },
-        type: BottomNavigationBarType.fixed,
-        backgroundColor: const Color(0xFF2C3E50), // Dark blue-grey background
-        selectedItemColor: const Color(0xFF64B5F6), // Light blue for selected
-        unselectedItemColor: Colors.grey.shade500, // Grey for unselected
-        selectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontSize: 12,
-          fontWeight: FontWeight.w500,
-        ),
-        elevation: 8,
-        selectedFontSize: 12, // Add this
-        unselectedFontSize: 10, // Add this
-        iconSize: 24, // Add this
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
+    return KeyboardListener(
+      focusNode: FocusNode(),
+      autofocus: true,
+      onKeyEvent: (event) {
+        if (event is KeyDownEvent) {
+          // Keyboard navigation: 1, 2, 3 keys or Ctrl+1, Ctrl+2, Ctrl+3
+          if (event.logicalKey == LogicalKeyboardKey.digit1 ||
+              (HardwareKeyboard.instance.isControlPressed &&
+                  event.logicalKey == LogicalKeyboardKey.digit1)) {
+            _changeTab(0);
+          } else if (event.logicalKey == LogicalKeyboardKey.digit2 ||
+              (HardwareKeyboard.instance.isControlPressed &&
+                  event.logicalKey == LogicalKeyboardKey.digit2)) {
+            _changeTab(1);
+          } else if (event.logicalKey == LogicalKeyboardKey.digit3 ||
+              (HardwareKeyboard.instance.isControlPressed &&
+                  event.logicalKey == LogicalKeyboardKey.digit3)) {
+            _changeTab(2);
+          }
+        }
+      },
+      child: Scaffold(
+        body: pages[_currentIndex],
+        bottomNavigationBar: Semantics(
+          label: 'Bottom navigation bar',
+          child: BottomNavigationBar(
+            currentIndex: _currentIndex,
+            onTap: (index) {
+              _changeTab(index);
+            },
+            type: BottomNavigationBarType.fixed,
+            backgroundColor: AppColors.secondary,
+            selectedItemColor: AppColors.accentBlue,
+            unselectedItemColor: AppColors.textSecondary,
+            selectedLabelStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+            elevation: 8,
+            selectedFontSize: 12,
+            unselectedFontSize: 10,
+            iconSize: 24,
+            items: [
+              BottomNavigationBarItem(
+                icon: Semantics(
+                  label: 'Navigate to Home tab',
+                  button: true,
+                  child: const Icon(Icons.home),
+                ),
+                label: 'Home',
+              ),
+              BottomNavigationBarItem(
+                icon: Semantics(
+                  label: 'Navigate to Info tab',
+                  button: true,
+                  child: const Icon(Icons.info),
+                ),
+                label: 'Info',
+              ),
+              BottomNavigationBarItem(
+                icon: Semantics(
+                  label: 'Navigate to Settings tab',
+                  button: true,
+                  child: const Icon(Icons.settings),
+                ),
+                label: 'Settings',
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

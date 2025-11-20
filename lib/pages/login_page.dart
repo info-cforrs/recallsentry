@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 import 'main_navigation.dart';
 import 'sign_up_page.dart';
 import '../services/auth_service.dart';
@@ -21,8 +22,38 @@ class _LoginPageState extends State<LoginPage> {
   bool _isLoading = false;
   final int _currentIndex = 0; // Home tab
 
+  // SECURITY: Rate limiting for login attempts
+  int _loginAttempts = 0;
+  DateTime? _lastAttemptTime;
+  static const int _maxAttemptsBeforeDelay = 3;
+  static const Duration _loginDelay = Duration(seconds: 30);
+
   Future<void> _handleLogin() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // SECURITY: Check rate limiting before attempting login
+    if (_loginAttempts >= _maxAttemptsBeforeDelay && _lastAttemptTime != null) {
+      final timeSinceLastAttempt = DateTime.now().difference(_lastAttemptTime!);
+      if (timeSinceLastAttempt < _loginDelay) {
+        final remainingSeconds = _loginDelay.inSeconds - timeSinceLastAttempt.inSeconds;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Too many login attempts. Please wait $remainingSeconds seconds.'),
+              backgroundColor: AppColors.warning,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      } else {
+        // Delay period has passed - reset counter
+        _loginAttempts = 0;
+      }
+    }
+
+    _lastAttemptTime = DateTime.now();
+    _loginAttempts++;
 
     setState(() => _isLoading = true);
 
@@ -33,6 +64,10 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       if (success && mounted) {
+        // SECURITY: Reset login attempts on successful login
+        _loginAttempts = 0;
+        _lastAttemptTime = null;
+
         // Navigate to main navigation on successful login
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
@@ -44,14 +79,14 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Login successful!'),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
           ),
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Invalid username or password'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -60,7 +95,7 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Login error: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -79,7 +114,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1D3547), // Dark blue background
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
@@ -93,9 +128,10 @@ class _LoginPageState extends State<LoginPage> {
                     onPressed: () => Navigator.of(context).pop(),
                     icon: const Icon(
                       Icons.arrow_back,
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       size: 24,
                     ),
+                    tooltip: 'Go back',
                   ),
                   const SizedBox(width: 8),
                   // App Icon
@@ -103,7 +139,7 @@ class _LoginPageState extends State<LoginPage> {
                     width: 40,
                     height: 40,
                     child: Image.asset(
-                      'assets/images/shield_logo3.png',
+                      'assets/images/shield_logo4.png',
                       width: 40,
                       height: 40,
                       fit: BoxFit.contain,
@@ -113,7 +149,7 @@ class _LoginPageState extends State<LoginPage> {
                           height: 40,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                              colors: [AppColors.success, AppColors.successDark],
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
                             ),
@@ -128,7 +164,7 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           child: const Icon(
                             Icons.check,
-                            color: Colors.white,
+                            color: AppColors.textPrimary,
                             size: 24,
                           ),
                         );
@@ -170,7 +206,7 @@ class _LoginPageState extends State<LoginPage> {
                               style: TextStyle(
                                 fontSize: 28,
                                 fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                               ),
                             ),
                             SizedBox(height: 8),
@@ -178,7 +214,7 @@ class _LoginPageState extends State<LoginPage> {
                               'Sign in to continue to RecallSentry',
                               style: TextStyle(
                                 fontSize: 16,
-                                color: Colors.white70,
+                                color: AppColors.textSecondary,
                               ),
                             ),
                           ],
@@ -200,28 +236,28 @@ class _LoginPageState extends State<LoginPage> {
                       TextFormField(
                         controller: _usernameController,
                         keyboardType: TextInputType.text,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: AppColors.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'Enter your username',
-                          hintStyle: const TextStyle(color: Colors.white54),
+                          hintStyle: const TextStyle(color: AppColors.textTertiary),
                           prefixIcon: const Icon(
                             Icons.person_outline,
-                            color: Colors.white70,
+                            color: AppColors.textSecondary,
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.white38),
+                            borderSide: const BorderSide(color: AppColors.border),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.blue),
+                            borderSide: const BorderSide(color: AppColors.borderFocus),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           errorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.red),
+                            borderSide: const BorderSide(color: AppColors.error),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           focusedErrorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.red),
+                            borderSide: const BorderSide(color: AppColors.error),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           filled: true,
@@ -255,13 +291,13 @@ class _LoginPageState extends State<LoginPage> {
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
-                        style: const TextStyle(color: Colors.white),
+                        style: const TextStyle(color: AppColors.textPrimary),
                         decoration: InputDecoration(
                           hintText: 'Enter your password',
-                          hintStyle: const TextStyle(color: Colors.white54),
+                          hintStyle: const TextStyle(color: AppColors.textTertiary),
                           prefixIcon: const Icon(
                             Icons.lock_outline,
-                            color: Colors.white70,
+                            color: AppColors.textSecondary,
                           ),
                           suffixIcon: IconButton(
                             onPressed: () {
@@ -273,23 +309,23 @@ class _LoginPageState extends State<LoginPage> {
                               _obscurePassword
                                   ? Icons.visibility
                                   : Icons.visibility_off,
-                              color: Colors.white70,
+                              color: AppColors.textSecondary,
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.white38),
+                            borderSide: const BorderSide(color: AppColors.border),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           focusedBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.blue),
+                            borderSide: const BorderSide(color: AppColors.borderFocus),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           errorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.red),
+                            borderSide: const BorderSide(color: AppColors.error),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           focusedErrorBorder: OutlineInputBorder(
-                            borderSide: const BorderSide(color: Colors.red),
+                            borderSide: const BorderSide(color: AppColors.error),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           filled: true,
@@ -321,13 +357,13 @@ class _LoginPageState extends State<LoginPage> {
                                 _rememberMe = value ?? false;
                               });
                             },
-                            activeColor: Colors.blue,
-                            checkColor: Colors.white,
+                            activeColor: AppColors.accentBlue,
+                            checkColor: AppColors.textPrimary,
                           ),
                           const Text(
                             'Remember me',
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: AppColors.textSecondary,
                               fontSize: 14,
                             ),
                           ),
@@ -341,14 +377,14 @@ class _LoginPageState extends State<LoginPage> {
                                   content: Text(
                                     'Forgot password functionality coming soon!',
                                   ),
-                                  backgroundColor: Colors.blue,
+                                  backgroundColor: AppColors.accentBlue,
                                 ),
                               );
                             },
                             child: const Text(
                               'Forgot Password?',
                               style: TextStyle(
-                                color: Colors.blue,
+                                color: AppColors.accentBlue,
                                 fontSize: 14,
                               ),
                             ),
@@ -365,8 +401,8 @@ class _LoginPageState extends State<LoginPage> {
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
+                            backgroundColor: AppColors.accentBlue,
+                            foregroundColor: AppColors.textPrimary,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
@@ -377,7 +413,7 @@ class _LoginPageState extends State<LoginPage> {
                                   height: 20,
                                   width: 20,
                                   child: CircularProgressIndicator(
-                                    color: Colors.white,
+                                    color: AppColors.textPrimary,
                                     strokeWidth: 2,
                                   ),
                                 )
@@ -397,20 +433,20 @@ class _LoginPageState extends State<LoginPage> {
                       Row(
                         children: [
                           Expanded(
-                            child: Container(height: 1, color: Colors.white38),
+                            child: Container(height: 1, color: AppColors.divider),
                           ),
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 16),
                             child: Text(
                               'OR',
                               style: TextStyle(
-                                color: Colors.white70,
+                                color: AppColors.textSecondary,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                           ),
                           Expanded(
-                            child: Container(height: 1, color: Colors.white38),
+                            child: Container(height: 1, color: AppColors.divider),
                           ),
                         ],
                       ),
@@ -424,7 +460,7 @@ class _LoginPageState extends State<LoginPage> {
                           const Text(
                             "Don't have an account? ",
                             style: TextStyle(
-                              color: Colors.white70,
+                              color: AppColors.textSecondary,
                               fontSize: 14,
                             ),
                           ),
@@ -440,7 +476,7 @@ class _LoginPageState extends State<LoginPage> {
                             child: const Text(
                               'Sign Up',
                               style: TextStyle(
-                                color: Colors.blue,
+                                color: AppColors.accentBlue,
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -459,9 +495,9 @@ class _LoginPageState extends State<LoginPage> {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
+        backgroundColor: AppColors.secondary,
+        selectedItemColor: AppColors.accentBlue,
+        unselectedItemColor: AppColors.textTertiary,
         currentIndex: _currentIndex,
         elevation: 8,
         selectedFontSize: 14,

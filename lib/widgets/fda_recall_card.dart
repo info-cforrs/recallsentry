@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/recall_data.dart';
-import '../pages/fda_recall_details_pagev2.dart';
+import '../pages/fda_recall_details_page.dart';
 import '../services/saved_recalls_service.dart';
+import '../providers/data_providers.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 
-class FdaRecallCard extends StatefulWidget {
+class FdaRecallCard extends ConsumerStatefulWidget {
   final RecallData recall;
 
   const FdaRecallCard({super.key, required this.recall});
 
   @override
-  State<FdaRecallCard> createState() => _FdaRecallCardState();
+  ConsumerState<FdaRecallCard> createState() => _FdaRecallCardState();
 }
 
-class _FdaRecallCardState extends State<FdaRecallCard> {
+class _FdaRecallCardState extends ConsumerState<FdaRecallCard> {
   // Section 1: Top Row
   Widget fdaRecallCardTopRow({
     required Widget categoryIcon,
@@ -213,7 +216,7 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
                       ),
                       child: Icon(
                         isSaved ? Icons.favorite : Icons.favorite_border,
-                        color: isSaved ? Color(0xFF4CAF50) : Colors.white,
+                        color: isSaved ? AppColors.success : AppColors.textPrimary,
                         size: 18,
                       ),
                     ),
@@ -269,9 +272,9 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.black.withOpacity(0.1), width: 1),
+            border: Border.all(color: Colors.black.withValues(alpha: 0.1), width: 1),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -330,7 +333,7 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
               child: Text(
                 '[FDA Recall ID]',
                 style: TextStyle(
-                  color: Colors.black.withOpacity(0.7),
+                  color: Colors.black.withValues(alpha: 0.7),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -356,7 +359,7 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
               child: Text(
                 '[States Affected]',
                 style: TextStyle(
-                  color: Colors.black.withOpacity(0.7),
+                  color: Colors.black.withValues(alpha: 0.7),
                   fontSize: 12,
                   fontWeight: FontWeight.w500,
                 ),
@@ -412,6 +415,9 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
     setState(() {
       _isSaved = !_isSaved;
     });
+    // Refresh provider so HomePage updates immediately
+    ref.refresh(savedRecallsProvider);
+    ref.refresh(safetyScoreProvider);
   }
 
   @override
@@ -423,7 +429,7 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (context) => FdaRecallDetailsPageV2(recall: widget.recall),
+            builder: (context) => FdaRecallDetailsPage(recall: widget.recall),
           ),
         );
       },
@@ -432,11 +438,11 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
         margin: const EdgeInsets.only(bottom: 16.0),
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
-          color: const Color(0xFFFFC107),
+          color: AppColors.warning,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withValues(alpha: 0.1),
               blurRadius: 6,
               offset: const Offset(0, 3),
             ),
@@ -451,7 +457,7 @@ class _FdaRecallCardState extends State<FdaRecallCard> {
               categoryText: widget.recall.category.toUpperCase(),
               dateIssued: _formatDate(widget.recall.dateIssued),
               badgeText: 'FDA',
-              badgeColor: const Color(0xFF4A90E2),
+              badgeColor: AppColors.accentBlue,
             ),
             const SizedBox(height: 16),
             // Section 2: Middle Row 1

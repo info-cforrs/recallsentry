@@ -34,9 +34,7 @@ class GoogleSheetsService {
       await _setupHeaders();
 
       _isInitialized = true;
-      print('✅ Google Sheets service initialized successfully!');
     } catch (e) {
-      print('❌ Error initializing Google Sheets service: $e');
       throw Exception('Failed to initialize Google Sheets: $e');
     }
   }
@@ -135,10 +133,9 @@ class GoogleSheetsService {
           'USDA-food-safety-questions-phone',
           'USDA-food-safety-questions-email',
         ]);
-        print('📝 Headers added to spreadsheet');
       }
     } catch (e) {
-      print('⚠️ Warning: Could not set up headers: $e');
+      // Silently fail - headers setup is not critical
     }
   }
 
@@ -154,11 +151,6 @@ class GoogleSheetsService {
       final allRows = await _worksheet.values.allRows();
       final recalls = <RecallData>[];
 
-      print('📊 Found ${allRows.length} rows in spreadsheet');
-      if (allRows.isNotEmpty) {
-        print('📋 Header row: ${allRows[0]}');
-      }
-
       // Build header-to-index map for robust column mapping
       Map<String, int> headerMap = {};
       if (allRows.isNotEmpty) {
@@ -166,7 +158,6 @@ class GoogleSheetsService {
         for (int i = 0; i < headers.length; i++) {
           headerMap[headers[i].toString().trim().toLowerCase()] = i;
         }
-        print('📋 Header map: $headerMap');
       }
 
       // Define header keys for all fields (FDA and USDA)
@@ -408,7 +399,6 @@ class GoogleSheetsService {
       // Skip the header row (index 0)
       for (int i = 1; i < allRows.length; i++) {
         final row = allRows[i];
-        print('📄 Row $i: $row');
 
         // Only require ID and Date for FDA/USDA rows (not Product Name)
         if (row.isNotEmpty) {
@@ -422,50 +412,32 @@ class GoogleSheetsService {
             final usdaRecallId = getValue(headerKeys['usdaRecallId']!, row);
             final productName = getValue(headerKeys['productName']!, row);
             final dateHeaderCandidates = headerKeys['dateIssued']!;
-            String foundDateHeader = '';
             String dateStr = '';
             for (final key in dateHeaderCandidates) {
               final idx = headerMap[key.toLowerCase()];
               if (idx != null && idx < row.length) {
-                foundDateHeader = key;
                 dateStr = row[idx].toString();
                 break;
               }
             }
-            print(
-              '🟡 Row ${i + 1}: agency=$agency, fdaRecallId=$fdaRecallId, usdaRecallId=$usdaRecallId, productName="$productName", dateHeader="$foundDateHeader", dateStr="$dateStr"',
-            );
             bool skip = false;
             if (agency == 'FDA') {
               if (fdaRecallId.isEmpty || dateStr.isEmpty) {
-                print(
-                  '⚠️ Warning: Skipping row ${i + 1} - missing required data (FDARecallID or Date)',
-                );
                 skip = true;
               }
             } else if (agency == 'USDA') {
               if (usdaRecallId.isEmpty || dateStr.isEmpty) {
-                print(
-                  '⚠️ Warning: Skipping row ${i + 1} - missing required data (USDARecallID or Date)',
-                );
                 skip = true;
               }
             } else {
               if (dateStr.isEmpty) {
-                print(
-                  '⚠️ Warning: Skipping row ${i + 1} - missing required data (Date)',
-                );
                 skip = true;
               }
             }
             if (skip) continue;
 
             final parsedDate = _parseDate(dateStr);
-            print('🟡 Row ${i + 1}: parsedDate=$parsedDate');
             if (parsedDate == null) {
-              print(
-                '⚠️ Warning: Skipping row ${i + 1} - invalid date format: "$dateStr"',
-              );
               continue;
             }
 
@@ -649,21 +621,14 @@ class GoogleSheetsService {
               sellByDate: getValue(headerKeys['sellByDate']!, row),
             );
             recalls.add(recall);
-            print(
-              '✅ Added recall: ${recall.id} - ${recall.productName} - Agency: ${recall.agency} - Date: ${recall.dateIssued}',
-            );
           } catch (e) {
-            print('⚠️ Warning: Skipping invalid row ${i + 1}: $e');
+            // Skip invalid rows silently
           }
-        } else {
-          print('⚠️ Warning: Row ${i + 1} is empty');
         }
       }
 
-      print('📊 Fetched ${recalls.length} recalls from spreadsheet');
       return recalls;
     } catch (e) {
-      print('❌ Error fetching recalls: $e');
       throw Exception('Failed to fetch recalls: $e');
     }
   }
@@ -771,20 +736,14 @@ class GoogleSheetsService {
         recall.usdaFoodSafetyQuestionsPhone,
         recall.usdaFoodSafetyQuestionsEmail,
       ]);
-
-      print('✅ Added recall: ${recall.productName}');
     } catch (e) {
-      print('❌ Error adding recall: $e');
       throw Exception('Failed to add recall: $e');
     }
   }
 
   // Helper method to parse date strings - returns null if parsing fails
   DateTime? _parseDate(String? dateString) {
-    print('📅 Parsing date string: "$dateString"');
-
     if (dateString == null || dateString.isEmpty) {
-      print('📅 Empty date string, cannot parse');
       return null;
     }
 
@@ -802,9 +761,6 @@ class GoogleSheetsService {
         ); // Excel day 1 is actually 1900-01-01
         final daysToAdd = serialNumber.floor();
         final parsedDate = baseDate.add(Duration(days: daysToAdd));
-        print(
-          '📅 Successfully parsed Excel serial date $serialNumber: $parsedDate',
-        );
         return parsedDate;
       }
     } catch (e) {
@@ -814,7 +770,6 @@ class GoogleSheetsService {
     try {
       // Try parsing ISO format
       final parsedDate = DateTime.parse(dateString);
-      print('📅 Successfully parsed ISO date: $parsedDate');
       return parsedDate;
     } catch (e) {
       // If parsing fails, try common date formats
@@ -826,7 +781,6 @@ class GoogleSheetsService {
           final day = int.parse(parts[1]);
           final year = int.parse(parts[2]);
           final parsedDate = DateTime(year, month, day);
-          print('📅 Successfully parsed MM/DD/YYYY date: $parsedDate');
           return parsedDate;
         }
       } catch (e2) {
@@ -838,7 +792,6 @@ class GoogleSheetsService {
             final month = int.parse(parts[1]);
             final year = int.parse(parts[2]);
             final parsedDate = DateTime(year, month, day);
-            print('📅 Successfully parsed DD/MM/YYYY date: $parsedDate');
             return parsedDate;
           }
         } catch (e3) {
@@ -850,12 +803,10 @@ class GoogleSheetsService {
               final month = int.parse(parts[1]);
               final day = int.parse(parts[2]);
               final parsedDate = DateTime(year, month, day);
-              print('📅 Successfully parsed YYYY-MM-DD date: $parsedDate');
               return parsedDate;
             }
           } catch (e4) {
             // If all parsing fails, return null
-            print('⚠️ Warning: Could not parse date "$dateString"');
             return null;
           }
         }

@@ -1,120 +1,85 @@
 import 'package:flutter/material.dart';
 import '../models/recall_data.dart';
+import '../pages/manufacturer_retailer_page.dart';
+import '../pages/about_item_details_page.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 
 class FDARecallDetailsCard extends StatelessWidget {
   final RecallData recall;
   const FDARecallDetailsCard({super.key, required this.recall});
 
+  void _navigateToManufacturerRetailer(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ManufacturerRetailerPage(recall: recall),
+      ),
+    );
+  }
+
+  void _navigateToAboutItemDetails(BuildContext context) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => AboutItemDetailsPage(recall: recall),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     // Determine which section will be last (for border radius)
-    String? formattedStartDate = recall.productionDateStart != null ? _formatDate(recall.productionDateStart) : null;
-    String? formattedEndDate = recall.productionDateEnd != null ? _formatDate(recall.productionDateEnd) : null;
-
-    bool hasDetailsFields = recall.recallReasonShort.isNotEmpty ||
+    bool hasDetailsFields = recall.negativeOutcomes.isNotEmpty ||
+        recall.recallReasonShort.isNotEmpty ||
         recall.brandName.isNotEmpty ||
         recall.productName.isNotEmpty ||
         recall.packagingDesc.isNotEmpty ||
-        recall.productSizeWeight.isNotEmpty ||
-        formattedStartDate != null ||
-        formattedEndDate != null;
-
-    bool hasDetailsGrid = (recall.upc.isNotEmpty && recall.upc != 'N/A') ||
-        (recall.sku.isNotEmpty && recall.sku != 'N/A') ||
-        (recall.batchLotCode.isNotEmpty && recall.batchLotCode != 'N/A') ||
-        (recall.expDate.isNotEmpty && recall.expDate != 'N/A') ||
-        (recall.sellByDate.isNotEmpty && recall.sellByDate != 'N/A') ||
-        (recall.packagedOnDate.isNotEmpty && recall.packagedOnDate != 'N/A');
+        recall.productionDateStart != null ||
+        recall.productionDateEnd != null ||
+        recall.soldBy.isNotEmpty ||
+        recall.productQty.isNotEmpty;
 
     // Determine which is the last section
-    bool detailsFieldsIsLast = hasDetailsFields && !hasDetailsGrid;
-    bool detailsGridIsLast = hasDetailsGrid;
+    bool detailsFieldsIsLast = hasDetailsFields;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildTopRow(
-          recallId: recall.fdaRecallId,
+          recallClassification: recall.recallClassification,
           dateIssued: recall.dateIssued,
           agency: recall.agency,
           category: recall.category,
         ),
-        _buildRiskCategoryRow(
+        _buildRiskStateRow(
           riskLevel: recall.riskLevel,
+          recallClassification: recall.recallClassification,
           stateCount: recall.stateCount,
         ),
         _buildDetailsFields(
-          recallReasonShort: recall.recallReasonShort,
+          negativeOutcomes: recall.negativeOutcomes,
+          recallReason: recall.recallReasonShort,
           brandName: recall.brandName,
           productName: recall.productName,
           packagingDesc: recall.packagingDesc,
-          productSizeWeight: recall.productSizeWeight,
-          productionDateStart: formattedStartDate,
-          productionDateEnd: formattedEndDate,
+          productionDateStart: recall.productionDateStart,
+          productionDateEnd: recall.productionDateEnd,
+          soldBy: recall.soldBy,
+          productQty: recall.productQty,
           isLast: detailsFieldsIsLast,
-        ),
-        _buildDetailsGrid(
-          upc: recall.upc,
-          sku: recall.sku,
-          batchLotCode: recall.batchLotCode,
-          expDate: recall.expDate,
-          sellByDate: recall.sellByDate,
-          packagedOnDate: recall.packagedOnDate,
-          isLast: detailsGridIsLast,
         ),
       ],
     );
   }
 
-  Widget _buildFdaFieldsSection() {
-    return Container(
-      color: const Color(0xFFFAFAFA),
-      margin: const EdgeInsets.symmetric(vertical: 10),
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'FDA Recall Details',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-          const SizedBox(height: 10),
-          _buildFieldRow('Reports of Injury', recall.reportsOfInjury),
-          _buildFieldRow(
-            'Distribution Date Start',
-            recall.distributionDateStart,
-          ),
-          _buildFieldRow('Distribution Date End', recall.distributionDateEnd),
-          _buildFieldRow('Best Used By Date End', recall.bestUsedByDateEnd),
-          _buildFieldRow('Item Num Code', recall.itemNumCode),
-          _buildFieldRow('Firm Contact Form', recall.firmContactForm),
-          _buildFieldRow('Distributor', recall.distributor),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildFieldRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Text('$label: ', style: const TextStyle(fontWeight: FontWeight.w600)),
-          Expanded(child: Text(value.isNotEmpty ? value : 'N/A')),
-        ],
-      ),
-    );
-  }
-
   Widget _buildTopRow({
-    required String recallId,
+    required String recallClassification,
     required DateTime dateIssued,
     required String agency,
     required String category,
   }) {
     return Container(
       decoration: const BoxDecoration(
-        color: Color(0xFFFFC107),
+        color: AppColors.secondary,
         borderRadius: BorderRadius.only(
           topLeft: Radius.circular(18),
           topRight: Radius.circular(18),
@@ -125,76 +90,28 @@ class FDARecallDetailsCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // Left Column: Icon + Category (increased width for "Veterinary")
-          Expanded(
-            flex: 2,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.lunch_dining, color: Colors.black, size: 22),
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        (category.isNotEmpty ? category : 'FOOD').toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 17,
-                        ),
-                        softWrap: false,
-                        overflow: TextOverflow.visible,
-                      ),
-                      const Text(
-                        'RECALL',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 17,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          // Date (left side)
+          Text(
+            _formatDate(dateIssued),
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.normal,
+              fontSize: 16,
             ),
           ),
-          // Center Column: Date
-          Expanded(
-            flex: 1,
-            child: Center(
-              child: Text(
-                _formatDate(dateIssued),
-                style: const TextStyle(
-                  color: Colors.black,
-                  fontWeight: FontWeight.normal,
-                  fontSize: 16,
-                ),
-                textAlign: TextAlign.center,
-              ),
+          // Agency badge (right side)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.accentBlue,
+              borderRadius: BorderRadius.circular(8),
             ),
-          ),
-          // Right Column: Agency badge
-          Expanded(
-            flex: 1,
-            child: Align(
-              alignment: Alignment.centerRight,
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1565C0),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  agency,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 15,
-                  ),
-                ),
+            child: Text(
+              agency,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
               ),
             ),
           ),
@@ -203,103 +120,70 @@ class FDARecallDetailsCard extends StatelessWidget {
     );
   }
 
-  Widget _buildRiskCategoryRow({
+  Widget _buildRiskStateRow({
     required String riskLevel,
-    required int stateCount,
+    required String recallClassification,
+    required dynamic stateCount,
   }) {
     return Container(
-      color: const Color(0xFFFFC107),
+      color: AppColors.secondary,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Column(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      const Text(
-                        'RISK LEVEL:',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.error,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      riskLevel,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Color(0xFFE53935),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          riskLevel,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        stateCount > 0 ? stateCount.toString() : 'N/A',
-                        style: const TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'States',
-                        style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Icon(Icons.add_box, color: Color(0xFFE53935), size: 20),
-              const SizedBox(width: 3),
-              Expanded(
-                child: Text(
-                  recall.negativeOutcomes.isNotEmpty
-                      ? recall.negativeOutcomes
-                      : 'negative_outcomes',
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 14,
-                  ),
-                  softWrap: true,
-                ),
-              ),
+              (stateCount == 0 ||
+                      stateCount == 50 ||
+                      (stateCount is String &&
+                          (stateCount.toString().toLowerCase() ==
+                                  'nationwide' ||
+                              stateCount.toString() == '0')))
+                  ? const Text(
+                      'NATIONWIDE',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    )
+                  : Text(
+                      '$stateCount States',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 15,
+                      ),
+                    ),
             ],
           ),
         ],
@@ -308,402 +192,277 @@ class FDARecallDetailsCard extends StatelessWidget {
   }
 
   Widget _buildDetailsFields({
-    required String recallReasonShort,
+    required String negativeOutcomes,
+    required String recallReason,
     required String brandName,
     required String productName,
     required String packagingDesc,
-    required String productSizeWeight,
-    required String? productionDateStart,
-    required String? productionDateEnd,
+    required DateTime? productionDateStart,
+    required DateTime? productionDateEnd,
+    required String soldBy,
+    required String productQty,
     required bool isLast,
   }) {
-    // Build list of widgets conditionally
     List<Widget> children = [];
-    
-    // Recall Reason Short - always show
-    children.add(Row(
-      children: [
-        const Icon(Icons.warning, color: Colors.red, size: 18),
-        const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            recallReasonShort,
-            style: const TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 15,
-            ),
-          ),
-        ),
-      ],
-    ));
-    
-    // Reports of Injury - only show if not empty
-    if (recall.reportsOfInjury.isNotEmpty && recall.reportsOfInjury != 'Not specified') {
-      children.add(const SizedBox(height: 10));
+
+    // Negative Outcomes - only show if not empty
+    if (negativeOutcomes.isNotEmpty) {
       children.add(Text(
-        recall.reportsOfInjury,
+        negativeOutcomes,
         style: const TextStyle(
-          color: Colors.black,
+          color: Colors.white,
           fontSize: 15,
           fontWeight: FontWeight.w600,
         ),
       ));
+      children.add(const SizedBox(height: 16));
     }
-    
-    // Horizontal line and Brand Name - only show if brandName not empty
-    if (brandName.isNotEmpty) {
-      children.add(const SizedBox(height: 10));
-      children.add(const SizedBox(height: 3));
-      children.add(Container(
-        width: double.infinity,
-        height: 1,
-        color: Colors.black,
-      ));
-      children.add(const SizedBox(height: 3));
+
+    // Recall Reason - only show if not empty
+    if (recallReason.isNotEmpty) {
       children.add(Text(
-        brandName,
-        style: const TextStyle(color: Colors.black, fontSize: 15),
+        recallReason,
+        style: const TextStyle(color: Colors.white, fontSize: 15),
       ));
+      children.add(const SizedBox(height: 16));
     }
-    
-    // Product Name - only show if not empty
-    if (productName.isNotEmpty) {
-      children.add(const SizedBox(height: 10));
-      children.add(Text(
-        productName,
-        style: const TextStyle(color: Colors.black, fontSize: 15),
-      ));
-    }
-    
-    // Packaging Desc - only show if not empty
-    if (packagingDesc.isNotEmpty) {
-      children.add(const SizedBox(height: 10));
-      children.add(Text(
-        packagingDesc,
-        style: const TextStyle(color: Colors.black, fontSize: 15),
-      ));
-    }
-    
-    // Product Size/Weight - only show if not empty
-    if (productSizeWeight.isNotEmpty) {
-      children.add(const SizedBox(height: 10));
-      children.add(Text(
-        productSizeWeight,
-        style: const TextStyle(color: Colors.black, fontSize: 15),
-      ));
-    }
-    
-    // Production Dates - only show if at least one is not null/N/A
-    if ((productionDateStart != null && productionDateStart != "N/A") || 
-        (productionDateEnd != null && productionDateEnd != "N/A")) {
-      children.add(const SizedBox(height: 10));
-      children.add(const Text(
-        'Produced:',
-        style: TextStyle(
-          color: Colors.black,
-          fontWeight: FontWeight.bold,
-          fontSize: 14,
-        ),
-      ));
+
+    // Reports of Injury - show without title as a separate row
+    if (recall.reportsOfInjury.isNotEmpty && recall.reportsOfInjury != 'N/A') {
       children.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'From:',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
+          Image.asset(
+            'assets/images/Reports_of_Injury_icon.png',
+            width: 20,
+            height: 20,
+            fit: BoxFit.contain,
           ),
           const SizedBox(width: 4),
-          Text(
-            productionDateStart ?? "N/A",
-            style: const TextStyle(color: Colors.black, fontSize: 14),
-          ),
-          const SizedBox(width: 16),
-          const Text(
-            'To:',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            productionDateEnd ?? "N/A",
-            style: const TextStyle(color: Colors.black, fontSize: 14),
-          ),
-        ],
-      ));
-    }
-    
-    // Sold By - only show if not empty
-    if (recall.soldBy.isNotEmpty) {
-      children.add(const SizedBox(height: 10));
-      children.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const Text(
-            'Sold By:',
-            style: TextStyle(
-              color: Colors.black,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(width: 8),
           Expanded(
             child: Text(
-              recall.soldBy,
-              style: const TextStyle(color: Colors.black, fontSize: 14),
+              recall.reportsOfInjury,
+              style: const TextStyle(color: Colors.white, fontSize: 15),
             ),
           ),
         ],
       ));
+      children.add(const SizedBox(height: 16));
     }
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFC107),
-        borderRadius: isLast
-            ? const BorderRadius.only(
-                bottomLeft: Radius.circular(18),
-                bottomRight: Radius.circular(18),
-              )
-            : null,
-      ),
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: children,
-      ),
-    );
-  }
 
-
-  Widget _buildDetailsGrid({
-    required String upc,
-    required String sku,
-    required String batchLotCode,
-    required String expDate,
-    required String sellByDate,
-    required String packagedOnDate,
-    required bool isLast,
-  }) {
-    // Build list of widgets conditionally
-    List<Widget> children = [];
-
-    // Product Qty and Packaged On Date row
-    bool hasProductQty = recall.productQty.isNotEmpty;
-    bool hasPackagedOn = packagedOnDate.isNotEmpty && packagedOnDate != 'N/A';
-
-    if (hasProductQty || hasPackagedOn) {
-      children.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (hasProductQty)
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    recall.productQty,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                    textAlign: TextAlign.left,
-                  ),
-                ],
-              ),
-            ),
-          if (hasProductQty && hasPackagedOn) const SizedBox(width: 16),
-          if (hasPackagedOn)
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Packaged On:',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 14,
-                    ),
-                  ),
-                  Text(
-                    packagedOnDate,
-                    style: const TextStyle(color: Colors.black, fontSize: 14),
-                  ),
-                ],
-              ),
-            ),
-        ],
+    // 1px line above brand name
+    if (brandName.isNotEmpty) {
+      children.add(Container(
+        height: 1,
+        color: AppColors.textPrimary.withValues(alpha: 0.2),
       ));
-      children.add(const SizedBox(height: 10));
+      children.add(const SizedBox(height: 16));
     }
 
-    // UPC and SKU row
-    bool hasUpc = upc.isNotEmpty && upc != 'N/A';
-    bool hasSku = sku.isNotEmpty && sku != 'N/A';
-
-    if (hasUpc || hasSku) {
-      children.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (hasUpc)
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    // Brand Name - only show if not empty (with arrow and modal trigger)
+    if (brandName.isNotEmpty) {
+      children.add(Builder(
+        builder: (context) {
+          return GestureDetector(
+            onTap: () => _navigateToManufacturerRetailer(context),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        const TextSpan(
-                          text: 'UPC Code: ',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        TextSpan(
-                          text: upc,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
+                  Expanded(
+                    child: Text(
+                      brandName,
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppColors.textPrimary,
+                    size: 18,
                   ),
                 ],
               ),
             ),
-          if (hasUpc && hasSku) const SizedBox(width: 16),
-          if (hasSku)
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  RichText(
-                    text: TextSpan(
-                      children: [
-                        const TextSpan(
-                          text: 'SKU: ',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 15,
-                          ),
-                        ),
-                        TextSpan(
-                          text: sku,
-                          style: const TextStyle(
-                            color: Colors.black,
-                            fontSize: 15,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-        ],
+          );
+        },
       ));
-      children.add(const SizedBox(height: 10));
+      children.add(const SizedBox(height: 16));
     }
 
-    // Batch/Lot Code row
-    if (batchLotCode.isNotEmpty && batchLotCode != 'N/A') {
-      children.add(RichText(
-        text: TextSpan(
+    // Product Name - only show if not empty
+    if (productName.isNotEmpty) {
+      children.add(Text(
+        productName,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ));
+      children.add(const SizedBox(height: 16));
+    }
+
+    // "About this Item" section - show if any of the three fields have data
+    if (packagingDesc.isNotEmpty || productQty.isNotEmpty || soldBy.isNotEmpty) {
+      // Section title with navigation
+      children.add(Builder(
+        builder: (context) {
+          return GestureDetector(
+            onTap: () => _navigateToAboutItemDetails(context),
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.info_outline, color: Colors.white, size: 20),
+                      SizedBox(width: 12),
+                      Text(
+                        'About this Item',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Icon(
+                    Icons.arrow_forward_ios,
+                    color: AppColors.textPrimary,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ));
+      children.add(const SizedBox(height: 12));
+
+      // Row 1: Packaging Description
+      if (packagingDesc.isNotEmpty) {
+        children.add(Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const TextSpan(
-              text: 'Batch/Lot Code: ',
-              style: TextStyle(
-                color: Colors.black,
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
+            const SizedBox(
+              width: 160,
+              child: Text(
+                'Packaging Description:',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
               ),
             ),
-            TextSpan(
-              text: batchLotCode,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 15,
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                packagingDesc,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                ),
               ),
             ),
           ],
-        ),
-      ));
-      children.add(const SizedBox(height: 10));
+        ));
+        children.add(const SizedBox(height: 12));
+      }
+
+      // Row 2: Product Quantity
+      if (productQty.isNotEmpty) {
+        children.add(Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(
+              width: 160,
+              child: Text(
+                'Product Quantity:',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                productQty,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ));
+        children.add(const SizedBox(height: 12));
+      }
+
+      // Row 3: Sold By/Distributor
+      if (soldBy.isNotEmpty) {
+        children.add(Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(
+              width: 160,
+              child: Text(
+                'Sold By/Distributor:',
+                style: TextStyle(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                soldBy,
+                textAlign: TextAlign.right,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          ],
+        ));
+        children.add(const SizedBox(height: 12));
+      }
+
+      children.add(const SizedBox(height: 4));
     }
 
-    // Sell By Date and Exp Date row
-    bool hasSellBy = sellByDate.isNotEmpty && sellByDate != 'N/A';
-    bool hasExpDate = expDate.isNotEmpty && expDate != 'N/A';
-
-    if (hasSellBy || hasExpDate) {
-      children.add(Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (hasSellBy)
-            Expanded(
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: 'Sell By Date: ',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    TextSpan(
-                      text: sellByDate,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          if (hasSellBy && hasExpDate) const SizedBox(width: 16),
-          if (hasExpDate)
-            Expanded(
-              child: RichText(
-                text: TextSpan(
-                  children: [
-                    const TextSpan(
-                      text: 'Exp Date: ',
-                      style: TextStyle(
-                        color: Colors.black,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-                    TextSpan(
-                      text: expDate,
-                      style: const TextStyle(
-                        color: Colors.black,
-                        fontSize: 15,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-        ],
-      ));
+    // Add recall ID at the bottom if this is the last section and recall number exists
+    if (isLast && recall.fdaRecallId.trim().isNotEmpty) {
+      if (children.isNotEmpty) {
+        children.add(const SizedBox(height: 16));
+      }
+      children.add(
+        Text(
+          'Recall Number: ${recall.fdaRecallId}',
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 13,
+          ),
+        ),
+      );
     }
 
     // Only show container if there are children to display
@@ -713,7 +472,7 @@ class FDARecallDetailsCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFFFFC107),
+        color: AppColors.secondary,
         borderRadius: isLast
             ? const BorderRadius.only(
                 bottomLeft: Radius.circular(18),

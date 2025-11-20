@@ -108,7 +108,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
         });
       }
     } catch (e) {
-      print('Failed to load articles: $e');
+      // Error loading articles
     }
   }
 
@@ -166,9 +166,8 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
       List<Article> articles = [];
       try {
         articles = await _articleService.getArticles();
-        print('Loaded ${articles.length} articles for Category Filter page');
       } catch (e) {
-        print('Failed to load articles: $e');
+        // Error loading articles
       }
 
       if (!mounted) return;
@@ -519,6 +518,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                     TextField(
                       controller: nameController,
                       style: const TextStyle(color: Colors.white),
+                      maxLength: 50,
                       decoration: InputDecoration(
                         hintText: 'e.g., Category High Risk Recalls',
                         hintStyle: const TextStyle(color: Colors.white54),
@@ -545,6 +545,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                     TextField(
                       controller: descController,
                       style: const TextStyle(color: Colors.white),
+                      maxLength: 200,
                       maxLines: 3,
                       decoration: InputDecoration(
                         hintText: 'Add a description...',
@@ -585,6 +586,9 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
 
                           setDialogState(() => isSaving = true);
 
+                          // Capture messenger before async gap
+                          final messenger = ScaffoldMessenger.of(context);
+
                           try {
                             final filterService = SavedFilterService();
                             await filterService.createSavedFilter(
@@ -596,7 +600,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
 
                             if (dialogContext.mounted) {
                               Navigator.of(dialogContext).pop();
-                              ScaffoldMessenger.of(context).showSnackBar(
+                              messenger.showSnackBar(
                                 const SnackBar(
                                   content: Text('SmartFilter saved successfully!'),
                                   backgroundColor: Color(0xFF4CAF50),
@@ -605,20 +609,24 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                             }
                           } on TierLimitException catch (e) {
                             setDialogState(() => isSaving = false);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(e.message),
-                                backgroundColor: const Color(0xFFE53935),
-                              ),
-                            );
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(e.message),
+                                  backgroundColor: const Color(0xFFE53935),
+                                ),
+                              );
+                            }
                           } catch (e) {
                             setDialogState(() => isSaving = false);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Failed to save filter: $e'),
-                                backgroundColor: const Color(0xFFE53935),
-                              ),
-                            );
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to save filter: $e'),
+                                  backgroundColor: const Color(0xFFE53935),
+                                ),
+                              );
+                            }
                           }
                         },
                   icon: isSaving
@@ -730,22 +738,26 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                         style: TextStyle(color: Colors.white54, fontSize: 12),
                       )
                     else
-                      ...riskOptions.map((level) {
-                        return RadioListTile<String>(
-                          title: Text(
-                            level == 'all' ? 'All Risk Levels' : level,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          value: level,
-                          groupValue: tempRiskLevel,
-                          onChanged: (value) {
-                            setState(() {
-                              tempRiskLevel = value!;
-                            });
-                          },
-                          activeColor: const Color(0xFF64B5F6),
-                        );
-                      }),
+                      RadioGroup<String>(
+                        groupValue: tempRiskLevel,
+                        onChanged: (value) {
+                          setState(() {
+                            tempRiskLevel = value!;
+                          });
+                        },
+                        child: Column(
+                          children: riskOptions.map((level) {
+                            return RadioListTile<String>(
+                              title: Text(
+                                level == 'all' ? 'All Risk Levels' : level,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              value: level,
+                              activeColor: const Color(0xFF64B5F6),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                     const Divider(color: Colors.white24),
 
                     // Category Filter
@@ -760,22 +772,26 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                         style: TextStyle(color: Colors.white54, fontSize: 12),
                       )
                     else
-                      ...categoryOptions.map((category) {
-                        return RadioListTile<String>(
-                          title: Text(
-                            category == 'all' ? 'All Categories' : category,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          value: category,
-                          groupValue: tempCategory,
-                          onChanged: (value) {
-                            setState(() {
-                              tempCategory = value!;
-                            });
-                          },
-                          activeColor: const Color(0xFF64B5F6),
-                        );
-                      }),
+                      RadioGroup<String>(
+                        groupValue: tempCategory,
+                        onChanged: (value) {
+                          setState(() {
+                            tempCategory = value!;
+                          });
+                        },
+                        child: Column(
+                          children: categoryOptions.map((category) {
+                            return RadioListTile<String>(
+                              title: Text(
+                                category == 'all' ? 'All Categories' : category,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              value: category,
+                              activeColor: const Color(0xFF64B5F6),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                     const Divider(color: Colors.white24),
 
                     // Agency Filter
@@ -790,22 +806,26 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                         style: TextStyle(color: Colors.white54, fontSize: 12),
                       )
                     else
-                      ...agencyOptions.map((agency) {
-                        return RadioListTile<String>(
-                          title: Text(
-                            agency == 'all' ? 'All Agencies' : agency,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          value: agency,
-                          groupValue: tempAgency,
-                          onChanged: (value) {
-                            setState(() {
-                              tempAgency = value!;
-                            });
-                          },
-                          activeColor: const Color(0xFF64B5F6),
-                        );
-                      }),
+                      RadioGroup<String>(
+                        groupValue: tempAgency,
+                        onChanged: (value) {
+                          setState(() {
+                            tempAgency = value!;
+                          });
+                        },
+                        child: Column(
+                          children: agencyOptions.map((agency) {
+                            return RadioListTile<String>(
+                              title: Text(
+                                agency == 'all' ? 'All Agencies' : agency,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              value: agency,
+                              activeColor: const Color(0xFF64B5F6),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                     const Divider(color: Colors.white24),
 
                     // State Filter
@@ -925,9 +945,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              RadioListTile<String>(
-                title: const Text('Most Recent', style: TextStyle(color: Colors.white)),
-                value: 'date',
+              RadioGroup<String>(
                 groupValue: _sortOption,
                 onChanged: (value) {
                   setState(() {
@@ -936,33 +954,25 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                   });
                   Navigator.of(context).pop();
                 },
-                activeColor: const Color(0xFF64B5F6),
-              ),
-              RadioListTile<String>(
-                title: const Text('Brand A-Z', style: TextStyle(color: Colors.white)),
-                value: 'brand_az',
-                groupValue: _sortOption,
-                onChanged: (value) {
-                  setState(() {
-                    _sortOption = value!;
-                    _applyFiltersAndSort();
-                  });
-                  Navigator.of(context).pop();
-                },
-                activeColor: const Color(0xFF64B5F6),
-              ),
-              RadioListTile<String>(
-                title: const Text('Brand Z-A', style: TextStyle(color: Colors.white)),
-                value: 'brand_za',
-                groupValue: _sortOption,
-                onChanged: (value) {
-                  setState(() {
-                    _sortOption = value!;
-                    _applyFiltersAndSort();
-                  });
-                  Navigator.of(context).pop();
-                },
-                activeColor: const Color(0xFF64B5F6),
+                child: Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: const Text('Most Recent', style: TextStyle(color: Colors.white)),
+                      value: 'date',
+                      activeColor: const Color(0xFF64B5F6),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Brand A-Z', style: TextStyle(color: Colors.white)),
+                      value: 'brand_az',
+                      activeColor: const Color(0xFF64B5F6),
+                    ),
+                    RadioListTile<String>(
+                      title: const Text('Brand Z-A', style: TextStyle(color: Colors.white)),
+                      value: 'brand_za',
+                      activeColor: const Color(0xFF64B5F6),
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -1143,7 +1153,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                   width: 40,
                   height: 40,
                   child: Image.asset(
-                    'assets/images/shield_logo3.png',
+                    'assets/images/shield_logo4.png',
                     width: 40,
                     height: 40,
                     fit: BoxFit.contain,
@@ -1248,7 +1258,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                   focusNode: _searchFocusNode,
                   onChanged: (value) {
                     setState(() {
-                      _searchQuery = value;
+                      _searchQuery = value.trim();
                       _applyFiltersAndSort();
                     });
                   },

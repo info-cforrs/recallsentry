@@ -17,14 +17,11 @@ class SharedAdverseReactionsAccordion extends StatelessWidget {
   Future<bool> _checkPremiumAccess() async {
     // If premium status is provided, use it
     if (isPremiumUser != null) {
-      print('🔒 [Adverse Reactions] Using provided premium status: $isPremiumUser');
       return isPremiumUser!;
     }
 
     // Otherwise, check via subscription service
-    print('🔒 [Adverse Reactions] Checking subscription service...');
     final subscription = await SubscriptionService().getSubscriptionInfo();
-    print('🔒 [Adverse Reactions] Subscription result - Tier: ${subscription.tier}, HasPremiumAccess: ${subscription.hasPremiumAccess}, IsLoggedIn: ${subscription.isLoggedIn}');
     return subscription.hasPremiumAccess;
   }
 
@@ -42,7 +39,6 @@ class SharedAdverseReactionsAccordion extends StatelessWidget {
         }
 
         final hasPremium = snapshot.data ?? false;
-        print('🔒 [Adverse Reactions] Build - ConnectionState: ${snapshot.connectionState}, HasPremium: $hasPremium');
 
         // If not premium, show grey locked button
         if (!hasPremium) {

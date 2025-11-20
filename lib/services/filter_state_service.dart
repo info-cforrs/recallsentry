@@ -1,82 +1,76 @@
-import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class FilterStateService {
-  static const String _brandFiltersKey = 'advanced_brand_filters';
-  static const String _productFiltersKey = 'advanced_product_filters';
-  static const String _hasActiveFiltersKey = 'has_active_filters';
+  static const String _filterStateKey = 'filter_state_encrypted';
+  final _secureStorage = const FlutterSecureStorage();
 
   // Save current filter state
+  // SECURITY: Now uses FlutterSecureStorage for encryption
   Future<void> saveFilterState({
     required List<String> brandFilters,
     required List<String> productFilters,
+    List<String>? stateFilters,
   }) async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-
-      // Save brand filters
-      await prefs.setStringList(_brandFiltersKey, brandFilters);
-
-      // Save product filters
-      await prefs.setStringList(_productFiltersKey, productFilters);
-
       // Mark as having active filters if any filters exist
-      bool hasFilters = brandFilters.isNotEmpty || productFilters.isNotEmpty;
-      await prefs.setBool(_hasActiveFiltersKey, hasFilters);
+      bool hasFilters = brandFilters.isNotEmpty ||
+                        productFilters.isNotEmpty ||
+                        (stateFilters?.isNotEmpty ?? false);
 
-      print(
-        '🔧 FilterStateService: Saved filters - Brands: $brandFilters, Products: $productFilters',
-      );
+      final filterData = jsonEncode({
+        'brandFilters': brandFilters,
+        'productFilters': productFilters,
+        'stateFilters': stateFilters ?? [],
+        'hasActiveFilters': hasFilters,
+      });
+
+      await _secureStorage.write(key: _filterStateKey, value: filterData);
     } catch (e) {
-      print('❌ FilterStateService: Error saving filter state: $e');
+      // Silently fail - filter state saving is not critical
     }
   }
 
   // Load current filter state
+  // SECURITY: Now uses FlutterSecureStorage for encryption
   Future<FilterState> loadFilterState() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
+      final String? filterData = await _secureStorage.read(key: _filterStateKey);
 
-      List<String> brandFilters = prefs.getStringList(_brandFiltersKey) ?? [];
-      List<String> productFilters =
-          prefs.getStringList(_productFiltersKey) ?? [];
-      bool hasActiveFilters = prefs.getBool(_hasActiveFiltersKey) ?? false;
+      if (filterData == null) {
+        return FilterState.empty();
+      }
 
-      print(
-        '🔧 FilterStateService: Loaded filters - Brands: $brandFilters, Products: $productFilters, Active: $hasActiveFilters',
-      );
+      final Map<String, dynamic> data = jsonDecode(filterData);
 
       return FilterState(
-        brandFilters: brandFilters,
-        productFilters: productFilters,
-        hasActiveFilters: hasActiveFilters,
+        brandFilters: List<String>.from(data['brandFilters'] ?? []),
+        productFilters: List<String>.from(data['productFilters'] ?? []),
+        stateFilters: List<String>.from(data['stateFilters'] ?? []),
+        hasActiveFilters: data['hasActiveFilters'] ?? false,
       );
     } catch (e) {
-      print('❌ FilterStateService: Error loading filter state: $e');
       return FilterState.empty();
     }
   }
 
   // Clear all filters (called when trash can is clicked)
+  // SECURITY: Now uses FlutterSecureStorage for encryption
   Future<void> clearAllFilters() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_brandFiltersKey);
-      await prefs.remove(_productFiltersKey);
-      await prefs.setBool(_hasActiveFiltersKey, false);
-
-      print('🔧 FilterStateService: Cleared all filters');
+      await _secureStorage.delete(key: _filterStateKey);
     } catch (e) {
-      print('❌ FilterStateService: Error clearing filters: $e');
+      // Silently fail - filter clearing is not critical
     }
   }
 
   // Check if there are active filters
+  // SECURITY: Now uses FlutterSecureStorage for encryption
   Future<bool> hasActiveFilters() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(_hasActiveFiltersKey) ?? false;
+      final filterState = await loadFilterState();
+      return filterState.hasActiveFilters;
     } catch (e) {
-      print('❌ FilterStateService: Error checking active filters: $e');
       return false;
     }
   }
@@ -86,9 +80,9 @@ class FilterStateService {
     try {
       final filterState = await loadFilterState();
       return filterState.brandFilters.length +
-          filterState.productFilters.length;
+          filterState.productFilters.length +
+          filterState.stateFilters.length;
     } catch (e) {
-      print('❌ FilterStateService: Error getting filter count: $e');
       return 0;
     }
   }
@@ -112,10 +106,14 @@ class FilterStateService {
           '${filterState.productFilters.length} product${filterState.productFilters.length == 1 ? '' : 's'}',
         );
       }
+      if (filterState.stateFilters.isNotEmpty) {
+        summaryParts.add(
+          '${filterState.stateFilters.length} state${filterState.stateFilters.length == 1 ? '' : 's'}',
+        );
+      }
 
       return summaryParts.join(', ');
     } catch (e) {
-      print('❌ FilterStateService: Error getting filter summary: $e');
       return 'Error loading filters';
     }
   }
@@ -125,24 +123,27 @@ class FilterStateService {
 class FilterState {
   final List<String> brandFilters;
   final List<String> productFilters;
+  final List<String> stateFilters;
   final bool hasActiveFilters;
 
   FilterState({
     required this.brandFilters,
     required this.productFilters,
+    required this.stateFilters,
     required this.hasActiveFilters,
   });
 
   FilterState.empty()
     : brandFilters = [],
       productFilters = [],
+      stateFilters = [],
       hasActiveFilters = false;
 
   // Total filter count
-  int get totalCount => brandFilters.length + productFilters.length;
+  int get totalCount => brandFilters.length + productFilters.length + stateFilters.length;
 
   // Check if filters are empty
-  bool get isEmpty => brandFilters.isEmpty && productFilters.isEmpty;
+  bool get isEmpty => brandFilters.isEmpty && productFilters.isEmpty && stateFilters.isEmpty;
 
   // Check if filters are not empty
   bool get isNotEmpty => !isEmpty;

@@ -7,6 +7,7 @@ class SavedFilter {
   final Map<String, dynamic> filterData;
   final List<String> brandFilters;
   final List<String> productFilters;
+  final List<String> stateFilters;
   final int filterCount;
   final bool isActive;
   final DateTime createdAt;
@@ -20,6 +21,7 @@ class SavedFilter {
     required this.filterData,
     required this.brandFilters,
     required this.productFilters,
+    required this.stateFilters,
     required this.filterCount,
     required this.isActive,
     required this.createdAt,
@@ -29,11 +31,7 @@ class SavedFilter {
 
   /// Create SavedFilter from API JSON response
   factory SavedFilter.fromJson(Map<String, dynamic> json) {
-    print('🔍 SavedFilter.fromJson called');
-    print('🔍 JSON: $json');
-
     final filterData = json['filter_data'] as Map<String, dynamic>? ?? {};
-    print('🔍 filter_data: $filterData');
 
     // Try to parse from top-level fields first (backend sends these)
     // Fall back to filter_data if not present
@@ -51,9 +49,13 @@ class SavedFilter {
             ?.map((e) => e.toString())
             .toList() ??
         [];
-
-    print('🔍 Parsed brandFilters: $brandFilters');
-    print('🔍 Parsed productFilters: $productFilters');
+    final stateFilters = (json['state_filters'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        (filterData['state_filters'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
 
     return SavedFilter(
       id: json['id'] as int,
@@ -62,6 +64,7 @@ class SavedFilter {
       filterData: filterData,
       brandFilters: brandFilters,
       productFilters: productFilters,
+      stateFilters: stateFilters,
       filterCount: json['filter_count'] as int? ?? 0,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: json['created_at'] != null
@@ -84,6 +87,7 @@ class SavedFilter {
       'filter_data': {
         'brand_filters': brandFilters,
         'product_filters': productFilters,
+        'state_filters': stateFilters,
       },
       'is_active': isActive,
     };
@@ -97,6 +101,7 @@ class SavedFilter {
     Map<String, dynamic>? filterData,
     List<String>? brandFilters,
     List<String>? productFilters,
+    List<String>? stateFilters,
     int? filterCount,
     bool? isActive,
     DateTime? createdAt,
@@ -110,6 +115,7 @@ class SavedFilter {
       filterData: filterData ?? this.filterData,
       brandFilters: brandFilters ?? this.brandFilters,
       productFilters: productFilters ?? this.productFilters,
+      stateFilters: stateFilters ?? this.stateFilters,
       filterCount: filterCount ?? this.filterCount,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,

@@ -2,6 +2,8 @@ import 'google_sheets_service.dart';
 import 'api_service.dart';
 import '../models/recall_data.dart';
 import '../config/app_config.dart';
+import '../exceptions/api_exceptions.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 class RecallDataService {
   final GoogleSheetsService _sheetsService = GoogleSheetsService();
@@ -30,37 +32,62 @@ class RecallDataService {
     bool forceRefresh = false,
     String? spreadsheetId,
   }) async {
-    print('🔍 RecallDataService.getRecalls() called');
-    print('📊 Data source: ${AppConfig.dataSource}');
 
     // Use REST API if configured
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-      print('✅ Using REST API data source');
 
       try {
-        // Cache for 30 minutes
+        // Check memory cache first (30 minutes)
         if (!forceRefresh &&
             _lastFetch != null &&
-            DateTime.now().difference(_lastFetch!).inMinutes < 30) {
-          print('📦 Using cached API data (${_cachedRecalls.length} recalls)');
+            DateTime.now().difference(_lastFetch!).inMinutes < 30 &&
+            _cachedRecalls.isNotEmpty) {
           return _cachedRecalls;
         }
 
-        print('🔽 Fetching recalls from REST API...');
+        // Try persistent cache if memory cache expired (24 hours)
+        if (!forceRefresh) {
+          final persistentData = await _loadFromPersistentCache('all_recalls');
+          if (persistentData != null) {
+            _cachedRecalls = persistentData;
+            _lastFetch = DateTime.now();
+            return _cachedRecalls;
+          }
+        }
+
+        // Fetch from API
         final apiRecalls = await _apiService.fetchAllRecalls();
 
+        // Save to both caches
         _cachedRecalls = apiRecalls;
         _lastFetch = DateTime.now();
-        print('✅ Successfully fetched ${_cachedRecalls.length} recalls from API');
+        await _saveToPersistentCache('all_recalls', apiRecalls);
+
         return _cachedRecalls;
-      } catch (e) {
-        print('❌ Error fetching recalls from API: $e');
-        return [];
+      } on ApiException {
+        // On API error, try to return cached data
+        final cachedData = await _loadFromPersistentCache('all_recalls');
+        if (cachedData != null && cachedData.isNotEmpty) {
+          return cachedData;
+        }
+        // If no cache available, rethrow the API exception
+        rethrow;
+      } catch (e, stack) {
+        // On other errors, try to return cached data
+        final cachedData = await _loadFromPersistentCache('all_recalls');
+        if (cachedData != null && cachedData.isNotEmpty) {
+          return cachedData;
+        }
+        // Wrap in ApiException
+        throw ApiException(
+          'Failed to fetch recalls',
+          originalException: e,
+          stackTrace: stack,
+        );
       }
     }
 
     // Fall back to Google Sheets
-    print('📊 Using Google Sheets data source');
 
     // Use provided spreadsheet ID, or app config, or default
     final targetSpreadsheetId =
@@ -69,27 +96,22 @@ class RecallDataService {
             ? AppConfig.googleSheetsSpreadsheetId
             : _defaultSpreadsheetId);
 
-    print('📊 Target spreadsheet ID: $targetSpreadsheetId');
 
     if (targetSpreadsheetId != 'your_default_spreadsheet_id_here' &&
         AppConfig.isGoogleSheetsConfigured) {
-      print('✅ Valid spreadsheet ID found, proceeding with Google Sheets');
 
       try {
         // Initialize service if spreadsheet ID is provided and different
         if (targetSpreadsheetId != _currentSpreadsheetId) {
-          print('🔄 Initializing Google Sheets service...');
           await _sheetsService.init(targetSpreadsheetId);
           _currentSpreadsheetId = targetSpreadsheetId;
           forceRefresh = true;
-          print('✅ Google Sheets service initialized successfully!');
         }
 
         // Cache for 30 minutes
         if (!forceRefresh &&
             _lastFetch != null &&
             DateTime.now().difference(_lastFetch!).inMinutes < 30) {
-          print('📦 Using cached data (${_cachedRecalls.length} recalls)');
           return _cachedRecalls;
         }
 
@@ -99,64 +121,64 @@ class RecallDataService {
           );
         }
 
-        print('🔽 Fetching recalls from Google Sheets...');
         final sheetsRecalls = await _sheetsService.fetchRecalls();
 
         if (sheetsRecalls.isNotEmpty) {
           _cachedRecalls = sheetsRecalls;
           _lastFetch = DateTime.now();
-          print(
-            '✅ Successfully fetched ${_cachedRecalls.length} recalls from Google Sheets',
-          );
           return _cachedRecalls;
         } else {
-          print('⚠️ Google Sheets returned empty data');
           return [];
         }
       } catch (e) {
-        print('❌ Error fetching recalls from Google Sheets: $e');
         return [];
       }
     } else {
       // No valid spreadsheet ID configured
-      print('⚠️ No spreadsheet ID configured in AppConfig.');
       return [];
     }
   }
 
   // Get FDA-specific recalls
-  Future<List<RecallData>> getFdaRecalls({bool forceRefresh = false}) async {
-    print('🔍 RecallDataService.getFdaRecalls() called');
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> getFdaRecalls({
+    bool forceRefresh = false,
+    int? limit,
+    int? offset,
+  }) async {
 
     // Use REST API if configured
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-      print('✅ Using REST API for FDA recalls');
 
       try {
-        // Cache for 30 minutes
+        // If pagination is requested, skip cache and fetch from API
+        if (limit != null || offset != null) {
+          final fdaRecalls = await _apiService.fetchFdaRecalls(
+            limit: limit,
+            offset: offset,
+          );
+          return fdaRecalls;
+        }
+
+        // Cache for 30 minutes (only for non-paginated requests)
         if (!forceRefresh &&
             _lastFdaFetch != null &&
             DateTime.now().difference(_lastFdaFetch!).inMinutes < 30) {
-          print('📦 Using cached FDA API data (${_cachedFdaRecalls.length} recalls)');
           return _cachedFdaRecalls;
         }
 
-        print('🔽 Fetching FDA recalls from REST API...');
         final fdaRecalls = await _apiService.fetchFdaRecalls();
 
         _cachedFdaRecalls = fdaRecalls;
         _lastFdaFetch = DateTime.now();
-        print('✅ Successfully fetched ${_cachedFdaRecalls.length} FDA recalls from API');
         return _cachedFdaRecalls;
       } catch (e) {
-        print('❌ Error fetching FDA recalls from API: $e');
         return [];
       }
     }
 
     // Fall back to Google Sheets
     if (!AppConfig.isFdaSpreadsheetConfigured) {
-      print('⚠️ FDA spreadsheet not configured');
       return [];
     }
 
@@ -165,62 +187,64 @@ class RecallDataService {
       if (!forceRefresh &&
           _lastFdaFetch != null &&
           DateTime.now().difference(_lastFdaFetch!).inMinutes < 30) {
-        print('📦 Using cached FDA data (${_cachedFdaRecalls.length} recalls)');
         return _cachedFdaRecalls;
       }
 
-      print('🔽 Fetching FDA recalls from Google Sheets...');
       await _sheetsService.init(AppConfig.fdaRecallsSpreadsheetId);
       final fdaRecalls = await _sheetsService.fetchRecalls();
 
       if (fdaRecalls.isNotEmpty) {
         _cachedFdaRecalls = fdaRecalls;
         _lastFdaFetch = DateTime.now();
-        print('✅ Successfully fetched ${_cachedFdaRecalls.length} FDA recalls');
         return _cachedFdaRecalls;
       } else {
-        print('⚠️ FDA spreadsheet returned empty data');
         return [];
       }
     } catch (e) {
-      print('❌ Error fetching FDA recalls: $e');
       return [];
     }
   }
 
   // Get USDA-specific recalls
-  Future<List<RecallData>> getUsdaRecalls({bool forceRefresh = false}) async {
-    print('🔍 RecallDataService.getUsdaRecalls() called');
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> getUsdaRecalls({
+    bool forceRefresh = false,
+    int? limit,
+    int? offset,
+  }) async {
 
     // Use REST API if configured
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-      print('✅ Using REST API for USDA recalls');
 
       try {
-        // Cache for 30 minutes
+        // If pagination is requested, skip cache and fetch from API
+        if (limit != null || offset != null) {
+          final usdaRecalls = await _apiService.fetchUsdaRecalls(
+            limit: limit,
+            offset: offset,
+          );
+          return usdaRecalls;
+        }
+
+        // Cache for 30 minutes (only for non-paginated requests)
         if (!forceRefresh &&
             _lastUsdaFetch != null &&
             DateTime.now().difference(_lastUsdaFetch!).inMinutes < 30) {
-          print('📦 Using cached USDA API data (${_cachedUsdaRecalls.length} recalls)');
           return _cachedUsdaRecalls;
         }
 
-        print('🔽 Fetching USDA recalls from REST API...');
         final usdaRecalls = await _apiService.fetchUsdaRecalls();
 
         _cachedUsdaRecalls = usdaRecalls;
         _lastUsdaFetch = DateTime.now();
-        print('✅ Successfully fetched ${_cachedUsdaRecalls.length} USDA recalls from API');
         return _cachedUsdaRecalls;
       } catch (e) {
-        print('❌ Error fetching USDA recalls from API: $e');
         return [];
       }
     }
 
     // Fall back to Google Sheets
     if (!AppConfig.isUsdaSpreadsheetConfigured) {
-      print('⚠️ USDA spreadsheet not configured');
       return [];
     }
 
@@ -229,29 +253,20 @@ class RecallDataService {
       if (!forceRefresh &&
           _lastUsdaFetch != null &&
           DateTime.now().difference(_lastUsdaFetch!).inMinutes < 30) {
-        print(
-          '📦 Using cached USDA data (${_cachedUsdaRecalls.length} recalls)',
-        );
         return _cachedUsdaRecalls;
       }
 
-      print('🔽 Fetching USDA recalls from Google Sheets...');
       await _sheetsService.init(AppConfig.usdaRecallsSpreadsheetId);
       final usdaRecalls = await _sheetsService.fetchRecalls();
 
       if (usdaRecalls.isNotEmpty) {
         _cachedUsdaRecalls = usdaRecalls;
         _lastUsdaFetch = DateTime.now();
-        print(
-          '✅ Successfully fetched ${_cachedUsdaRecalls.length} USDA recalls',
-        );
         return _cachedUsdaRecalls;
       } else {
-        print('⚠️ USDA spreadsheet returned empty data');
         return [];
       }
     } catch (e) {
-      print('❌ Error fetching USDA recalls: $e');
       return [];
     }
   }
@@ -283,15 +298,6 @@ class RecallDataService {
       allRecalls = await getRecalls(spreadsheetId: spreadsheetId);
     }
 
-    print('RecallDataService: Total recalls fetched: ${allRecalls.length}');
-
-    if (agency != null) {
-      print('RecallDataService: Filtering for agency: "$agency"');
-      // Print all available agencies for debugging
-      final allAgencies = allRecalls.map((r) => '"${r.agency}"').toSet();
-      print('RecallDataService: All agencies in data: $allAgencies');
-    }
-
     final filteredRecalls = allRecalls.where((recall) {
       if (brands != null && brands.isNotEmpty) {
         if (!brands.any(
@@ -314,9 +320,6 @@ class RecallDataService {
       if (agency != null) {
         final agencyMatches =
             recall.agency.toUpperCase() == agency.toUpperCase();
-        print(
-          'RecallDataService: Recall "${recall.productName}" agency "${recall.agency}" matches "$agency": $agencyMatches',
-        );
         if (!agencyMatches) {
           return false;
         }
@@ -328,15 +331,6 @@ class RecallDataService {
 
       return true;
     }).toList();
-
-    print(
-      'RecallDataService: Filtered results: ${filteredRecalls.length} recalls',
-    );
-    for (var recall in filteredRecalls) {
-      print(
-        'Filtered Recall: ${recall.id} - ${recall.productName} - Agency: ${recall.agency}',
-      );
-    }
 
     return filteredRecalls;
   }
@@ -351,6 +345,158 @@ class RecallDataService {
     _lastFetch = null;
   }
 
+  // Get a single recall by ID
+  Future<RecallData?> getRecallById(String recallId) async {
+
+    // Try to parse as integer for API call
+    final id = int.tryParse(recallId);
+    if (id == null) {
+      return null;
+    }
+
+    // Use REST API if configured
+    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
+
+      try {
+        final recall = await _apiService.fetchRecallById(id);
+        return recall;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Fall back to searching in cached recalls
+
+    // First try to get from cached recalls
+    final allRecalls = await getRecalls();
+    try {
+      final recall = allRecalls.firstWhere((r) => r.id == recallId);
+      return recall;
+    } catch (e) {
+      return null;
+    }
+  }
+
   // Check if service is ready
   bool get isInitialized => _sheetsService.isInitialized;
+
+  /// Save recalls to persistent cache using Hive
+  /// PERFORMANCE: Provides offline support and faster app restarts
+  /// OPTIMIZATION: Implements cache size management with LRU eviction
+  Future<void> _saveToPersistentCache(String key, List<RecallData> recalls) async {
+    try {
+      final box = await Hive.openBox('recallsCache');
+      await box.put(key, {
+        'data': recalls.map((r) => r.toJson()).toList(),
+        'timestamp': DateTime.now().millisecondsSinceEpoch,
+        'accessCount': 0,
+        'lastAccess': DateTime.now().millisecondsSinceEpoch,
+      });
+
+      // Manage cache size after saving
+      await _manageCacheSize(box);
+    } catch (e) {
+      // Silently fail - caching is not critical
+    }
+  }
+
+  /// Manage cache size with LRU (Least Recently Used) eviction
+  /// maxCacheSizeMb: 100 MB to prevent excessive storage usage
+  static const int maxCacheSizeMb = 100;
+  static const int maxCacheAgeDays = 30;
+
+  Future<void> _manageCacheSize(Box box) async {
+    try {
+      // Calculate approximate cache size
+      int totalSize = 0;
+      final Map<String, int> keySizes = {};
+      final Map<String, int> keyAccessTimes = {};
+
+      for (var key in box.keys) {
+        final cached = box.get(key);
+        if (cached != null && cached is Map) {
+          final data = cached['data'] as List?;
+          if (data != null) {
+            // Approximate size: each recall ~2KB
+            final size = data.length * 2 * 1024; // 2KB per recall
+            totalSize += size;
+            keySizes[key.toString()] = size;
+            keyAccessTimes[key.toString()] = cached['lastAccess'] ?? 0;
+          }
+        }
+      }
+
+      final maxSizeBytes = maxCacheSizeMb * 1024 * 1024;
+
+      // If cache exceeds limit, remove oldest entries
+      if (totalSize > maxSizeBytes) {
+        // Sort keys by last access time (oldest first)
+        final sortedKeys = keyAccessTimes.entries.toList()
+          ..sort((a, b) => a.value.compareTo(b.value));
+
+        int removedSize = 0;
+        for (var entry in sortedKeys) {
+          if (totalSize - removedSize <= maxSizeBytes) {
+            break;
+          }
+          await box.delete(entry.key);
+          removedSize += keySizes[entry.key] ?? 0;
+        }
+      }
+
+      // Also remove entries older than 30 days
+      final now = DateTime.now();
+      for (var key in box.keys) {
+        final cached = box.get(key);
+        if (cached != null && cached is Map) {
+          final timestamp = cached['timestamp'] as int?;
+          if (timestamp != null) {
+            final age = now.difference(
+              DateTime.fromMillisecondsSinceEpoch(timestamp),
+            ).inDays;
+            if (age > maxCacheAgeDays) {
+              await box.delete(key);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // Silently fail - cache management is not critical
+    }
+  }
+
+  /// Load recalls from persistent cache
+  /// PERFORMANCE: Returns null if cache expired (24 hours) or invalid
+  /// LRU: Updates last access time for cache management
+  Future<List<RecallData>?> _loadFromPersistentCache(String key) async {
+    try {
+      final box = await Hive.openBox('recallsCache');
+      final cached = box.get(key);
+
+      if (cached == null) return null;
+
+      final timestamp = DateTime.fromMillisecondsSinceEpoch(cached['timestamp']);
+      // Cache valid for 24 hours
+      if (DateTime.now().difference(timestamp).inHours > 24) {
+        return null;
+      }
+
+      final data = (cached['data'] as List)
+          .map((json) => RecallData.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      // Update access tracking for LRU eviction
+      final accessCount = (cached['accessCount'] as int? ?? 0) + 1;
+      await box.put(key, {
+        'data': cached['data'],
+        'timestamp': cached['timestamp'],
+        'accessCount': accessCount,
+        'lastAccess': DateTime.now().millisecondsSinceEpoch,
+      });
+
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
 }

@@ -24,11 +24,11 @@ class Article {
   factory Article.fromJson(Map<String, dynamic> json) {
     return Article(
       id: json['id'] as int,
-      title: json['title'] as String,
-      slug: json['slug'] as String,
-      imageUrl: json['image_url'] as String,
-      articleUrl: json['article_url'] as String,
-      tags: json['tags'] as String,
+      title: json['title'] as String? ?? '',
+      slug: json['slug'] as String? ?? '',
+      imageUrl: json['image_url'] as String? ?? '',
+      articleUrl: json['article_url'] as String? ?? '',
+      tags: json['tags'] as String? ?? '',
       tagsList: (json['tags_list'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??

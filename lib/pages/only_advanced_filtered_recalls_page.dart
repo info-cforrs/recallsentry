@@ -12,11 +12,13 @@ import '../widgets/custom_back_button.dart';
 class OnlyAdvancedFilteredRecallsPage extends StatefulWidget {
   final List<String> brandFilters;
   final List<String> productFilters;
+  final List<String> stateFilters;
 
   const OnlyAdvancedFilteredRecallsPage({
     super.key,
     this.brandFilters = const [],
     this.productFilters = const [],
+    this.stateFilters = const [],
   });
 
   @override
@@ -36,6 +38,7 @@ class _OnlyAdvancedFilteredRecallsPageState
   // Current active filters (may be different from widget parameters)
   List<String> _activeBrandFilters = [];
   List<String> _activeProductFilters = [];
+  List<String> _activeStateFilters = [];
 
   @override
   void initState() {
@@ -46,24 +49,22 @@ class _OnlyAdvancedFilteredRecallsPageState
   // Initialize filters - use passed parameters or load saved filters
   Future<void> _initializeFilters() async {
     // If filters were passed in constructor, use those
-    if (widget.brandFilters.isNotEmpty || widget.productFilters.isNotEmpty) {
+    if (widget.brandFilters.isNotEmpty || widget.productFilters.isNotEmpty || widget.stateFilters.isNotEmpty) {
       _activeBrandFilters = List.from(widget.brandFilters);
       _activeProductFilters = List.from(widget.productFilters);
+      _activeStateFilters = List.from(widget.stateFilters);
     } else {
       // Otherwise, load saved filters
       final filterState = await _filterStateService.loadFilterState();
       _activeBrandFilters = filterState.brandFilters;
       _activeProductFilters = filterState.productFilters;
+      _activeStateFilters = filterState.stateFilters;
     }
 
     _loadFilteredRecalls();
   }
 
   Future<void> _loadFilteredRecalls() async {
-    print('🔍 Advanced Filter Page: _loadFilteredRecalls() called');
-    print('🔍 Active Brand filters: $_activeBrandFilters');
-    print('🔍 Active Product filters: $_activeProductFilters');
-
     if (mounted) {
       setState(() {
         _isLoading = true;
@@ -81,22 +82,17 @@ class _OnlyAdvancedFilteredRecallsPageState
       final fdaRecalls = await _recallService.getFdaRecalls();
       final usdaRecalls = await _recallService.getUsdaRecalls();
       final allRecalls = [...fdaRecalls, ...usdaRecalls];
-      print(
-        '🔍 Advanced Filter: Got ${allRecalls.length} total recalls (FDA + USDA)',
-      );
 
       // Apply tier-based date filter
       final now = DateTime.now();
       final DateTime cutoff;
-      if (tier == SubscriptionTier.guest || tier == SubscriptionTier.free) {
-        // Last 30 days for Guest/Free users
+      if (tier == SubscriptionTier.free) {
+        // Last 30 days for Free users
         cutoff = now.subtract(const Duration(days: 30));
       } else {
         // Since Jan 1 of current year for SmartFiltering/RecallMatch users
         cutoff = DateTime(now.year, 1, 1);
       }
-
-      print('🔍 Advanced Filter: Using cutoff date: $cutoff (Tier: $tier)');
 
       final recentRecalls = allRecalls.where((recall) {
         return recall.dateIssued.isAfter(cutoff);
@@ -105,63 +101,53 @@ class _OnlyAdvancedFilteredRecallsPageState
       // Sort by date (most recent first)
       recentRecalls.sort((a, b) => b.dateIssued.compareTo(a.dateIssued));
 
-      print(
-        '🔍 Advanced Filter: Found ${recentRecalls.length} recalls after cutoff date',
-      );
-
-      // Then apply brand/product filters to the 30-day filtered results
+      // Then apply brand/product/state filters to the 30-day filtered results
       List<RecallData> filtered = recentRecalls;
 
-      if (_activeBrandFilters.isNotEmpty || _activeProductFilters.isNotEmpty) {
-        print('🔍 Advanced Filter: Applying brand/product filters...');
+      if (_activeBrandFilters.isNotEmpty || _activeProductFilters.isNotEmpty || _activeStateFilters.isNotEmpty) {
         filtered = recentRecalls.where((recall) {
-          bool matchesBrand = false;
-          bool matchesProduct = false;
+          bool hasMatch = false;
 
-          // Check brand filters (OR logic within brand filters)
-          if (_activeBrandFilters.isNotEmpty) {
+          // Check brand filters (OR logic - match if ANY brand filter matches)
+          if (!hasMatch && _activeBrandFilters.isNotEmpty) {
             for (String brandFilter in _activeBrandFilters) {
               if (recall.brandName.toLowerCase().contains(
                 brandFilter.toLowerCase(),
               )) {
-                matchesBrand = true;
-                print(
-                  '✅ Brand match: "${recall.brandName}" contains "$brandFilter"',
-                );
+                hasMatch = true;
                 break;
               }
             }
           }
 
-          // Check product filters (OR logic within product filters)
-          if (_activeProductFilters.isNotEmpty) {
+          // Check product filters (OR logic - match if ANY product filter matches)
+          if (!hasMatch && _activeProductFilters.isNotEmpty) {
             for (String productFilter in _activeProductFilters) {
               if (recall.productName.toLowerCase().contains(
                 productFilter.toLowerCase(),
               )) {
-                matchesProduct = true;
-                print(
-                  '✅ Product match: "${recall.productName}" contains "$productFilter"',
-                );
+                hasMatch = true;
                 break;
               }
             }
           }
 
-          // OR logic between brand and product filters - match if ANY filter matches
-          final result = matchesBrand || matchesProduct;
-          if (result) {
-            print('✅ Recall matched: ${recall.id} - ${recall.productName}');
+          // Check state filters (OR logic - match if ANY state filter matches)
+          if (!hasMatch && _activeStateFilters.isNotEmpty) {
+            for (String stateFilter in _activeStateFilters) {
+              final distribution = recall.productDistribution.toLowerCase();
+              if (distribution.contains(stateFilter.toLowerCase()) ||
+                  distribution == 'nationwide' ||
+                  distribution == 'all states') {
+                hasMatch = true;
+                break;
+              }
+            }
           }
-          return result;
+
+          // Brand OR Product OR State - match if ANY filter type matches
+          return hasMatch;
         }).toList();
-        print(
-          '🔍 Advanced Filter: Found ${filtered.length} matching recalls after applying brand/product filters',
-        );
-      } else {
-        print(
-          '🔍 Advanced Filter: No brand/product filters applied, showing all recalls from last 30 days',
-        );
       }
 
       if (mounted) {
@@ -169,12 +155,8 @@ class _OnlyAdvancedFilteredRecallsPageState
           _filteredRecalls = filtered;
           _isLoading = false;
         });
-        print(
-          '🔍 Advanced Filter: setState completed with ${_filteredRecalls.length} recalls',
-        );
       }
     } catch (e) {
-      print('❌ Advanced Filter Error: $e');
       if (mounted) {
         setState(() {
           _errorMessage = 'Error loading recalls: $e';
@@ -186,13 +168,6 @@ class _OnlyAdvancedFilteredRecallsPageState
 
   @override
   Widget build(BuildContext context) {
-    print('🎯 Advanced Filter Page build() called');
-    print('🎯 _isLoading: $_isLoading');
-    print('🎯 _errorMessage: $_errorMessage');
-    print('🎯 _filteredRecalls.length: ${_filteredRecalls.length}');
-    print('🎯 brandFilters: $_activeBrandFilters');
-    print('🎯 productFilters: $_activeProductFilters');
-
     return Scaffold(
       backgroundColor: const Color(0xFF1D3547), // Standard dark blue background
       body: SafeArea(
@@ -220,7 +195,7 @@ class _OnlyAdvancedFilteredRecallsPageState
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/shield_logo3.png',
+                        'assets/images/shield_logo4.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -419,11 +394,11 @@ class _OnlyAdvancedFilteredRecallsPageState
                           Expanded(
                             child: ElevatedButton.icon(
                               onPressed: () async {
+                                final navigator = Navigator.of(context);
                                 // Clear saved filter state
                                 await _filterStateService.clearAllFilters();
                                 // Navigate to fresh page with no filters
-                                Navigator.pushReplacement(
-                                  context,
+                                navigator.pushReplacement(
                                   MaterialPageRoute(
                                     builder: (context) =>
                                         const OnlyAdvancedFilteredRecallsPage(),

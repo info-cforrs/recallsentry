@@ -9,11 +9,13 @@ import '../subscribe_page.dart';
 class SaveFilterDialog extends StatefulWidget {
   final List<String> brandFilters;
   final List<String> productFilters;
+  final List<String> stateFilters;
 
   const SaveFilterDialog({
     super.key,
     required this.brandFilters,
     required this.productFilters,
+    this.stateFilters = const [],
   });
 
   @override
@@ -88,6 +90,7 @@ class _SaveFilterDialogState extends State<SaveFilterDialog> {
         description: _descriptionController.text.trim(),
         brandFilters: widget.brandFilters,
         productFilters: widget.productFilters,
+        stateFilters: widget.stateFilters,
       );
 
       // Apply the filter to update last_used_at and increment usage counter
@@ -164,7 +167,7 @@ class _SaveFilterDialogState extends State<SaveFilterDialog> {
       return _buildUpgradeRequiredDialog();
     }
 
-    final filterCount = widget.brandFilters.length + widget.productFilters.length;
+    final filterCount = widget.brandFilters.length + widget.productFilters.length + widget.stateFilters.length;
 
     return AlertDialog(
       backgroundColor: const Color(0xFF2A4A5C),
@@ -228,6 +231,13 @@ class _SaveFilterDialogState extends State<SaveFilterDialog> {
                       const SizedBox(height: 4),
                       Text(
                         'Products: ${widget.productFilters.join(', ')}',
+                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                    ],
+                    if (widget.stateFilters.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'States: ${widget.stateFilters.join(', ')}',
                         style: const TextStyle(color: Colors.white70, fontSize: 13),
                       ),
                     ],
@@ -364,7 +374,7 @@ class _SaveFilterDialogState extends State<SaveFilterDialog> {
 
   Widget _buildUpgradeRequiredDialog() {
     final limit = _subscription?.getSavedFilterLimit() ?? 0;
-    String message = _subscription?.tier == SubscriptionTier.free || _subscription?.tier == SubscriptionTier.guest
+    String message = _subscription?.tier == SubscriptionTier.free
         ? 'Saved Filters is a premium feature. Upgrade to SmartFiltering to save up to 10 filters, or RecallMatch for unlimited filters.'
         : 'You\'ve reached the maximum of $limit saved filters. Upgrade to RecallMatch for unlimited filters.';
 

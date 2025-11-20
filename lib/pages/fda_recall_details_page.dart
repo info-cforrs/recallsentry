@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
-
 import '../models/recall_data.dart';
-import '../services/recall_data_service.dart';
-import '../services/api_service.dart';
-import '../widgets/shared/shared_adverse_reactions_accordion.dart';
+import '../widgets/shared/shared_image_carousel.dart';
 import '../widgets/shared/shared_recommendations_accordion.dart';
 import '../widgets/shared/shared_product_distribution_accordion.dart';
-import 'rmc_details_page.dart';
+import '../widgets/shared/shared_recommended_products_accordion.dart';
+import '../widgets/shared/shared_fda_resources_section.dart';
+import '../widgets/fda_recall_details_card.dart';
+import '../services/recall_data_service.dart';
+import '../services/api_service.dart';
+import '../services/recall_sharing_service.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'main_navigation.dart';
+import 'rmc_details_page.dart';
+import '../models/rmc_enrollment.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
+import 'package:rs_flutter/widgets/custom_loading_indicator.dart';
+import '../services/subscription_service.dart';
+import 'subscribe_page.dart';
 
 class FdaRecallDetailsPage extends StatefulWidget {
   final RecallData recall;
@@ -18,33 +26,15 @@ class FdaRecallDetailsPage extends StatefulWidget {
   State<FdaRecallDetailsPage> createState() => _FdaRecallDetailsPageState();
 }
 
-class _FdaRecallDetailsPageState extends State<FdaRecallDetailsPage> with WidgetsBindingObserver {
+class _FdaRecallDetailsPageState extends State<FdaRecallDetailsPage> {
   RecallData? _freshRecall;
   bool _isLoading = true;
   String? _error;
-  int _refreshKey = 0; // Used to force rebuild of premium widgets after login
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addObserver(this);
     _fetchLatestRecall();
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    // When app resumes (e.g., after login modal), refresh premium status
-    if (state == AppLifecycleState.resumed) {
-      setState(() {
-        _refreshKey++; // Increment key to force rebuild of premium widgets
-      });
-    }
   }
 
   Future<void> _fetchLatestRecall() async {
@@ -76,273 +66,408 @@ class _FdaRecallDetailsPageState extends State<FdaRecallDetailsPage> with Widget
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF1D3547),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFF1D3547),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        title: const Text(
-          'FDA Recall Details',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+    if (_isLoading) {
+      return const Scaffold(
+        body: FullPageLoadingIndicator(
+          title: 'FDA Recall Details',
+          message: 'Loading recall information...',
         ),
-        centerTitle: true,
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: AppColors.primary,
+        appBar: AppBar(
+          backgroundColor: AppColors.primary,
+          title: const Text(
+            'FDA Recall Details',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
+          iconTheme: const IconThemeData(color: AppColors.textPrimary),
+          elevation: 0,
+        ),
+        body: Center(
+          child: Text(_error!, style: const TextStyle(color: AppColors.error)),
+        ),
+      );
+    }
+
+    final recall = _freshRecall ?? widget.recall;
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: AppColors.primary,
+        leading: Semantics(
+          label: 'Back',
+          button: true,
+          child: IconButton(
+            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+            tooltip: 'Go back',
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
+        title: Semantics(
+          header: true,
+          child: const Text(
+            'FDA Recall Details',
+            style: TextStyle(color: AppColors.textPrimary),
+          ),
+        ),
+        elevation: 0,
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Center(
-              child: Text(_error!, style: const TextStyle(color: Colors.red)),
-            )
-          : SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // --- Recall Number Tag at Top (USDA style) ---
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF2A4A5C),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                'Recall Number: ',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                              Text(
-                                _freshRecall?.fieldRecallNumber.isNotEmpty ==
-                                        true
-                                    ? _freshRecall!.fieldRecallNumber
-                                    : 'FDA RECALL',
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    // Top image carousel (USDA style)
-                    Center(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.all(8),
-                        child: SizedBox(
-                          height: 140,
-                          width: 240,
-                          child: _FdaImageCarousel(
-                            imageUrls: [
-                              _freshRecall?.imageUrl ?? '',
-                              _freshRecall?.imageUrl2 ?? '',
-                              _freshRecall?.imageUrl3 ?? '',
-                              _freshRecall?.imageUrl4 ?? '',
-                              _freshRecall?.imageUrl5 ?? '',
-                            ].where((url) => url.isNotEmpty).toList(),
-                            showIndicators: true,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // FDA Recall ID field below carousel
-                    if (_freshRecall?.fdaRecallId != null &&
-                        _freshRecall!.fdaRecallId.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
+      body: Container(
+        color: AppColors.primary,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Image Carousel
+              Builder(
+                builder: (context) {
+                  final imageUrls = recall.getAllImageUrls();
+                  return SharedImageCarousel(
+                    imageUrls: imageUrls,
+                    showIndicators: false,
+                    height: 220,
+                    width: double.infinity,
+                    borderRadius: 18,
+                    onShareTap: () {
+                      RecallSharingService().showShareDialog(context, recall);
+                    },
+                  );
+                },
+              ),
+              const SizedBox(height: 18),
+              // FDA Recall Details Card
+              FDARecallDetailsCard(recall: recall),
+              const SizedBox(height: 16),
+
+              // Estimated Value (moved from card)
+              if (recall.estItemValue.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(
+                        width: 160,
                         child: Text(
-                          'FDA Recall ID: ${_freshRecall!.fdaRecallId}',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          'Estimated Value (each):',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
                             fontWeight: FontWeight.bold,
-                            fontSize: 16,
+                            fontSize: 15,
                           ),
                         ),
                       ),
-                    // Details card
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A4A5C),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _buildDetailRow('Brand:', _freshRecall?.brandName ?? 'N/A'),
-                          const SizedBox(height: 8),
-                          _buildDetailRow('Category:', _freshRecall?.category ?? 'N/A'),
-                          const SizedBox(height: 8),
-                          _buildDetailRow('Date Issued:', _freshRecall?.dateIssued != null ? _formatDate(_freshRecall!.dateIssued) : 'N/A'),
-                          const SizedBox(height: 8),
-                          _buildDetailRow('Classification:', _freshRecall?.recallClassification ?? 'N/A'),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Start Recall Process button
-                    _buildStartRecallProcessButton(context, _freshRecall!),
-                    const SizedBox(height: 16),
-                    // PRODUCT IDENTIFICATION section (placeholder for FDA)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A4A5C),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Product Identification:',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Text(
+                          recall.estItemValue,
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            color: AppColors.textPrimary,
+                            fontSize: 15,
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _freshRecall?.productIdentification.isNotEmpty ==
-                                    true
-                                ? _freshRecall!.productIdentification
-                                : '[Not specified for FDA]',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.normal,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // RECALL PHA REASON section (placeholder for FDA)
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF2A4A5C),
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Reason for Recall:',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            _freshRecall?.recallPhaReason.isNotEmpty == true
-                                ? _freshRecall!.recallPhaReason
-                                : '[Not specified for FDA]',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.normal,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    // HOW FOUND section (new)
-                    if (_freshRecall?.howFound != null &&
-                        _freshRecall!.howFound.trim().isNotEmpty)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 16),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF2A4A5C),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'How Found:',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 15,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              _freshRecall!.howFound,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.normal,
-                                fontSize: 15,
-                              ),
-                            ),
-                          ],
                         ),
                       ),
-                    // --- Adverse Reactions Accordion Section (Premium) ---
-                    SharedAdverseReactionsAccordion(
-                      key: ValueKey('adverse_reactions_$_refreshKey'),
-                      adverseReactions: _freshRecall?.adverseReactions ?? '',
-                      adverseReactionDetails:
-                          _freshRecall?.adverseReactionDetails ?? '',
-                    ),
-                    // --- Recommendations Accordion Section (Premium) ---
-                    SharedRecommendationsAccordion(
-                      key: ValueKey('recommendations_$_refreshKey'),
-                      recommendationsActions:
-                          _freshRecall?.recommendationsActions ?? '',
-                      remedy: _freshRecall?.remedy ?? '',
-                    ),
-                    // --- Product Distribution Accordion Section (Premium) ---
-                    SharedProductDistributionAccordion(
-                      key: ValueKey('product_distribution_$_refreshKey'),
-                      productDistribution:
-                          _freshRecall?.productDistribution ?? '',
-                    ),
-                    // --- Manufacturer and Retailer Details Accordion Section (placeholder for FDA) ---
-                    _ManufacturerRetailerAccordion(recall: _freshRecall!),
-                    // --- FDA Resources Section ---
-                    const SizedBox(height: 8),
-                    _FdaResourcesSection(recall: _freshRecall!),
-                    // --- Bottom Big Button Section ---
-                    const SizedBox(height: 24),
-                    _BottomBigButtonSection(
-                      recallUrl: _freshRecall?.recallUrl ?? '',
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+
+              // 1. Product Identification
+              if (recall.productIdentification.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Product Identification:',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        recall.productIdentification,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 2. How Found
+              if (recall.howFound.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'How Found:',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        recall.howFound,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 3. Product Distribution (States) - Premium Feature
+              _buildPremiumDetailSection(
+                title: 'Product Distribution',
+                premiumContent: SharedProductDistributionAccordion(
+                  productDistribution: recall.productDistribution,
+                  distributionMapUrl: recall.distributionMapUrl,
                 ),
               ),
-            ),
+
+              // 4. Adverse Reactions
+              if (recall.adverseReactions.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Adverse Reactions:',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        recall.adverseReactions,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 5. Adverse Reaction Details
+              if (recall.adverseReactionDetails.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Adverse Reaction Details:',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        recall.adverseReactionDetails,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 6. Recommendations - Premium Feature
+              _buildPremiumDetailSection(
+                title: 'Recommendations',
+                premiumContent: SharedRecommendationsAccordion(
+                  recommendationsActions: recall.recommendationsActions,
+                  remedy: recall.remedy,
+                ),
+              ),
+
+              // 7. Resolution - Consumer Actions
+              _buildResolutionSection(recall),
+
+              // 8. Remedy
+              if (recall.remedy.trim().isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 40),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Remedy:',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        recall.remedy,
+                        style: const TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+              // 9. I have this Recalled Item
+              _buildStartRecallProcessButton(context, recall),
+              const SizedBox(height: 12),
+
+              // 10. Recall Process
+              _buildRecallProcessSection(context),
+
+              // 11. Recommended Replacement Items - Premium Feature
+              _buildPremiumDetailSection(
+                title: 'Recommended Replacement Items',
+                premiumContent: SharedRecommendedProductsAccordion(recall: recall),
+              ),
+
+              // 13. FDA Resources Section
+              const SharedFdaResourcesSection(),
+              const SizedBox(height: 24),
+
+              // --- Bottom Big Button Section ---
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFFEC7A2D),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      if (recall.recallUrl.isNotEmpty) {
+                        final url = Uri.parse(recall.recallUrl);
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(
+                            url,
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      }
+                    },
+                    child: const Text(
+                      'FDA Recall/Alert Link',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontWeight: FontWeight.normal,
+                        fontSize: 18,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  if (recall.pressReleaseLink.isNotEmpty) ...[
+                    const SizedBox(height: 35),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        backgroundColor: AppColors.success,
+                        padding: const EdgeInsets.symmetric(vertical: 18),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () async {
+                        if (recall.pressReleaseLink.isNotEmpty) {
+                          final url = Uri.parse(recall.pressReleaseLink);
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(
+                              url,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        }
+                      },
+                      child: const Text(
+                        'FDA Recall/Alert Press Release',
+                        style: TextStyle(
+                          color: AppColors.textPrimary,
+                          fontWeight: FontWeight.normal,
+                          fontSize: 18,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+                  ] else
+                    const SizedBox(height: 35),
+                  TextButton(
+                    style: TextButton.styleFrom(
+                      backgroundColor: const Color(0xFF00B6FF),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pushNamed('/subscribe');
+                    },
+                    child: const Text(
+                      'SUBSCRIBE FOR DETAILS',
+                      style: TextStyle(
+                        color: AppColors.textPrimary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        letterSpacing: 1.1,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+
+              // Recall ID (bottom left)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    recall.fdaRecallId,
+                    style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
       bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: 1,
+        backgroundColor: AppColors.secondary,
+        selectedItemColor: AppColors.accentBlue,
+        unselectedItemColor: AppColors.textTertiary,
+        currentIndex: 1, // Recalls tab selected
         elevation: 8,
         selectedFontSize: 14,
         unselectedFontSize: 12,
@@ -389,615 +514,568 @@ class _FdaRecallDetailsPageState extends State<FdaRecallDetailsPage> with Widget
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-            fontSize: 15,
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            value.isNotEmpty ? value : 'N/A',
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-            ),
-          ),
-        ),
-      ],
-    );
+  Future<Map<String, dynamic>> _getEnrollmentForCurrentUser(int recallId) async {
+    try {
+      // Fetch ONLY the current user's enrollments (not all users)
+      final enrollments = await ApiService().fetchRmcEnrollments();
+
+      // Filter to find the enrollment for this specific recall
+      final userEnrollment = enrollments.where((e) => e.recallId == recallId).firstOrNull;
+
+      return {'enrollment': userEnrollment};
+    } catch (e) {
+      return {'enrollment': null};
+    }
   }
 
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.day}, ${date.year}';
-  }
-
-  Widget _buildStartRecallProcessButton(BuildContext context, RecallData recall) {
-    return FutureBuilder<List>(
-      future: ApiService().fetchRmcEnrollmentsByRecallFilter(recall.databaseId!),
+  // Helper widget to wrap premium detail sections
+  Widget _buildPremiumDetailSection({
+    required String title,
+    required Widget premiumContent,
+  }) {
+    return FutureBuilder<SubscriptionInfo>(
+      future: SubscriptionService().getSubscriptionInfo(),
       builder: (context, snapshot) {
-        final bool hasEnrollment = snapshot.hasData && snapshot.data!.isNotEmpty;
-        final String statusText = hasEnrollment
-            ? 'Tap to manage recall'
-            : 'Start Recall Process';
+        final hasPremiumAccess = snapshot.data?.isPremium ?? false;
 
-        return Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(12),
-              onTap: !hasEnrollment ? () {
-            // Only show confirmation dialog if not started
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return AlertDialog(
-                  backgroundColor: const Color(0xFF2A4A5C),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                  title: const Text(
-                    'Start Recall Process',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  content: const Text(
-                    'Are you ready to start managing this recall? This will activate the Recall Management Center for this item.',
-                    style: TextStyle(color: Colors.white),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: const Text(
-                        'Cancel',
-                        style: TextStyle(color: Colors.white70),
+        if (hasPremiumAccess) {
+          // Show the actual premium content
+          return premiumContent;
+        } else {
+          // Show locked/greyed-out version
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFD1D1D1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: InkWell(
+                onTap: () => _showPremiumDetailsUpgradeModal(),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[400],
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.lock,
+                          color: Colors.black54,
+                          size: 24,
+                        ),
                       ),
-                    ),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF4CAF50),
-                      ),
-                      onPressed: () async {
-                        // Enroll recall in RMC with new enrollment system
-                        try {
-                          // Create RMC enrollment with "Not Started" status
-                          final enrollment = await ApiService().enrollRecallInRmc(
-                            recallId: recall.databaseId!,
-                            status: 'Not Started',
-                          );
-
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-
-                          // Navigate to RMC Details workflow page
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => RmcDetailsPage(
-                                recall: recall,
-                                enrollment: enrollment,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              title,
+                              style: const TextStyle(
+                                color: Colors.black,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
-                          );
-                        } catch (e) {
-                          if (!mounted) return;
-                          Navigator.of(context).pop();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Failed to enroll recall in RMC: $e'),
-                              backgroundColor: Colors.red,
-                              duration: const Duration(seconds: 3),
+                            const SizedBox(height: 4),
+                            const Text(
+                              'Upgrade to SmartFiltering or RecallMatch for details',
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontSize: 13,
+                              ),
                             ),
-                          );
-                        }
-                      },
-                      child: const Text(
-                        'Start Process',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            );
-          } : () async {
-            // If already enrolled, fetch enrollment and navigate to RMC workflow page
-            try {
-              final enrollments = await ApiService().fetchRmcEnrollmentsByRecallFilter(recall.databaseId!);
-              if (enrollments.isNotEmpty) {
-                if (!mounted) return;
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => RmcDetailsPage(
-                      recall: recall,
-                      enrollment: enrollments.first,
-                    ),
-                  ),
-                );
-              }
-            } catch (e) {
-              if (!mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Failed to load enrollment: $e'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00B6FF),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Icon(
-                    Icons.list_alt,
-                    color: Colors.white,
-                    size: 24,
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        !hasEnrollment
-                            ? 'I have this recalled item'
-                            : 'Recall Management Center',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        statusText,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
-                        ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.black54,
+                        size: 18,
                       ),
                     ],
                   ),
                 ),
-                const Icon(
-                  Icons.arrow_forward_ios,
-                  color: Colors.white,
-                  size: 18,
-                ),
-              ],
+              ),
             ),
-          ),
-        ),
-      ),
-    );
+          );
+        }
       },
     );
   }
-}
 
-// --- FDA Image Carousel Widget ---
-class _FdaImageCarousel extends StatefulWidget {
-  final List<String> imageUrls;
-  final bool showIndicators;
-  const _FdaImageCarousel({
-    required this.imageUrls,
-    this.showIndicators = false,
-  });
-
-  @override
-  State<_FdaImageCarousel> createState() => _FdaImageCarouselState();
-}
-
-class _FdaImageCarouselState extends State<_FdaImageCarousel> {
-  late final PageController _controller;
-  int _currentPage = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = PageController();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final imageUrls = widget.imageUrls;
-    if (imageUrls.isEmpty) {
-      return Center(
-        child: Icon(
-          Icons.image_not_supported,
-          size: 80,
-          color: Colors.grey[400],
-        ),
-      );
-    }
-
-    return SizedBox(
-      height: 140,
-      width: 240,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          PageView.builder(
-            controller: _controller,
-            itemCount: imageUrls.length,
-            onPageChanged: (index) {
-              setState(() {
-                _currentPage = index;
-              });
-            },
-            itemBuilder: (context, index) {
-              final url = imageUrls[index];
-              return GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => _FullScreenImageView(imageUrl: url),
-                      fullscreenDialog: true,
-                    ),
-                  );
-                },
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(24),
-                  child: Image.network(
-                    url,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) => Center(
-                      child: Icon(
-                        Icons.broken_image,
-                        size: 80,
-                        color: Colors.grey[400],
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-          if (imageUrls.length > 1 && _currentPage > 0)
-            Positioned(
-              left: 8,
-              child: IconButton(
-                icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 32),
-                onPressed: () {
-                  if (_currentPage > 0) {
-                    _controller.previousPage(
-                      duration: Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                },
-              ),
-            ),
-          if (imageUrls.length > 1 && _currentPage < imageUrls.length - 1)
-            Positioned(
-              right: 8,
-              child: IconButton(
-                icon: Icon(
-                  Icons.arrow_forward_ios,
+  void _showPremiumDetailsUpgradeModal() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Row(
+            children: [
+              Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Upgrade Required',
+                style: TextStyle(
                   color: Colors.white,
-                  size: 32,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                onPressed: () {
-                  if (_currentPage < imageUrls.length - 1) {
-                    _controller.nextPage(
-                      duration: Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  }
-                },
+              ),
+            ],
+          ),
+          content: const Text(
+            'Premium recall details including Product Distribution, Recommendations, and Recommended Replacement Items are available with SmartFiltering (\$1.99/month) or RecallMatch (\$4.99/month).',
+            style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54, fontSize: 16),
               ),
             ),
-          if (widget.showIndicators && imageUrls.length > 1)
-            Positioned(
-              bottom: 4,
-              left: 0,
-              right: 0,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(imageUrls.length, (index) {
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    width: _currentPage == index ? 16 : 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: _currentPage == index
-                          ? Colors.white
-                          : Colors.white38,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  );
-                }),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const SubscribePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD700),
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text(
+                'Upgrade',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
               ),
             ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
-}
 
-// --- Accordions and Sections ---
-class _ManufacturerRetailerAccordion extends StatefulWidget {
-  final RecallData recall;
-  const _ManufacturerRetailerAccordion({required this.recall});
+  void _showRmcUpgradeModal() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Row(
+            children: [
+              Icon(Icons.workspace_premium, color: Color(0xFFFFD700), size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Upgrade Required',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          content: const Text(
+            'Recall Management Center (RMC) is an exclusive RecallMatch feature. Upgrade to RecallMatch (\$4.99/month) to access step-by-step recall resolution workflows, household inventory tracking, SmartScan, and automated RecallMatch engine.',
+            style: TextStyle(color: Colors.white70, fontSize: 16, height: 1.4),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white54, fontSize: 16),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const SubscribePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFFFD700),
+                foregroundColor: const Color(0xFF2A4A5C),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text(
+                'Upgrade',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
-  @override
-  State<_ManufacturerRetailerAccordion> createState() =>
-      _ManufacturerRetailerAccordionState();
-}
+  Widget _buildStartRecallProcessButton(
+    BuildContext context,
+    RecallData recall,
+  ) {
+    return FutureBuilder<SubscriptionInfo>(
+      future: SubscriptionService().getSubscriptionInfo(),
+      builder: (context, subscriptionSnapshot) {
+        final hasRmcAccess = subscriptionSnapshot.data?.hasRMCAccess ?? false;
 
-class _ManufacturerRetailerAccordionState
-    extends State<_ManufacturerRetailerAccordion> {
-  bool _expanded = false;
+        return FutureBuilder<Map<String, dynamic>>(
+          future: _getEnrollmentForCurrentUser(recall.databaseId!),
+          builder: (context, snapshot) {
+            final bool hasEnrollment =
+                snapshot.hasData && snapshot.data!['enrollment'] != null;
+            final String statusText;
 
-  @override
-  Widget build(BuildContext context) {
-    final r = widget.recall;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF2A4A5C),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        children: [
-          InkWell(
-            borderRadius: BorderRadius.circular(18),
-            onTap: () {
-              setState(() {
-                _expanded = !_expanded;
-              });
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Manufacturer & Retailer Details',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
+            if (hasEnrollment) {
+              // Show the current enrollment status
+              final RmcEnrollment enrollment = snapshot.data!['enrollment'] as RmcEnrollment;
+              final rmcStatus = enrollment.status;
+              statusText = 'Status: $rmcStatus';
+            } else {
+              statusText = 'Start Recall Process';
+            }
+
+            return Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                color: hasRmcAccess ? null : const Color(0xFFD1D1D1),
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: !hasRmcAccess
+                      ? () {
+                          // Show upgrade modal for non-RecallMatch users
+                          _showRmcUpgradeModal();
+                        }
+                      : !hasEnrollment
+                  ? () {
+                      // Only show confirmation dialog if not started
+                      showDialog(
+                        context: context,
+                        builder: (BuildContext context) {
+                          return AlertDialog(
+                            backgroundColor: AppColors.secondary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                            title: const Text(
+                              'Start Recall Process',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            content: const Text(
+                              'Are you ready to start managing this recall? This will activate the Recall Management Center for this item.',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(),
+                                child: const Text(
+                                  'Cancel',
+                                  style: TextStyle(color: Colors.white70),
+                                ),
+                              ),
+                              ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.success,
+                                ),
+                                onPressed: () async {
+                                  // Capture navigator and messenger before async gap
+                                  final navigator = Navigator.of(context);
+                                  final messenger = ScaffoldMessenger.of(context);
+
+                                  // Enroll recall in RMC with new enrollment system
+                                  try {
+                                    // Create RMC enrollment with "Not Started" status
+                                    final enrollment = await ApiService()
+                                        .enrollRecallInRmc(
+                                          recallId: recall.databaseId!,
+                                          rmcStatus: 'Not Started',
+                                        );
+
+                                    if (!mounted) return;
+                                    navigator.pop();
+
+                                    // Navigate to RMC Details workflow page
+                                    navigator.push(
+                                      MaterialPageRoute(
+                                        builder: (context) => RmcDetailsPage(
+                                          recall: recall,
+                                          enrollment: enrollment,
+                                        ),
+                                      ),
+                                    );
+                                  } catch (e) {
+                                    if (!mounted) return;
+                                    navigator.pop();
+                                    messenger.showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          'Failed to enroll recall in RMC: $e',
+                                        ),
+                                        backgroundColor: Colors.red,
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                  }
+                                },
+                                child: const Text(
+                                  'Start Process',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    }
+                  : () async {
+                      // If already enrolled, use the enrollment from snapshot data
+                      if (snapshot.hasData && snapshot.data!['enrollment'] != null) {
+                        final enrollment = snapshot.data!['enrollment'] as RmcEnrollment;
+
+                        if (!mounted) return;
+
+                        // Navigate to RMC Details page (one enrollment per recall per user)
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => RmcDetailsPage(
+                              recall: recall,
+                              enrollment: enrollment,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  vertical: 16,
+                  horizontal: 20,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: hasRmcAccess ? const Color(0xFF00B6FF) : Colors.grey[400],
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        Icons.list_alt,
+                        color: hasRmcAccess ? AppColors.textPrimary : Colors.black54,
+                        size: 24,
                       ),
                     ),
-                  ),
-                  Icon(
-                    _expanded ? Icons.expand_less : Icons.expand_more,
-                    color: Colors.white,
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            !hasEnrollment
+                                ? 'I have this recalled item'
+                                : 'Recall Management Center',
+                            style: TextStyle(
+                              color: hasRmcAccess ? AppColors.textPrimary : Colors.black,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            hasRmcAccess ? statusText : 'RecallMatch exclusive feature',
+                            style: TextStyle(
+                              color: hasRmcAccess ? AppColors.textSecondary : Colors.black54,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Icon(
+                      hasRmcAccess ? Icons.arrow_forward_ios : Icons.lock,
+                      color: hasRmcAccess ? AppColors.textPrimary : Colors.black54,
+                      size: 18,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          if (_expanded)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Manufacturer: ${r.recallingFdaFirm.isNotEmpty ? r.recallingFdaFirm : '[Not specified for FDA]'}',
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                  Text(
-                    'Contact Name: ${r.firmContactName.isNotEmpty ? r.firmContactName : '[Not specified]'}',
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                  Text(
-                    'Contact Phone: ${r.firmContactPhone.isNotEmpty ? r.firmContactPhone : '[Not specified]'}',
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                  Text(
-                    'Contact Email: ${r.firmContactEmail.isNotEmpty ? r.firmContactEmail : '[Not specified]'}',
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                  Text(
-                    'Website: ${r.firmContactWebSite.isNotEmpty ? r.firmContactWebSite : '[Not specified]'}',
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                  ),
-                ],
-              ),
+        );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildResolutionSection(RecallData recall) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 40),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Title
+          const Text(
+            'Resolution – Consumer Actions',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.bold,
+              fontSize: 15,
             ),
+          ),
+          const SizedBox(height: 10),
+          // Five equally spaced circular icons with labels
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildRemedyCheckbox('Return', recall.remedyReturn),
+              _buildRemedyCheckbox('Repair', recall.remedyRepair),
+              _buildRemedyCheckbox('Replace', recall.remedyReplace),
+              _buildRemedyCheckbox('Dispose', recall.remedyDispose),
+              _buildRemedyCheckbox('N/A', recall.remedyNA),
+            ],
+          ),
         ],
       ),
     );
   }
-}
 
-// --- FDA Resources Section ---
-class _FdaResourcesSection extends StatelessWidget {
-  final RecallData recall;
-  const _FdaResourcesSection({required this.recall});
+  Widget _buildRemedyCheckbox(String label, String value) {
+    bool isChecked = value.toUpperCase() == 'Y';
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            isChecked
+                ? 'assets/images/Check_Circle_LightBG.png'
+                : 'assets/images/Blank_Circle_LightBG.png',
+            width: 60,
+            height: 60,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildRecallProcessSection(BuildContext context) {
     return Container(
+      margin: const EdgeInsets.only(bottom: 40),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFF2A4A5C),
-        borderRadius: BorderRadius.circular(18),
+        color: AppColors.secondary,
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 12),
-            child: Text(
-              'FDA Resources',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
+          // Row 1: Title and Learn More link
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Recall Process',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                ),
               ),
-            ),
+              GestureDetector(
+                onTap: () async {
+                  // Open the Recall-Process.png image or navigate to a learn more page
+                  // For now, you can add navigation logic here
+                },
+                child: const Text(
+                  'Learn More',
+                  style: TextStyle(
+                    color: AppColors.accentBlue,
+                    fontSize: 14,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
           ),
-          if (recall.firmContactPhone.isNotEmpty)
-            ListTile(
-              leading: const Icon(Icons.phone, color: Colors.white),
-              title: Text(
-                'Contact: ${recall.firmContactPhone}',
-                style: const TextStyle(color: Colors.white),
+          const SizedBox(height: 20),
+          // Row 2: Four equally spaced columns with icons and text
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildProcessStep(
+                'assets/images/Identify_Affected_Item.png',
+                'Identify\nAffected Item',
               ),
-            ),
-          if (recall.recallUrl.isNotEmpty)
-            ListTile(
-              leading: const Icon(Icons.link, color: Colors.white),
-              title: const Text(
-                'Recall Link',
-                style: TextStyle(color: Colors.white),
+              _buildProcessStep(
+                'assets/images/Follow_Recall_Steps.png',
+                'Follow Recall\nSteps',
               ),
-              onTap: () async {
-                final url = Uri.parse(recall.recallUrl);
-                if (await canLaunchUrl(url)) {
-                  await launchUrl(url, mode: LaunchMode.externalApplication);
-                }
-              },
-            ),
+              _buildProcessStep(
+                'assets/images/Choose_Path.png',
+                'Choose\nPath',
+              ),
+              _buildProcessStep(
+                'assets/images/Receive_Resolution.png',
+                'Resolution',
+              ),
+            ],
+          ),
         ],
       ),
     );
   }
-}
 
-// --- Bottom Big Button Section Widget ---
-class _BottomBigButtonSection extends StatelessWidget {
-  final String recallUrl;
-  const _BottomBigButtonSection({required this.recallUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Top blue button
-        TextButton(
-          style: TextButton.styleFrom(
-            backgroundColor: const Color(0xFF1565C0),
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: () async {
-            if (recallUrl.isNotEmpty) {
-              final url = Uri.parse(recallUrl);
-              if (await canLaunchUrl(url)) {
-                await launchUrl(url, mode: LaunchMode.externalApplication);
-              }
-            }
-          },
-          child: const Text(
-            'FDA Recall/Alert Link',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.normal,
-              fontSize: 18,
-              decoration: TextDecoration.underline,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        const SizedBox(height: 40),
-        // Bottom subscribe button
-        TextButton(
-          style: TextButton.styleFrom(
-            backgroundColor: const Color(0xFF00B6FF),
-            padding: const EdgeInsets.symmetric(vertical: 18),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          onPressed: () {
-            Navigator.of(context).pushNamed('/subscribe');
-          },
-          child: const Text(
-            'SUBSCRIBE FOR DETAILS',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-              letterSpacing: 1.1,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ),
-        const SizedBox(height: 20),
-      ],
-    );
-  }
-}
-
-// --- Full Screen Image View Widget ---
-class _FullScreenImageView extends StatelessWidget {
-  final String imageUrl;
-  const _FullScreenImageView({required this.imageUrl});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
-      ),
-      body: Center(
-        child: InteractiveViewer(
-          child: Image.network(
-            imageUrl,
+  Widget _buildProcessStep(String iconPath, String label) {
+    return Expanded(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            iconPath,
+            width: 60,
+            height: 60,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) => Center(
-              child: Icon(
-                Icons.broken_image,
-                size: 80,
-                color: Colors.grey[400],
-              ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 12,
             ),
           ),
-        ),
+        ],
       ),
     );
   }

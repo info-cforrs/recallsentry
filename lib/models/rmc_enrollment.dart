@@ -17,6 +17,7 @@ class RmcEnrollment {
   final DateTime? purchaseDate;
   final String purchaseLocation;
   final double? estimatedValue;
+  final String? resolutionBranch; // Track which branch: Return, Repair, Replace, Dispose
 
   // Optional embedded recall data
   final Map<String, dynamic>? recallData;
@@ -40,6 +41,7 @@ class RmcEnrollment {
     this.purchaseDate,
     this.purchaseLocation = '',
     this.estimatedValue,
+    this.resolutionBranch,
     this.recallData,
   });
 
@@ -50,7 +52,7 @@ class RmcEnrollment {
       username: json['username'] as String?,
       userEmail: json['user_email'] as String?,
       recallId: json['recall'] as int,
-      status: json['status'] as String? ?? 'Not Active',
+      status: json['rmc_status'] as String? ?? 'Not Active',
       enrolledAt: DateTime.parse(json['enrolled_at'] as String),
       startedAt: json['started_at'] != null
           ? DateTime.parse(json['started_at'] as String)
@@ -77,6 +79,7 @@ class RmcEnrollment {
       estimatedValue: json['estimated_value'] != null
           ? double.tryParse(json['estimated_value'].toString())
           : null,
+      resolutionBranch: json['resolution_branch'] as String?,
       recallData: json['recall_data'] as Map<String, dynamic>?,
     );
   }
@@ -86,7 +89,7 @@ class RmcEnrollment {
       'id': id,
       'user': userId,
       'recall': recallId,
-      'status': status,
+      'rmc_status': status,
       'enrolled_at': enrolledAt.toIso8601String(),
       'started_at': startedAt?.toIso8601String(),
       'stopped_using_at': stoppedUsingAt?.toIso8601String(),
@@ -99,6 +102,7 @@ class RmcEnrollment {
       'purchase_date': purchaseDate?.toIso8601String().split('T')[0],
       'purchase_location': purchaseLocation,
       'estimated_value': estimatedValue?.toString(),
+      'resolution_branch': resolutionBranch,
     };
   }
 
@@ -121,6 +125,7 @@ class RmcEnrollment {
     DateTime? purchaseDate,
     String? purchaseLocation,
     double? estimatedValue,
+    String? resolutionBranch,
     Map<String, dynamic>? recallData,
   }) {
     return RmcEnrollment(
@@ -142,6 +147,7 @@ class RmcEnrollment {
       purchaseDate: purchaseDate ?? this.purchaseDate,
       purchaseLocation: purchaseLocation ?? this.purchaseLocation,
       estimatedValue: estimatedValue ?? this.estimatedValue,
+      resolutionBranch: resolutionBranch ?? this.resolutionBranch,
       recallData: recallData ?? this.recallData,
     );
   }

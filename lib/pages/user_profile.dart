@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
 import '../services/user_profile_service.dart';
@@ -14,6 +15,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
+  final _subscriptionPlanController = TextEditingController();
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -49,6 +51,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _emailController.dispose();
+    _subscriptionPlanController.dispose();
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -69,6 +72,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
         _firstNameController.text = profile.firstName;
         _lastNameController.text = profile.lastName;
         _emailController.text = profile.email;
+        _subscriptionPlanController.text = profile.subscriptionPlan;
         _isLoading = false;
       });
     } else if (mounted) {
@@ -103,6 +107,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
     if (updatedProfile != null && mounted) {
       setState(() {
         _userProfile = updatedProfile;
+        _subscriptionPlanController.text = updatedProfile.subscriptionPlan;
         _isEditing = false;
         _isLoading = false;
       });
@@ -204,7 +209,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                     width: 40,
                     height: 40,
                     child: Image.asset(
-                      'assets/images/shield_logo3.png',
+                      'assets/images/shield_logo4.png',
                       width: 40,
                       height: 40,
                       fit: BoxFit.contain,
@@ -311,6 +316,15 @@ class _UserProfilePageState extends State<UserProfilePage> {
                       ),
 
                       const SizedBox(height: 32),
+
+                      // Current Plan (Read-only)
+                      _buildTextField(
+                        controller: _subscriptionPlanController,
+                        label: 'Current Plan',
+                        enabled: false,
+                      ),
+
+                      const SizedBox(height: 16),
 
                       // First Name
                       _buildTextField(
@@ -481,6 +495,62 @@ class _UserProfilePageState extends State<UserProfilePage> {
                                   ),
                           ),
                         ),
+
+                      const SizedBox(height: 32),
+
+                      // Privacy & Data section
+                      _buildSectionHeader('Privacy & Data'),
+                      const SizedBox(height: 16),
+
+                      // Export Data Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: OutlinedButton.icon(
+                          onPressed: _isLoading ? null : _exportData,
+                          icon: const Icon(Icons.download),
+                          label: const Text(
+                            'Export My Data',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.white,
+                            side: const BorderSide(color: Colors.white70, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // Delete Account Button
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: OutlinedButton.icon(
+                          onPressed: _isLoading ? null : _deleteAccount,
+                          icon: const Icon(Icons.delete_forever),
+                          label: const Text(
+                            'Delete My Account',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: Colors.red,
+                            side: const BorderSide(color: Colors.red, width: 1.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                        ),
+                      ),
 
                       const SizedBox(height: 20),
                     ],
@@ -696,5 +766,289 @@ class _UserProfilePageState extends State<UserProfilePage> {
     }
 
     return true;
+  }
+
+  /// Export user data
+  Future<void> _exportData() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final result = await _profileService.exportUserData();
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (result.success) {
+        // Show success message with data
+        _showDataExportDialog(result.data);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Show exported data in a dialog
+  void _showDataExportDialog(Map<String, dynamic>? data) {
+    if (data == null) return;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Your Data Export',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: SingleChildScrollView(
+            child: SelectableText(
+              const JsonEncoder.withIndent('  ').convert(data),
+              style: const TextStyle(
+                color: Colors.white,
+                fontFamily: 'monospace',
+                fontSize: 12,
+              ),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Close',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  /// Delete user account with confirmation
+  Future<void> _deleteAccount() async {
+    // Show first confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF2A4A5C),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'Delete Account?',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          content: const Text(
+            'Are you sure you want to delete your account? This action cannot be undone and will permanently delete:\n\n'
+            '• Your profile information\n'
+            '• All saved recalls\n'
+            '• All saved filters\n'
+            '• RMC enrollments\n'
+            '• Usage statistics\n'
+            '• Gamification data\n\n'
+            'You will need to re-authenticate to confirm.',
+            style: TextStyle(
+              color: Colors.white70,
+              fontSize: 16,
+              height: 1.4,
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.white54,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text(
+                'Continue',
+                style: TextStyle(
+                  color: Colors.red,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    // Show password confirmation dialog
+    final passwordController = TextEditingController();
+    bool obscurePassword = true;
+
+    final passwordConfirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: const Color(0xFF2A4A5C),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              title: const Text(
+                'Re-authenticate',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Please enter your password to confirm account deletion.',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 16,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextFormField(
+                    controller: passwordController,
+                    obscureText: obscurePassword,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: 'Password',
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      enabledBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Colors.white38),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderSide: const BorderSide(color: Colors.blue),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFF2A4A5C).withValues(alpha: 0.3),
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          setState(() {
+                            obscurePassword = !obscurePassword;
+                          });
+                        },
+                        icon: Icon(
+                          obscurePassword ? Icons.visibility : Icons.visibility_off,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(
+                      color: Colors.white54,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (passwordController.text.isNotEmpty) {
+                      Navigator.of(context).pop(true);
+                    }
+                  },
+                  child: const Text(
+                    'Delete Account',
+                    style: TextStyle(
+                      color: Colors.red,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (passwordConfirmed != true || passwordController.text.isEmpty) {
+      passwordController.dispose();
+      return;
+    }
+
+    // Perform account deletion
+    setState(() {
+      _isLoading = true;
+    });
+
+    final result = await _profileService.deleteAccount(
+      password: passwordController.text,
+    );
+
+    passwordController.dispose();
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (result.success) {
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Your account has been permanently deleted'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+
+        // Navigate to intro/login page
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          '/',
+          (route) => false,
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result.message),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

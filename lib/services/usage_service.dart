@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'auth_service.dart';
+import 'security_service.dart';
 import '../config/app_config.dart';
 
 class UsageData {
@@ -78,12 +79,15 @@ class UsageData {
 
 class UsageService {
   final String _baseUrl = AppConfig.apiBaseUrl;
+  final http.Client _httpClient = SecurityService().createSecureHttpClient();
 
   // Cache for usage data
   UsageData? _cachedUsageData;
   DateTime? _lastFetchTime;
   static const Duration _cacheDuration = Duration(minutes: 5);
 
+  /// Get user usage statistics
+  /// SECURITY: Uses certificate pinning
   Future<UsageData?> getUserUsage({bool forceRefresh = false}) async {
     // Return cached data if still valid and not forcing refresh
     if (!forceRefresh &&
@@ -100,7 +104,7 @@ class UsageService {
       }
 
       final url = Uri.parse('$_baseUrl/user/usage/');
-      final response = await http.get(
+      final response = await _httpClient.get(
         url,
         headers: {
           'Authorization': 'Bearer $token',
@@ -114,16 +118,15 @@ class UsageService {
         _lastFetchTime = DateTime.now();
         return _cachedUsageData;
       } else {
-        print('Failed to fetch usage data: ${response.statusCode}');
-        print('Response: ${response.body}');
         return null;
       }
     } catch (e) {
-      print('Error fetching usage data: $e');
       return null;
     }
   }
 
+  /// Track user action
+  /// SECURITY: Uses certificate pinning
   Future<bool> trackUsage(String actionType) async {
     try {
       final token = await AuthService().getAccessToken();
@@ -132,7 +135,7 @@ class UsageService {
       }
 
       final url = Uri.parse('$_baseUrl/track-usage/');
-      final response = await http.post(
+      final response = await _httpClient.post(
         url,
         headers: {
           'Authorization': 'Bearer $token',
@@ -149,14 +152,11 @@ class UsageService {
         return true;
       } else if (response.statusCode == 429) {
         // Limit reached
-        print('Usage limit reached for $actionType');
         return false;
       } else {
-        print('Failed to track usage: ${response.statusCode}');
         return false;
       }
     } catch (e) {
-      print('Error tracking usage: $e');
       return false;
     }
   }

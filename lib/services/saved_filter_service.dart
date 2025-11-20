@@ -10,6 +10,21 @@ class SavedFilterService {
   final String baseUrl = AppConfig.apiBaseUrl;
   final AuthService _authService = AuthService();
 
+  /// Sanitize user input before sending to API
+  /// SECURITY: Defense-in-depth input validation
+  String _sanitizeInput(String input) {
+    // Trim whitespace
+    String sanitized = input.trim();
+
+    // Remove leading/trailing special characters
+    sanitized = sanitized.replaceAll(RegExp(r'^[^\w]+|[^\w]+$'), '');
+
+    // Limit consecutive spaces to single space
+    sanitized = sanitized.replaceAll(RegExp(r'\s+'), ' ');
+
+    return sanitized;
+  }
+
   /// Get authorization headers with JWT token
   Future<Map<String, String>> _getHeaders() async {
     final token = await _authService.getAccessToken();
@@ -26,81 +41,83 @@ class SavedFilterService {
       final headers = await _getHeaders();
       final uri = Uri.parse('$baseUrl/saved-filters/');
 
-      print('🔍 Fetching saved filters from: $uri');
-
       final response = await http.get(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
         final results = jsonData['results'] as List;
 
-        print('✅ Successfully fetched ${results.length} saved filters');
-
         return results
             .map((json) => SavedFilter.fromJson(json as Map<String, dynamic>))
             .toList();
       } else if (response.statusCode == 401) {
-        print('❌ Unauthorized - user not logged in');
         throw Exception('Please log in to access saved filters');
       } else {
-        print('❌ Error fetching saved filters: ${response.statusCode}');
         throw Exception('Failed to load saved filters: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception fetching saved filters: $e');
       rethrow;
     }
   }
 
   /// Create a new saved filter
   /// POST /api/saved-filters/
+  /// SECURITY: Validates and sanitizes all input before sending to API
   Future<SavedFilter> createSavedFilter({
     required String name,
     required String description,
     required List<String> brandFilters,
     required List<String> productFilters,
+    List<String>? stateFilters,
   }) async {
+    // Validate input lengths
+    if (name.trim().isEmpty) {
+      throw Exception('Filter name is required');
+    }
+    if (name.length > 50) {
+      throw Exception('Filter name must be 50 characters or less');
+    }
+    if (description.length > 200) {
+      throw Exception('Description must be 200 characters or less');
+    }
+
     try {
       final headers = await _getHeaders();
       final uri = Uri.parse('$baseUrl/saved-filters/');
 
       final body = json.encode({
-        'name': name,
-        'description': description,
+        'name': _sanitizeInput(name),
+        'description': _sanitizeInput(description),
         'filter_data': {
-          'brand_filters': brandFilters,
-          'product_filters': productFilters,
+          'brand_filters': brandFilters.map((f) => _sanitizeInput(f)).toList(),
+          'product_filters': productFilters.map((f) => _sanitizeInput(f)).toList(),
+          'state_filters': stateFilters ?? [],
         },
       });
-
-      print('📤 Creating saved filter: $name');
 
       final response = await http.post(uri, headers: headers, body: body);
 
       if (response.statusCode == 201) {
         final jsonData = json.decode(response.body);
-        print('✅ Successfully created saved filter: $name');
         return SavedFilter.fromJson(jsonData as Map<String, dynamic>);
       } else if (response.statusCode == 403) {
         final errorData = json.decode(response.body);
-        print('❌ Tier limit reached: ${errorData['error']}');
         throw TierLimitException(errorData['error']);
       } else if (response.statusCode == 401) {
         throw Exception('Please log in to save filters');
       } else {
-        print('❌ Error creating saved filter: ${response.statusCode}');
         final errorBody = json.decode(response.body);
         throw Exception(
             'Failed to create saved filter: ${errorBody['error'] ?? response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception creating saved filter: $e');
       rethrow;
     }
   }
 
   /// Update an existing saved filter
   /// PUT /api/saved-filters/{id}/
+  /// SECURITY: Validates and sanitizes all input before sending to API
   Future<SavedFilter> updateSavedFilter({
     required int id,
     required String name,
@@ -108,37 +125,43 @@ class SavedFilterService {
     required List<String> brandFilters,
     required List<String> productFilters,
   }) async {
+    // Validate input lengths
+    if (name.trim().isEmpty) {
+      throw Exception('Filter name is required');
+    }
+    if (name.length > 50) {
+      throw Exception('Filter name must be 50 characters or less');
+    }
+    if (description.length > 200) {
+      throw Exception('Description must be 200 characters or less');
+    }
+
     try {
       final headers = await _getHeaders();
       final uri = Uri.parse('$baseUrl/saved-filters/$id/');
 
       final body = json.encode({
-        'name': name,
-        'description': description,
+        'name': _sanitizeInput(name),
+        'description': _sanitizeInput(description),
         'filter_data': {
-          'brand_filters': brandFilters,
-          'product_filters': productFilters,
+          'brand_filters': brandFilters.map((f) => _sanitizeInput(f)).toList(),
+          'product_filters': productFilters.map((f) => _sanitizeInput(f)).toList(),
         },
       });
-
-      print('📝 Updating saved filter ID: $id');
 
       final response = await http.put(uri, headers: headers, body: body);
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        print('✅ Successfully updated saved filter: $name');
         return SavedFilter.fromJson(jsonData as Map<String, dynamic>);
       } else if (response.statusCode == 401) {
         throw Exception('Please log in to update filters');
       } else if (response.statusCode == 404) {
         throw Exception('Filter not found');
       } else {
-        print('❌ Error updating saved filter: ${response.statusCode}');
         throw Exception('Failed to update saved filter: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception updating saved filter: $e');
       rethrow;
     }
   }
@@ -150,22 +173,18 @@ class SavedFilterService {
       final headers = await _getHeaders();
       final uri = Uri.parse('$baseUrl/saved-filters/$id/');
 
-      print('🗑️ Deleting saved filter ID: $id');
-
       final response = await http.delete(uri, headers: headers);
 
       if (response.statusCode == 204) {
-        print('✅ Successfully deleted saved filter ID: $id');
+        // Successfully deleted
       } else if (response.statusCode == 401) {
         throw Exception('Please log in to delete filters');
       } else if (response.statusCode == 404) {
         throw Exception('Filter not found');
       } else {
-        print('❌ Error deleting saved filter: ${response.statusCode}');
         throw Exception('Failed to delete saved filter: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception deleting saved filter: $e');
       rethrow;
     }
   }
@@ -177,24 +196,19 @@ class SavedFilterService {
       final headers = await _getHeaders();
       final uri = Uri.parse('$baseUrl/saved-filters/$id/apply/');
 
-      print('⚡ Applying saved filter ID: $id');
-
       final response = await http.post(uri, headers: headers);
 
       if (response.statusCode == 200) {
         final jsonData = json.decode(response.body);
-        print('✅ Successfully applied saved filter ID: $id');
         return SavedFilter.fromJson(jsonData as Map<String, dynamic>);
       } else if (response.statusCode == 401) {
         throw Exception('Please log in to apply filters');
       } else if (response.statusCode == 404) {
         throw Exception('Filter not found');
       } else {
-        print('❌ Error applying saved filter: ${response.statusCode}');
         throw Exception('Failed to apply saved filter: ${response.statusCode}');
       }
     } catch (e) {
-      print('❌ Exception applying saved filter: $e');
       rethrow;
     }
   }

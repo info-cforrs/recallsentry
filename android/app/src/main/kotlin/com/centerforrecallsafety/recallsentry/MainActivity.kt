@@ -1,4 +1,4 @@
-package com.example.rs_flutter
+package com.centerforrecallsafety.recallsentry
 
 import io.flutter.embedding.android.FlutterActivity
 

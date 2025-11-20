@@ -49,12 +49,15 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
   bool _isSearchFieldFocused = false; // Track if search field is currently focused
   bool _keepButtonVisible = false; // Keep button visible even when focus is lost (during save)
 
+  // PAGINATION: Infinite scroll state
+  int _currentPage = 0;
+  static const int _pageSize = 20;
+  bool _isLoadingMore = false;
+  bool _hasMoreRecalls = true;
+
   @override
   void initState() {
     super.initState();
-    print(
-      '🔥 USDA Recalls Page: initState() called - starting to load recalls',
-    );
     _loadUSDARecalls();
     _scrollController.addListener(_onScroll);
 
@@ -76,6 +79,18 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
           _showSearchAndFilters = shouldShow;
         });
       }
+
+      // PAGINATION: Load more recalls when near bottom
+      final maxScroll = _scrollController.position.maxScrollExtent;
+      final currentScroll = _scrollController.position.pixels;
+      final delta = 200.0; // Trigger 200px before reaching bottom
+
+      if (maxScroll - currentScroll <= delta &&
+          !_isLoadingMore &&
+          _hasMoreRecalls &&
+          !_isLoading) {
+        _loadNextPage();
+      }
     }
   }
 
@@ -85,28 +100,23 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
     setState(() {
       _isLoading = true;
       _errorMessage = '';
+      _currentPage = 0;
+      _hasMoreRecalls = true;
     });
 
     try {
-      print('🔍 USDA Page: Starting to load recalls and articles...');
-
-      // Load both recalls and articles in parallel
+      // PAGINATION: Load first page of recalls and articles in parallel
       final results = await Future.wait([
-        _recallService.getFilteredRecalls(agency: 'USDA'),
+        _recallService.getUsdaRecalls(limit: _pageSize, offset: 0),
         _articleService.getUsdaArticles(),
       ]);
 
-      final allRecalls = results[0] as List<RecallData>;
+      final firstPageRecalls = results[0] as List<RecallData>;
       final articles = results[1] as List<Article>;
-
-      print(
-        '✅ USDA Page: Received ${allRecalls.length} total USDA recalls from service',
-      );
-      print('✅ USDA Page: Received ${articles.length} USDA articles');
 
       // Filter recalls to last 30 days
       final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
-      final recentRecalls = allRecalls.where((recall) {
+      final recentRecalls = firstPageRecalls.where((recall) {
         return recall.dateIssued.isAfter(thirtyDaysAgo);
       }).toList();
 
@@ -116,12 +126,6 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
       // Extract unique filter options from actual data
       _updateAvailableFilterOptions(recentRecalls);
 
-      for (var recall in recentRecalls) {
-        print(
-          'Recent USDA Recall: ${recall.id} - ${recall.productName} - Agency: ${recall.agency} - Date: ${recall.dateIssued}',
-        );
-      }
-
       if (!mounted) return;
 
       setState(() {
@@ -129,31 +133,82 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
           _usdaRecalls = recentRecalls;
           _usdaArticles = articles;
           _applyFiltersAndSort();
-          print(
-            '✅ Using ${recentRecalls.length} real USDA recalls from last 30 days from Google Sheets',
-          );
+
+          // Check if there are more recalls to load
+          _hasMoreRecalls = recentRecalls.length == _pageSize;
         } else {
-          print('⚠️ No recent USDA recalls found');
           _usdaRecalls = [];
           _usdaArticles = articles;
           _filteredRecalls = [];
+          _hasMoreRecalls = false;
         }
         _isLoading = false;
         _errorMessage = '';
-        print(
-          '🎯 USDA Page setState: _usdaRecalls.length = ${_usdaRecalls.length}',
-        );
-        print('🎯 USDA Page setState: _isLoading = $_isLoading');
-        print('🎯 USDA Page setState: _errorMessage = "$_errorMessage"');
       });
     } catch (e) {
-      print('❌ USDA Page Error: $e');
       if (!mounted) return;
 
       setState(() {
         _errorMessage = 'Error loading recalls: $e';
         _isLoading = false;
         _usdaRecalls = [];
+        _hasMoreRecalls = false;
+      });
+    }
+  }
+
+  /// PAGINATION: Load next page of recalls for infinite scroll
+  Future<void> _loadNextPage() async {
+    if (!mounted || _isLoadingMore || !_hasMoreRecalls) return;
+
+    setState(() {
+      _isLoadingMore = true;
+    });
+
+    try {
+      // Calculate offset based on current page
+      final offset = (_currentPage + 1) * _pageSize;
+
+      // Fetch next page of recalls
+      final nextPageRecalls = await _recallService.getUsdaRecalls(
+        limit: _pageSize,
+        offset: offset,
+      );
+
+      // Filter to last 30 days
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+      final recentRecalls = nextPageRecalls.where((recall) {
+        return recall.dateIssued.isAfter(thirtyDaysAgo);
+      }).toList();
+
+      if (!mounted) return;
+
+      setState(() {
+        if (recentRecalls.isNotEmpty) {
+          // Add new recalls to existing list
+          _usdaRecalls.addAll(recentRecalls);
+          _currentPage++;
+
+          // Update filter options with new data
+          _updateAvailableFilterOptions(_usdaRecalls);
+
+          // Re-apply filters to include new recalls
+          _applyFiltersAndSort();
+
+          // Check if there are more recalls to load
+          _hasMoreRecalls = recentRecalls.length == _pageSize;
+        } else {
+          // No more recalls available
+          _hasMoreRecalls = false;
+        }
+        _isLoadingMore = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _isLoadingMore = false;
+        // Optionally show error message
       });
     }
   }
@@ -212,15 +267,11 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
     if (_selectedRiskLevel != 'all' &&
         !_availableRiskLevels.contains(_selectedRiskLevel)) {
       _selectedRiskLevel = 'all';
-      print('🔄 Reset risk level filter - selected value no longer available');
     }
 
     if (_selectedRecallReason != 'all' &&
         !_availableRecallReasons.contains(_selectedRecallReason)) {
       _selectedRecallReason = 'all';
-      print(
-        '🔄 Reset recall reason filter - selected value no longer available',
-      );
     }
 
     if (_selectedRecallClassification != 'all' &&
@@ -228,25 +279,12 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
           _selectedRecallClassification,
         )) {
       _selectedRecallClassification = 'all';
-      print(
-        '🔄 Reset recall classification filter - selected value no longer available',
-      );
     }
 
     // Reset state selections if any selected states are no longer available
     if (_selectedStates.isNotEmpty) {
       _selectedStates.removeWhere((state) => !_availableStates.contains(state));
-      if (_selectedStates.isEmpty) {
-        print('🔄 Reset state filter - selected values no longer available');
-      }
     }
-
-    print('🎯 Available Risk Levels from data: $_availableRiskLevels');
-    print('🎯 Available Recall Reasons from data: $_availableRecallReasons');
-    print(
-      '🎯 Available Recall Classifications from data: $_availableRecallClassifications',
-    );
-    print('🎯 Available States from data: ${_availableStates.length} states');
   }
 
   void _applyFiltersAndSort() {
@@ -381,9 +419,6 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
       _availableRiskLevels = riskLevels.toList()..sort();
       _availableRecallReasons = recallReasons.toList()..sort();
       _availableRecallClassifications = recallClassifications.toList()..sort();
-      print(
-        '🔄 Updated filter options for search context: Risk levels: $_availableRiskLevels, Recall Reasons: $_availableRecallReasons, Recall Classifications: $_availableRecallClassifications',
-      );
     }
   }
 
@@ -398,46 +433,36 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  ListTile(
-                    title: const Text('Date (Newest First)'),
-                    leading: Radio<String>(
-                      value: 'date',
-                      groupValue: _sortOption,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _sortOption = value!;
-                        });
-                        _applyFiltersAndSort();
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    title: const Text('Brand Name (A-Z)'),
-                    leading: Radio<String>(
-                      value: 'brand_az',
-                      groupValue: _sortOption,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _sortOption = value!;
-                        });
-                        _applyFiltersAndSort();
-                        Navigator.of(context).pop();
-                      },
-                    ),
-                  ),
-                  ListTile(
-                    title: const Text('Brand Name (Z-A)'),
-                    leading: Radio<String>(
-                      value: 'brand_za',
-                      groupValue: _sortOption,
-                      onChanged: (String? value) {
-                        setState(() {
-                          _sortOption = value!;
-                        });
-                        _applyFiltersAndSort();
-                        Navigator.of(context).pop();
-                      },
+                  RadioGroup<String>(
+                    groupValue: _sortOption,
+                    onChanged: (String? value) {
+                      setState(() {
+                        _sortOption = value!;
+                      });
+                      _applyFiltersAndSort();
+                      Navigator.of(context).pop();
+                    },
+                    child: Column(
+                      children: [
+                        ListTile(
+                          title: const Text('Date (Newest First)'),
+                          leading: Radio<String>(
+                            value: 'date',
+                          ),
+                        ),
+                        ListTile(
+                          title: const Text('Brand Name (A-Z)'),
+                          leading: Radio<String>(
+                            value: 'brand_az',
+                          ),
+                        ),
+                        ListTile(
+                          title: const Text('Brand Name (Z-A)'),
+                          leading: Radio<String>(
+                            value: 'brand_za',
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
@@ -685,6 +710,7 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                       return;
                     }
 
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
                     setDialogState(() => isSaving = true);
 
                     try {
@@ -698,7 +724,7 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
 
                       if (dialogContext.mounted) {
                         Navigator.of(dialogContext).pop();
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        scaffoldMessenger.showSnackBar(
                           const SnackBar(
                             content: Text('SmartFilter saved successfully!'),
                             backgroundColor: Color(0xFF4CAF50),
@@ -707,20 +733,24 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                       }
                     } on TierLimitException catch (e) {
                       setDialogState(() => isSaving = false);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(e.message),
-                          backgroundColor: const Color(0xFFE53935),
-                        ),
-                      );
+                      if (dialogContext.mounted) {
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text(e.message),
+                            backgroundColor: const Color(0xFFE53935),
+                          ),
+                        );
+                      }
                     } catch (e) {
                       setDialogState(() => isSaving = false);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Failed to save filter: $e'),
-                          backgroundColor: const Color(0xFFE53935),
-                        ),
-                      );
+                      if (dialogContext.mounted) {
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to save filter: $e'),
+                            backgroundColor: const Color(0xFFE53935),
+                          ),
+                        );
+                      }
                     }
                   },
                   icon: isSaving
@@ -839,22 +869,26 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                         style: TextStyle(color: Colors.white54, fontSize: 12),
                       )
                     else
-                      ...riskOptions.map((level) {
-                        return RadioListTile<String>(
-                          title: Text(
-                            level == 'all' ? 'All Risk Levels' : level,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          value: level,
-                          groupValue: tempRiskLevel,
-                          onChanged: (value) {
-                            setDialogState(() {
-                              tempRiskLevel = value!;
-                            });
-                          },
-                          activeColor: const Color(0xFF64B5F6),
-                        );
-                      }),
+                      RadioGroup<String>(
+                        groupValue: tempRiskLevel,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            tempRiskLevel = value!;
+                          });
+                        },
+                        child: Column(
+                          children: riskOptions.map((level) {
+                            return RadioListTile<String>(
+                              title: Text(
+                                level == 'all' ? 'All Risk Levels' : level,
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              value: level,
+                              activeColor: const Color(0xFF64B5F6),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                     const Divider(color: Colors.white24),
 
                     // Recall Reason Filter
@@ -871,24 +905,28 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                         style: TextStyle(color: Colors.white54, fontSize: 12),
                       )
                     else
-                      ...recallReasonOptions.map((recallReason) {
-                        return RadioListTile<String>(
-                          title: Text(
-                            recallReason == 'all'
-                                ? 'All Recall Reasons'
-                                : recallReason.toUpperCase(),
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          value: recallReason,
-                          groupValue: tempRecallReason,
-                          onChanged: (value) {
-                            setDialogState(() {
-                              tempRecallReason = value!;
-                            });
-                          },
-                          activeColor: const Color(0xFF64B5F6),
-                        );
-                      }),
+                      RadioGroup<String>(
+                        groupValue: tempRecallReason,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            tempRecallReason = value!;
+                          });
+                        },
+                        child: Column(
+                          children: recallReasonOptions.map((recallReason) {
+                            return RadioListTile<String>(
+                              title: Text(
+                                recallReason == 'all'
+                                    ? 'All Recall Reasons'
+                                    : recallReason.toUpperCase(),
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              value: recallReason,
+                              activeColor: const Color(0xFF64B5F6),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                     const Divider(color: Colors.white24),
 
                     // Recall Classification Filter
@@ -905,24 +943,28 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                         style: TextStyle(color: Colors.white54, fontSize: 12),
                       )
                     else
-                      ...recallClassificationOptions.map((recallClassification) {
-                        return RadioListTile<String>(
-                          title: Text(
-                            recallClassification == 'all'
-                                ? 'All Recall Classifications'
-                                : recallClassification.toUpperCase(),
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          value: recallClassification,
-                          groupValue: tempRecallClassification,
-                          onChanged: (value) {
-                            setDialogState(() {
-                              tempRecallClassification = value!;
-                            });
-                          },
-                          activeColor: const Color(0xFF64B5F6),
-                        );
-                      }),
+                      RadioGroup<String>(
+                        groupValue: tempRecallClassification,
+                        onChanged: (value) {
+                          setDialogState(() {
+                            tempRecallClassification = value!;
+                          });
+                        },
+                        child: Column(
+                          children: recallClassificationOptions.map((recallClassification) {
+                            return RadioListTile<String>(
+                              title: Text(
+                                recallClassification == 'all'
+                                    ? 'All Recall Classifications'
+                                    : recallClassification.toUpperCase(),
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                              value: recallClassification,
+                              activeColor: const Color(0xFF64B5F6),
+                            );
+                          }).toList(),
+                        ),
+                      ),
                     const SizedBox(height: 16),
                     const Divider(color: Colors.white24),
 
@@ -1029,40 +1071,55 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
     );
   }
 
-  /// Build interleaved list with recalls and articles
-  /// Inserts an article card after every 3rd recall card
-  List<Widget> _buildInterleavedList() {
-    List<Widget> widgets = [];
-    int articleIndex = 0;
+  // Calculate total number of items (recalls + interspersed articles + upgrade banner)
+  int _getTotalItemCount() {
+    if (_filteredRecalls.isEmpty) return 0;
 
-    for (int i = 0; i < _filteredRecalls.length; i++) {
-      final recall = _filteredRecalls[i];
+    // Number of articles to show (one after every 3rd recall)
+    final articlesCount = _usdaArticles.isEmpty
+      ? 0
+      : (_filteredRecalls.length / 3).floor().clamp(0, _usdaArticles.length);
 
-      // Add recall card with spacing
-      widgets.add(
-        Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: SmallUsdaRecallCard(recall: recall),
-        ),
-      );
+    // Recalls + articles + upgrade banner (1 item)
+    return _filteredRecalls.length + articlesCount + 1;
+  }
 
-      // Insert article card after every 3rd recall
-      if ((i + 1) % 3 == 0 &&
-          articleIndex < _usdaArticles.length &&
-          _usdaArticles.isNotEmpty) {
-        widgets.add(
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: ArticleCard(article: _usdaArticles[articleIndex]),
-          ),
-        );
-        articleIndex++;
-      }
-    }
+  // Determine if item at index should be an article
+  // Articles appear at indices 3, 7, 11, 15... (every 4th position after 3 recalls)
+  bool _isArticleAtIndex(int index) {
+    if (_usdaArticles.isEmpty) return false;
 
-    // Add upgrade section at the end for free users
-    widgets.add(
-      FutureBuilder<SubscriptionInfo>(
+    // Pattern: article at index 3, 7, 11, 15... => (n*4 + 3) where n = 0,1,2...
+    // This means: recall, recall, recall, ARTICLE, recall, recall, recall, ARTICLE...
+    if ((index + 1) % 4 != 0) return false; // Must be at position 3, 7, 11, 15...
+
+    // Calculate which article this would be (0-indexed)
+    final articleIndex = (index + 1) ~/ 4 - 1;
+
+    // Make sure we have enough articles to show
+    return articleIndex < _usdaArticles.length;
+  }
+
+  // Get recall index from item index (accounting for interspersed articles)
+  int _getRecallIndex(int itemIndex) {
+    // How many articles appear BEFORE this index?
+    final articlesBefore = ((itemIndex + 1) ~/ 4);
+    return itemIndex - articlesBefore;
+  }
+
+  // Get article index from item index
+  int _getArticleIndex(int itemIndex) {
+    // Article index based on the pattern (indices 3, 7, 11, 15...)
+    return (itemIndex + 1) ~/ 4 - 1;
+  }
+
+  /// Build interleaved list with recalls and articles using ListView.builder
+  Widget _buildInterleavedListItem(int index) {
+    final totalItems = _getTotalItemCount();
+
+    // Last item is the upgrade banner
+    if (index == totalItems - 1) {
+      return FutureBuilder<SubscriptionInfo>(
         future: _subscriptionService.getSubscriptionInfo(),
         builder: (context, snapshot) {
           final subscriptionInfo = snapshot.data;
@@ -1153,10 +1210,32 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
             ),
           );
         },
-      ),
-    );
+      );
+    }
 
-    return widgets;
+    // Check if this index should show an article
+    if (_isArticleAtIndex(index)) {
+      final articleIndex = _getArticleIndex(index);
+      if (articleIndex < _usdaArticles.length) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: ArticleCard(article: _usdaArticles[articleIndex]),
+        );
+      }
+    }
+
+    // Otherwise show a recall
+    final recallIndex = _getRecallIndex(index);
+    if (recallIndex < _filteredRecalls.length) {
+      final recall = _filteredRecalls[recallIndex];
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: SmallUsdaRecallCard(recall: recall),
+      );
+    }
+
+    // Fallback (should not happen)
+    return const SizedBox.shrink();
   }
 
   List<String> _getUsStates() {
@@ -1214,16 +1293,74 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
   }
 
   Widget _buildRecallsList() {
-    return SingleChildScrollView(
-      controller: _scrollController,
-      padding: const EdgeInsets.all(16),
-      child: ListView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: _buildInterleavedList().length,
-        itemBuilder: (context, index) {
-          return _buildInterleavedList()[index];
-        },
+    final totalItems = _getTotalItemCount();
+
+    return RefreshIndicator(
+      onRefresh: () async {
+        // Reset pagination state on pull-to-refresh
+        setState(() {
+          _currentPage = 0;
+          _hasMoreRecalls = true;
+          _usdaRecalls = [];
+        });
+        await _loadUSDARecalls();
+      },
+      color: const Color(0xFF64B5F6), // Match app theme
+      backgroundColor: const Color(0xFF2C3E50),
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        padding: const EdgeInsets.all(16),
+        physics: const AlwaysScrollableScrollPhysics(), // Enable pull-to-refresh even when content fits screen
+        child: Column(
+          children: [
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: totalItems,
+              itemBuilder: (context, index) {
+                return _buildInterleavedListItem(index);
+              },
+            ),
+            // PAGINATION: Loading indicator at bottom when loading more
+            if (_isLoadingMore)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      height: 24,
+                      child: CircularProgressIndicator(
+                        color: const Color(0xFF64B5F6),
+                        strokeWidth: 2.5,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Loading more recalls...',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            // PAGINATION: End of results indicator
+            if (!_hasMoreRecalls && _usdaRecalls.isNotEmpty && !_isLoadingMore)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 24.0),
+                child: Text(
+                  'All recalls loaded',
+                  style: TextStyle(
+                    color: Colors.white54,
+                    fontSize: 14,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -1262,7 +1399,7 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
                           width: 40,
                           height: 40,
                           child: Image.asset(
-                            'assets/images/shield_logo3.png',
+                            'assets/images/shield_logo4.png',
                             width: 40,
                             height: 40,
                             fit: BoxFit.contain,

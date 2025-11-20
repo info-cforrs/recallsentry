@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'main_navigation.dart';
 import '../widgets/custom_back_button.dart';
+import '../services/auth_service.dart';
+import '../config/app_config.dart';
+import 'auth_required_page.dart';
 
 class PushNotificationsPage extends StatefulWidget {
   const PushNotificationsPage({super.key});
@@ -10,13 +15,14 @@ class PushNotificationsPage extends StatefulWidget {
 }
 
 class _PushNotificationsPageState extends State<PushNotificationsPage> {
+  bool _isLoading = true;
+  bool _isSaving = false;
+
   // General Notifications
   bool _allNotifications = true;
 
   // Recall Alerts
   bool _newRecalls = true;
-  bool _recallUpdates = true;
-  bool _savedRecallChanges = true;
 
   // App Features
   bool _newFeatures = true;
@@ -26,24 +32,122 @@ class _PushNotificationsPageState extends State<PushNotificationsPage> {
   bool _promotionalOffers = false;
   bool _newsletters = false;
 
-  // App Usage
-  bool _savedRecallLimitReached = true;
-  bool _appliedFiltersLimitReached = true;
-
-  // Recall Updates
-  bool _smartFilterRecallUpdates = true;
-  bool _followedRecallUpdates = true;
-  bool _brandFilterRecallUpdates = true;
-  bool _productNameRecallUpdates = true;
-
   // Recommendations and Rewards
   bool _replacementItemRecommendations = true;
-  bool _rewardMilestones = true;
-  bool _safetyStreakGoals = true;
-  bool _safetyScoreGoals = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPreferences();
+  }
+
+  Future<void> _loadPreferences() async {
+    try {
+      final authService = AuthService();
+      final token = await authService.getAccessToken();
+      if (token == null) {
+        if (mounted) {
+          // Redirect to auth required page
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => const AuthRequiredPage(
+                pageTitle: 'Push Notifications',
+              ),
+            ),
+          );
+        }
+        return;
+      }
+
+      final response = await http.get(
+        Uri.parse('${AppConfig.apiBaseUrl}/notifications/preferences/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (mounted) {
+          setState(() {
+            _allNotifications = data['fcm_all'] ?? true;
+            _newRecalls = data['fcm_new_recalls'] ?? true;
+            _replacementItemRecommendations = data['fcm_replacement_recommendations'] ?? false;
+            _newFeatures = data['fcm_new_features'] ?? true;
+            _tipsAndTricks = data['fcm_tips_tricks'] ?? false;
+            _promotionalOffers = data['fcm_promotional'] ?? false;
+            _newsletters = data['fcm_newsletters'] ?? false;
+            _isLoading = false;
+          });
+        }
+      } else {
+        throw Exception('Failed to load preferences');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error loading preferences: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _updatePreference(String field, bool value) async {
+    setState(() => _isSaving = true);
+
+    try {
+      final authService = AuthService();
+      final token = await authService.getAccessToken();
+      if (token == null) return;
+
+      final response = await http.patch(
+        Uri.parse('${AppConfig.apiBaseUrl}/notifications/preferences/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+        body: json.encode({field: value}),
+      );
+
+      if (response.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Preference saved'),
+              duration: const Duration(seconds: 1),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      } else {
+        throw Exception('Failed to update preference');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF1D3547),
+        body: Center(
+          child: CircularProgressIndicator(color: Colors.white),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFF1D3547),
       body: SafeArea(
@@ -71,7 +175,7 @@ class _PushNotificationsPageState extends State<PushNotificationsPage> {
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/shield_logo3.png',
+                        'assets/images/shield_logo4.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -143,10 +247,11 @@ class _PushNotificationsPageState extends State<PushNotificationsPage> {
                             style: TextStyle(color: Colors.white70),
                           ),
                           value: _allNotifications,
-                          onChanged: (value) {
+                          onChanged: _isSaving ? null : (value) {
                             setState(() {
                               _allNotifications = value;
                             });
+                            _updatePreference('fcm_all', value);
                           },
                           secondary: const Icon(
                             Icons.notifications,
@@ -180,219 +285,14 @@ class _PushNotificationsPageState extends State<PushNotificationsPage> {
                             style: TextStyle(color: Colors.white70),
                           ),
                           value: _newRecalls,
-                          onChanged: (value) {
+                          onChanged: _isSaving ? null : (value) {
                             setState(() {
                               _newRecalls = value;
                             });
+                            _updatePreference('fcm_new_recalls', value);
                           },
                           secondary: const Icon(
                             Icons.new_releases,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.white24),
-                        SwitchListTile(
-                          title: const Text(
-                            'Recall Updates',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Updates to existing recalls',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _recallUpdates,
-                          onChanged: (value) {
-                            setState(() {
-                              _recallUpdates = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.update,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.white24),
-                        SwitchListTile(
-                          title: const Text(
-                            'Saved Recall Changes',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Changes to recalls you\'ve saved',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _savedRecallChanges,
-                          onChanged: (value) {
-                            setState(() {
-                              _savedRecallChanges = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.bookmark,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // App Usage Section
-                  _buildSectionHeader('App Usage'),
-                  Card(
-                    elevation: 2,
-                    color: const Color(0xFF2A4A5C),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        SwitchListTile(
-                          title: const Text(
-                            'Saved Recall Limit Reached',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Notify me when I reach my saved recall limit',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _savedRecallLimitReached,
-                          onChanged: (value) {
-                            setState(() {
-                              _savedRecallLimitReached = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.bookmark_border,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.white24),
-                        SwitchListTile(
-                          title: const Text(
-                            'Applied Filters Limit Reached',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Notify me when I reach my applied filters limit',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _appliedFiltersLimitReached,
-                          onChanged: (value) {
-                            setState(() {
-                              _appliedFiltersLimitReached = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.filter_alt,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Recall Updates Section
-                  _buildSectionHeader('Recall Updates'),
-                  Card(
-                    elevation: 2,
-                    color: const Color(0xFF2A4A5C),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      children: [
-                        SwitchListTile(
-                          title: const Text(
-                            'SmartFilter Recall Updates',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Notify me with updates on new SmartFilter recalls',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _smartFilterRecallUpdates,
-                          onChanged: (value) {
-                            setState(() {
-                              _smartFilterRecallUpdates = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.filter_list,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.white24),
-                        SwitchListTile(
-                          title: const Text(
-                            'Followed Recall Updates',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Notify me with updates on Followed recalls',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _followedRecallUpdates,
-                          onChanged: (value) {
-                            setState(() {
-                              _followedRecallUpdates = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.follow_the_signs,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.white24),
-                        SwitchListTile(
-                          title: const Text(
-                            'Brand Filter Recall Updates',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Notify me with updates on Brand filter recalls',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _brandFilterRecallUpdates,
-                          onChanged: (value) {
-                            setState(() {
-                              _brandFilterRecallUpdates = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.branding_watermark,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.white24),
-                        SwitchListTile(
-                          title: const Text(
-                            'Product Name Recall Updates',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Notify me with updates on Product Name recalls',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _productNameRecallUpdates,
-                          onChanged: (value) {
-                            setState(() {
-                              _productNameRecallUpdates = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.label,
                             color: Colors.white70,
                           ),
                           activeThumbColor: Colors.green,
@@ -423,79 +323,14 @@ class _PushNotificationsPageState extends State<PushNotificationsPage> {
                             style: TextStyle(color: Colors.white70),
                           ),
                           value: _replacementItemRecommendations,
-                          onChanged: (value) {
+                          onChanged: _isSaving ? null : (value) {
                             setState(() {
                               _replacementItemRecommendations = value;
                             });
+                            _updatePreference('fcm_replacement_recommendations', value);
                           },
                           secondary: const Icon(
                             Icons.shopping_bag,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.white24),
-                        SwitchListTile(
-                          title: const Text(
-                            'Reward Milestones',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Notify me when reaching Reward milestones',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _rewardMilestones,
-                          onChanged: (value) {
-                            setState(() {
-                              _rewardMilestones = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.emoji_events,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.white24),
-                        SwitchListTile(
-                          title: const Text(
-                            'Safety Streak Goals',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Notify me when I reach a Safety Streak goal',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _safetyStreakGoals,
-                          onChanged: (value) {
-                            setState(() {
-                              _safetyStreakGoals = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.local_fire_department,
-                            color: Colors.white70,
-                          ),
-                          activeThumbColor: Colors.green,
-                        ),
-                        const Divider(height: 1, color: Colors.white24),
-                        SwitchListTile(
-                          title: const Text(
-                            'Safety Score Goals',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          subtitle: const Text(
-                            'Notify me when I reach a Safety Score goal',
-                            style: TextStyle(color: Colors.white70),
-                          ),
-                          value: _safetyScoreGoals,
-                          onChanged: (value) {
-                            setState(() {
-                              _safetyScoreGoals = value;
-                            });
-                          },
-                          secondary: const Icon(
-                            Icons.score,
                             color: Colors.white70,
                           ),
                           activeThumbColor: Colors.green,
@@ -526,10 +361,11 @@ class _PushNotificationsPageState extends State<PushNotificationsPage> {
                             style: TextStyle(color: Colors.white70),
                           ),
                           value: _newFeatures,
-                          onChanged: (value) {
+                          onChanged: _isSaving ? null : (value) {
                             setState(() {
                               _newFeatures = value;
                             });
+                            _updatePreference('fcm_new_features', value);
                           },
                           secondary: const Icon(
                             Icons.auto_awesome,
@@ -548,10 +384,11 @@ class _PushNotificationsPageState extends State<PushNotificationsPage> {
                             style: TextStyle(color: Colors.white70),
                           ),
                           value: _tipsAndTricks,
-                          onChanged: (value) {
+                          onChanged: _isSaving ? null : (value) {
                             setState(() {
                               _tipsAndTricks = value;
                             });
+                            _updatePreference('fcm_tips_tricks', value);
                           },
                           secondary: const Icon(
                             Icons.lightbulb,
@@ -585,10 +422,11 @@ class _PushNotificationsPageState extends State<PushNotificationsPage> {
                             style: TextStyle(color: Colors.white70),
                           ),
                           value: _promotionalOffers,
-                          onChanged: (value) {
+                          onChanged: _isSaving ? null : (value) {
                             setState(() {
                               _promotionalOffers = value;
                             });
+                            _updatePreference('fcm_promotional', value);
                           },
                           secondary: const Icon(
                             Icons.local_offer,
@@ -607,10 +445,11 @@ class _PushNotificationsPageState extends State<PushNotificationsPage> {
                             style: TextStyle(color: Colors.white70),
                           ),
                           value: _newsletters,
-                          onChanged: (value) {
+                          onChanged: _isSaving ? null : (value) {
                             setState(() {
                               _newsletters = value;
                             });
+                            _updatePreference('fcm_newsletters', value);
                           },
                           secondary: const Icon(
                             Icons.email,

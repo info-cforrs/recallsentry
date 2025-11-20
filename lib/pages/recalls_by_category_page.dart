@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'main_navigation.dart';
-import '../services/filter_state_service.dart';
 import '../services/recall_data_service.dart';
 import '../services/subscription_service.dart';
 import '../widgets/custom_back_button.dart';
@@ -16,7 +15,6 @@ class RecallsByCategoryPage extends StatefulWidget {
 class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
   // Category counts
   final Map<String, int> _categoryCounts = {};
-  bool _isLoadingCounts = true;
 
   @override
   void initState() {
@@ -37,8 +35,8 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
       // Determine cutoff date based on tier
       final now = DateTime.now();
       final DateTime cutoff;
-      if (tier == SubscriptionTier.guest || tier == SubscriptionTier.free) {
-        // Last 30 days for Guest/Free users
+      if (tier == SubscriptionTier.free) {
+        // Last 30 days for Free users
         cutoff = now.subtract(const Duration(days: 30));
       } else {
         // Since Jan 1 of current year for SmartFiltering/RecallMatch users
@@ -82,16 +80,10 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
       if (mounted) {
         setState(() {
           _categoryCounts.addAll(counts);
-          _isLoadingCounts = false;
         });
       }
     } catch (e) {
-      print('Error loading category counts: $e');
-      if (mounted) {
-        setState(() {
-          _isLoadingCounts = false;
-        });
-      }
+      // Error loading category counts
     }
   }
 
@@ -124,7 +116,7 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/shield_logo3.png',
+                        'assets/images/shield_logo4.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -407,14 +399,16 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
       count: _categoryCounts[categoryKey] ?? 0,
       onTap: () async {
         // Get subscription tier to determine cutoff date
+        final navigator = Navigator.of(context);
+
         final subscriptionService = SubscriptionService();
         final subscriptionInfo = await subscriptionService.getSubscriptionInfo();
         final tier = subscriptionInfo.tier;
 
         final now = DateTime.now();
         final DateTime cutoff;
-        if (tier == SubscriptionTier.guest || tier == SubscriptionTier.free) {
-          // Last 30 days for Guest/Free users
+        if (tier == SubscriptionTier.free) {
+          // Last 30 days for Free users
           cutoff = now.subtract(const Duration(days: 30));
         } else {
           // Since Jan 1 of current year for SmartFiltering/RecallMatch users
@@ -426,10 +420,6 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
         // Use working FDA and USDA endpoints
         final fdaRecalls = await recallService.getFdaRecalls();
         final usdaRecalls = await recallService.getUsdaRecalls();
-
-        print('🟢 Total FDA recalls: ${fdaRecalls.length}');
-        print('🟢 Total USDA recalls: ${usdaRecalls.length}');
-        print('🟢 Using cutoff date: $cutoff (Tier: $tier)');
 
         // Filter by cutoff date and matching categories
         final recentFda = fdaRecalls.where((recall) {
@@ -444,14 +434,10 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
           return categories.any((c) => cat.contains(c.toLowerCase()));
         }).toList();
 
-        print('🟢 FDA $title recalls (after cutoff): ${recentFda.length}');
-        print('🟢 USDA $title recalls (after cutoff): ${recentUsda.length}');
-
         final filtered = [...recentFda, ...recentUsda];
-        print('🟢 Total filtered recalls to show: ${filtered.length}');
 
-        if (context.mounted) {
-          Navigator.of(context).push(
+        if (mounted) {
+          navigator.push(
             MaterialPageRoute(
               builder: (context) => category.FilteredRecallsPage(
                 filteredRecalls: filtered,

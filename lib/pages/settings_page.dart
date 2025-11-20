@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'user_profile.dart';
 import 'subscribe_page.dart';
@@ -12,60 +13,16 @@ import 'push_notifications_page.dart';
 import 'email_notifications_page.dart';
 import '../services/auth_service.dart';
 import '../services/subscription_service.dart';
-import '../services/user_profile_service.dart';
+import '../providers/data_providers.dart';
 
-class SettingsPage extends StatefulWidget {
+class SettingsPage extends ConsumerStatefulWidget {
   const SettingsPage({super.key});
 
   @override
-  State<SettingsPage> createState() => _SettingsPageState();
+  ConsumerState<SettingsPage> createState() => _SettingsPageState();
 }
 
-class _SettingsPageState extends State<SettingsPage> {
-  bool _locationEnabled = true;
-  UserProfile? _userProfile;
-  bool _isLoadingProfile = false;
-  SubscriptionTier _subscriptionTier = SubscriptionTier.guest;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserProfile();
-    _loadSubscriptionTier();
-  }
-
-  Future<void> _loadUserProfile() async {
-    setState(() {
-      _isLoadingProfile = true;
-    });
-
-    final profile = await UserProfileService().getUserProfile();
-
-    if (profile != null && mounted) {
-      setState(() {
-        _userProfile = profile;
-        _isLoadingProfile = false;
-      });
-    } else if (mounted) {
-      setState(() {
-        _isLoadingProfile = false;
-      });
-    }
-  }
-
-  Future<void> _loadSubscriptionTier() async {
-    final info = await SubscriptionService().getSubscriptionInfo();
-    if (mounted) {
-      setState(() {
-        _subscriptionTier = info.tier;
-      });
-    }
-  }
-
-  bool get _isLoggedIn {
-    return _subscriptionTier != SubscriptionTier.guest;
-  }
-
+class _SettingsPageState extends ConsumerState<SettingsPage> {
   void _showLoginSignupModal(BuildContext context) {
     showDialog(
       context: context,
@@ -100,14 +57,17 @@ class _SettingsPageState extends State<SettingsPage> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.of(context).pop();
-                    Navigator.push(
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const LoginPage(),
                       ),
                     );
+                    // Refresh providers to IMMEDIATELY force recomputation
+                    ref.refresh(userProfileProvider);
+                    ref.refresh(subscriptionInfoProvider);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF64B5F6),
@@ -130,14 +90,17 @@ class _SettingsPageState extends State<SettingsPage> {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.of(context).pop();
-                    Navigator.push(
+                    await Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (context) => const SignUpPage(),
                       ),
                     );
+                    // Refresh providers to IMMEDIATELY force recomputation
+                    ref.refresh(userProfileProvider);
+                    ref.refresh(subscriptionInfoProvider);
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
@@ -177,6 +140,16 @@ class _SettingsPageState extends State<SettingsPage> {
 
   @override
   Widget build(BuildContext context) {
+    // Watch providers - automatic loading and rebuilds
+    final userProfileAsync = ref.watch(userProfileProvider);
+    final isLoggedIn = ref.watch(isLoggedInProvider);
+
+    // Extract user profile from async data
+    final userProfile = userProfileAsync.maybeWhen(
+      data: (profile) => profile,
+      orElse: () => null,
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFF1D3547), // Dark blue background
       body: SafeArea(
@@ -203,7 +176,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       width: 40,
                       height: 40,
                       child: Image.asset(
-                        'assets/images/shield_logo3.png',
+                        'assets/images/shield_logo4.png',
                         width: 40,
                         height: 40,
                         fit: BoxFit.contain,
@@ -266,9 +239,9 @@ class _SettingsPageState extends State<SettingsPage> {
                   ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.blue,
-                      child: _userProfile != null
+                      child: userProfile != null
                           ? Text(
-                              _userProfile!.initials,
+                              userProfile.initials,
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -277,14 +250,14 @@ class _SettingsPageState extends State<SettingsPage> {
                           : const Icon(Icons.person, color: Colors.white),
                     ),
                     title: Text(
-                      _userProfile?.fullName ?? 'Guest User',
+                      userProfile?.fullName ?? 'Guest User',
                       style: const TextStyle(
                         fontWeight: FontWeight.w600,
                         color: Colors.white,
                       ),
                     ),
                     subtitle: Text(
-                      _userProfile?.email ?? 'Not logged in',
+                      userProfile?.email ?? 'Not logged in',
                       style: const TextStyle(color: Colors.white70),
                     ),
                     trailing: const Icon(
@@ -293,13 +266,18 @@ class _SettingsPageState extends State<SettingsPage> {
                       color: Colors.white70,
                     ),
                     onTap: () async {
-                      await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const UserProfilePage(),
-                        ),
-                      );
-                      // Reload profile when returning from profile page
-                      _loadUserProfile();
+                      // Only allow navigation if user is logged in
+                      if (isLoggedIn) {
+                        await Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const UserProfilePage(),
+                          ),
+                        );
+                        // No need to invalidate - user is still logged in, just viewed profile
+                      } else {
+                        // Show login modal if not logged in
+                        _showLoginSignupModal(context);
+                      }
                     },
                   ),
                   const Divider(height: 1, color: Colors.white24),
@@ -334,12 +312,15 @@ class _SettingsPageState extends State<SettingsPage> {
                       size: 16,
                       color: Colors.white70,
                     ),
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const LoginPage(),
                         ),
                       );
+                      // Refresh providers to IMMEDIATELY force recomputation
+                      ref.refresh(userProfileProvider);
+                      ref.refresh(subscriptionInfoProvider);
                     },
                   ),
                   const Divider(height: 1, color: Colors.white24),
@@ -354,34 +335,37 @@ class _SettingsPageState extends State<SettingsPage> {
                       size: 16,
                       color: Colors.white70,
                     ),
-                    onTap: () {
-                      Navigator.of(context).push(
+                    onTap: () async {
+                      await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => const SignUpPage(),
                         ),
                       );
+                      // Refresh providers to IMMEDIATELY force recomputation
+                      ref.refresh(userProfileProvider);
+                      ref.refresh(subscriptionInfoProvider);
                     },
                   ),
                   const Divider(height: 1, color: Colors.white24),
                   ListTile(
                     leading: Icon(
                       Icons.bar_chart,
-                      color: _isLoggedIn ? Colors.white70 : Colors.black54,
+                      color: isLoggedIn ? Colors.white70 : Colors.black54,
                     ),
                     title: Text(
                       'App Usage',
                       style: TextStyle(
-                        color: _isLoggedIn ? Colors.white : Colors.black,
+                        color: isLoggedIn ? Colors.white : Colors.black,
                       ),
                     ),
                     trailing: Icon(
                       Icons.arrow_forward_ios,
                       size: 16,
-                      color: _isLoggedIn ? Colors.white70 : Colors.black54,
+                      color: isLoggedIn ? Colors.white70 : Colors.black54,
                     ),
-                    tileColor: _isLoggedIn ? null : const Color(0xFFD1D1D1),
+                    tileColor: isLoggedIn ? null : const Color(0xFFD1D1D1),
                     onTap: () {
-                      if (_isLoggedIn) {
+                      if (isLoggedIn) {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => const AppUsagePage(),
@@ -489,24 +473,6 @@ class _SettingsPageState extends State<SettingsPage> {
                         ),
                       );
                     },
-                  ),
-                  const Divider(height: 1, color: Colors.white24),
-                  SwitchListTile(
-                    title: const Text(
-                      'Location Services',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    value: _locationEnabled,
-                    onChanged: (value) {
-                      setState(() {
-                        _locationEnabled = value;
-                      });
-                    },
-                    secondary: const Icon(
-                      Icons.location_on,
-                      color: Colors.white70,
-                    ),
-                    activeThumbColor: Colors.green,
                   ),
                 ],
               ),
@@ -847,6 +813,17 @@ class _SettingsPageState extends State<SettingsPage> {
                 // Perform logout
                 await AuthService().logout();
                 SubscriptionService().clearCache();
+
+                // Refresh ALL auth-dependent providers to IMMEDIATELY force recomputation
+                // This ensures HomePage and other pages clear stale data immediately
+                ref.refresh(userProfileProvider);
+                ref.refresh(subscriptionInfoProvider);
+                ref.refresh(savedRecallsProvider);
+                ref.refresh(savedFiltersProvider);
+                ref.refresh(smartFilterMatchedRecallsProvider);
+                ref.refresh(activeRmcEnrollmentsProvider);
+                ref.refresh(rmcRecallsWithEnrollmentsProvider);
+                ref.refresh(safetyScoreProvider);
 
                 // Show success message
                 messenger.showSnackBar(

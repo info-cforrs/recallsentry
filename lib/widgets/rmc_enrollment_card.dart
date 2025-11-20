@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/recall_data.dart';
 import '../models/rmc_enrollment.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 
 /// Card widget specifically designed for displaying RMC enrollments
 /// Shows both recall information and user-specific enrollment data
@@ -18,13 +19,13 @@ class RmcEnrollmentCard extends StatelessWidget {
 
   Color _getStatusColor() {
     if (enrollment.status == 'Not Started') {
-      return const Color(0xFFFF9800); // Orange
+      return AppColors.warning; // Orange
     } else if (enrollment.status == 'Completed') {
-      return const Color(0xFF4CAF50); // Green
+      return AppColors.success; // Green
     } else if (enrollment.status.startsWith('In Progress')) {
-      return const Color(0xFF2196F3); // Blue
+      return AppColors.accentBlue; // Blue
     }
-    return const Color(0xFF9E9E9E); // Grey
+    return AppColors.riskUnknown; // Grey
   }
 
   String _formatDate(DateTime? date) {
@@ -48,7 +49,7 @@ class RmcEnrollmentCard extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFF2A4A5C),
+          color: AppColors.secondary,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -83,7 +84,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                     child: Text(
                       _getShortStatus().toUpperCase(),
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                       ),
@@ -97,14 +98,14 @@ class RmcEnrollmentCard extends StatelessWidget {
                       const Text(
                         'Updated',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: AppColors.textSecondary,
                           fontSize: 10,
                         ),
                       ),
                       Text(
                         _formatDate(enrollment.updatedAt),
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 11,
                           fontWeight: FontWeight.w500,
                         ),
@@ -133,7 +134,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                             Text(
                               recall.brandName,
                               style: const TextStyle(
-                                color: Colors.white,
+                                color: AppColors.textPrimary,
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -144,7 +145,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                             Text(
                               recall.productName,
                               style: const TextStyle(
-                                color: Colors.white70,
+                                color: AppColors.textSecondary,
                                 fontSize: 14,
                               ),
                               maxLines: 2,
@@ -154,12 +155,12 @@ class RmcEnrollmentCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Product Image
+                      // Product Image (optimized thumbnail for better performance)
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
                         child: recall.getPrimaryImageUrl().isNotEmpty
                             ? Image.network(
-                                recall.getPrimaryImageUrl(),
+                                recall.getImageUrlForContext(ImageSize.thumbnail),
                                 width: 80,
                                 height: 80,
                                 fit: BoxFit.cover,
@@ -170,7 +171,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                                     color: Colors.black26,
                                     child: const Icon(
                                       Icons.image_not_supported,
-                                      color: Colors.white38,
+                                      color: AppColors.textDisabled,
                                       size: 32,
                                     ),
                                   );
@@ -184,7 +185,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                                     child: const Center(
                                       child: CircularProgressIndicator(
                                         strokeWidth: 2,
-                                        color: Colors.white38,
+                                        color: AppColors.textDisabled,
                                       ),
                                     ),
                                   );
@@ -196,7 +197,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                                 color: Colors.black26,
                                 child: const Icon(
                                   Icons.photo,
-                                  color: Colors.white38,
+                                  color: AppColors.textDisabled,
                                   size: 32,
                                 ),
                               ),
@@ -214,14 +215,14 @@ class RmcEnrollmentCard extends StatelessWidget {
                       const Text(
                         'Recall ID: ',
                         style: TextStyle(
-                          color: Colors.white70,
+                          color: AppColors.textSecondary,
                           fontSize: 12,
                         ),
                       ),
                       Text(
                         recall.id,
                         style: const TextStyle(
-                          color: Colors.white,
+                          color: AppColors.textPrimary,
                           fontSize: 12,
                           fontWeight: FontWeight.w500,
                         ),
@@ -234,7 +235,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                   // Divider
                   Container(
                     height: 1,
-                    color: Colors.white24,
+                    color: AppColors.border,
                   ),
 
                   const SizedBox(height: 16),
@@ -264,8 +265,8 @@ class RmcEnrollmentCard extends StatelessWidget {
                       Expanded(
                         child: _buildInfoItem(
                           'Estimated Value',
-                          enrollment.estimatedValue != null
-                              ? '\$${enrollment.estimatedValue!.toStringAsFixed(2)}'
+                          recall.estItemValue.isNotEmpty
+                              ? recall.estItemValue
                               : 'Not specified',
                           Icons.attach_money,
                         ),
@@ -309,7 +310,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                               Text(
                                 'Notes',
                                 style: TextStyle(
-                                  color: Colors.white70,
+                                  color: AppColors.textSecondary,
                                   fontSize: 11,
                                   fontWeight: FontWeight.bold,
                                 ),
@@ -320,7 +321,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                           Text(
                             enrollment.notes,
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.textPrimary,
                               fontSize: 12,
                             ),
                             maxLines: 3,
@@ -343,7 +344,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                               ? 'Tap to start process'
                               : 'Tap to continue',
                           style: const TextStyle(
-                            color: Color(0xFF5DADE2),
+                            color: AppColors.accentBlueLight,
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
                           ),
@@ -351,7 +352,7 @@ class RmcEnrollmentCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         const Icon(
                           Icons.arrow_forward_ios,
-                          color: Color(0xFF5DADE2),
+                          color: AppColors.accentBlueLight,
                           size: 12,
                         ),
                       ],

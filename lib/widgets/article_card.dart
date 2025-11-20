@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/article.dart';
+import 'package:rs_flutter/constants/app_colors.dart';
 
 class ArticleCard extends StatelessWidget {
   final Article article;
@@ -39,14 +40,14 @@ class ArticleCard extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.article,
-                    color: Colors.white,
+                    color: AppColors.textPrimary,
                     size: 20,
                   ),
                   SizedBox(width: 8),
                   Text(
                     'Articles & Insights',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: AppColors.textPrimary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0.5,
@@ -79,7 +80,7 @@ class ArticleCard extends StatelessWidget {
                               ),
                               child: const Icon(
                                 Icons.image_not_supported,
-                                color: Colors.white54,
+                                color: AppColors.textTertiary,
                                 size: 32,
                               ),
                             );
@@ -94,7 +95,7 @@ class ArticleCard extends StatelessWidget {
                               ),
                               child: const Center(
                                 child: CircularProgressIndicator(
-                                  color: Colors.white,
+                                  color: AppColors.textPrimary,
                                   strokeWidth: 2,
                                 ),
                               ),
@@ -111,7 +112,7 @@ class ArticleCard extends StatelessWidget {
                     child: Text(
                       article.title,
                       style: const TextStyle(
-                        color: Colors.white,
+                        color: AppColors.textPrimary,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         height: 1.3,
@@ -151,7 +152,7 @@ class ArticleCard extends StatelessWidget {
                           child: Text(
                             tag.toUpperCase(),
                             style: const TextStyle(
-                              color: Colors.white,
+                              color: AppColors.textPrimary,
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.5,
@@ -170,7 +171,7 @@ class ArticleCard extends StatelessWidget {
                       Text(
                         'Read More',
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.9),
+                          color: AppColors.textPrimary.withValues(alpha: 0.9),
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
                         ),
@@ -178,7 +179,7 @@ class ArticleCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Icon(
                         Icons.arrow_forward,
-                        color: Colors.white.withValues(alpha: 0.9),
+                        color: AppColors.textPrimary.withValues(alpha: 0.9),
                         size: 14,
                       ),
                     ],

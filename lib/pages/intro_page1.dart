@@ -19,28 +19,16 @@ class IntroPage1 extends StatelessWidget {
               const SizedBox(height: 40),
 
               // Shield Logo
-              Container(
-                width: 140, // Increased size to give more space
-                height: 140, // Increased size to give more space
-                decoration: BoxDecoration(
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
-                ),
+              SizedBox(
+                width: 140,
+                height: 140,
                 child: Padding(
-                  padding: const EdgeInsets.all(
-                    8.0,
-                  ), // Add padding to prevent edge clipping
+                  padding: const EdgeInsets.all(8.0),
                   child: Image.asset(
-                    'assets/images/shield_logo3.png',
+                    'assets/images/shield_logo4.png',
                     width: 120,
                     height: 120,
-                    fit: BoxFit
-                        .contain, // Contains the entire image without clipping
+                    fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       // Fallback to custom shield if image not found
                       return Container(
