@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recall_data.dart';
 import '../services/saved_recalls_service.dart';
 import '../pages/fda_recall_details_page.dart';
+import '../pages/usda_recall_details_page.dart';
+import '../pages/cpsc_recall_details_page.dart';
 import '../pages/subscribe_page.dart';
 import '../providers/data_providers.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
@@ -172,17 +174,34 @@ class _SmallFdaRecallCardState extends ConsumerState<SmallFdaRecallCard> {
     );
   }
 
+  /// Navigate to the appropriate details page based on agency
+  void _navigateToDetailsPage(BuildContext context) {
+    final agency = widget.recall.agency.toUpperCase();
+    Widget detailsPage;
+
+    switch (agency) {
+      case 'USDA':
+        detailsPage = UsdaRecallDetailsPage(recall: widget.recall);
+        break;
+      case 'CPSC':
+        detailsPage = CpscRecallDetailsPage(recall: widget.recall);
+        break;
+      case 'FDA':
+      default:
+        detailsPage = FdaRecallDetailsPage(recall: widget.recall);
+        break;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => detailsPage),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => FdaRecallDetailsPage(recall: widget.recall),
-          ),
-        );
-      },
+      onTap: () => _navigateToDetailsPage(context),
       child: Container(
         decoration: BoxDecoration(
           color: AppColors.secondary,
@@ -287,9 +306,9 @@ class _SmallFdaRecallCardState extends ConsumerState<SmallFdaRecallCard> {
                         overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
-                      // FDA Recall ID
+                      // Recall ID (agency-specific)
                       Text(
-                        'ID: ${widget.recall.fdaRecallId.isNotEmpty ? widget.recall.fdaRecallId : 'N/A'}',
+                        'ID: ${_getRecallId()}',
                         style: const TextStyle(
                           color: AppColors.textPrimary,
                           fontSize: 12,
@@ -389,6 +408,40 @@ class _SmallFdaRecallCardState extends ConsumerState<SmallFdaRecallCard> {
       return 'None reported';
     }
     return widget.recall.negativeOutcomes;
+  }
+
+  /// Get the appropriate recall ID based on agency
+  String _getRecallId() {
+    final agency = widget.recall.agency.toUpperCase();
+
+    switch (agency) {
+      case 'FDA':
+        if (widget.recall.fdaRecallId.isNotEmpty) {
+          return widget.recall.fdaRecallId;
+        }
+        break;
+      case 'USDA':
+        if (widget.recall.usdaRecallId.isNotEmpty) {
+          return widget.recall.usdaRecallId;
+        }
+        break;
+      case 'CPSC':
+        // For CPSC, prioritize fieldRecallNumber, then id
+        if (widget.recall.fieldRecallNumber.isNotEmpty) {
+          return widget.recall.fieldRecallNumber;
+        }
+        break;
+    }
+
+    // Fallback: try fieldRecallNumber, then id
+    if (widget.recall.fieldRecallNumber.isNotEmpty) {
+      return widget.recall.fieldRecallNumber;
+    }
+    if (widget.recall.id.isNotEmpty) {
+      return widget.recall.id;
+    }
+
+    return 'N/A';
   }
 
   String _formatDate(DateTime? date) {

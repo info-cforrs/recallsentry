@@ -22,12 +22,25 @@ import '../models/saved_filter.dart';
 /// Using a FutureProvider ensures we only fetch it once and share it everywhere.
 ///
 /// Watches userProfile for invalidation AND awaits it for race condition prevention
+/// HANDLES GUEST USERS: Returns free tier if user is not authenticated
 final subscriptionInfoProvider = FutureProvider<SubscriptionInfo>((ref) async {
-  // Watch and await - this both tracks changes AND waits for completion
-  await ref.watch(userProfileProvider.future);
+  try {
+    print('🔵 subscriptionInfoProvider: Starting...');
 
-  final subscriptionService = ref.watch(subscriptionServiceProvider);
-  return subscriptionService.getSubscriptionInfo();
+    // Watch and await - this both tracks changes AND waits for completion
+    final userProfile = await ref.watch(userProfileProvider.future);
+    print('👤 subscriptionInfoProvider: User profile = ${userProfile?.username ?? "not logged in"}');
+
+    final subscriptionService = ref.watch(subscriptionServiceProvider);
+    final subscriptionInfo = await subscriptionService.getSubscriptionInfo();
+    print('✅ subscriptionInfoProvider: Tier = ${subscriptionInfo.tier}');
+    return subscriptionInfo;
+  } catch (e) {
+    // If user is not authenticated, return free tier
+    print('⚠️ subscriptionInfoProvider: User not authenticated, returning FREE tier');
+    print('   Error was: $e');
+    return SubscriptionInfo.free();
+  }
 });
 
 /// Subscription Tier Provider - Derived from subscription info
@@ -93,12 +106,19 @@ final usdaRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
   return recallService.getUsdaRecalls();
 });
 
-/// All Recalls Provider - Combines FDA and USDA recalls
+/// CPSC Recalls Provider - Fetches all CPSC recalls from REST API
+final cpscRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
+  final recallService = ref.watch(recallDataServiceProvider);
+  return recallService.getCpscRecalls();
+});
+
+/// All Recalls Provider - Combines FDA, USDA, and CPSC recalls
 final allRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
   final fdaRecallsAsync = ref.watch(fdaRecallsProvider);
   final usdaRecallsAsync = ref.watch(usdaRecallsProvider);
+  final cpscRecallsAsync = ref.watch(cpscRecallsProvider);
 
-  // Wait for both to complete
+  // Wait for all to complete
   final fdaRecalls = await fdaRecallsAsync.when(
     data: (data) => Future.value(data),
     loading: () => Future.value(<RecallData>[]),
@@ -111,7 +131,13 @@ final allRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
     error: (_, __) => Future.value(<RecallData>[]),
   );
 
-  return [...fdaRecalls, ...usdaRecalls];
+  final cpscRecalls = await cpscRecallsAsync.when(
+    data: (data) => Future.value(data),
+    loading: () => Future.value(<RecallData>[]),
+    error: (_, __) => Future.value(<RecallData>[]),
+  );
+
+  return [...fdaRecalls, ...usdaRecalls, ...cpscRecalls];
 });
 
 /// Filtered Recalls Provider (Tier-Based) - Applies tier-based date filtering
@@ -119,25 +145,43 @@ final allRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
 /// Free users: Last 30 days
 /// Premium users: Since Jan 1 of current year
 final filteredRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
-  final allRecalls = await ref.watch(allRecallsProvider.future);
-  final subscriptionInfo = await ref.watch(subscriptionInfoProvider.future);
+  try {
+    print('🔵 filteredRecallsProvider: Starting...');
 
-  final tier = subscriptionInfo.tier;
-  final allowedAgencies = subscriptionInfo.getAllowedAgencies();
-  final now = DateTime.now();
-  final DateTime cutoff;
+    final allRecalls = await ref.watch(allRecallsProvider.future);
+    print('📦 filteredRecallsProvider: Got ${allRecalls.length} total recalls');
 
-  if (tier == SubscriptionTier.free) {
-    cutoff = now.subtract(const Duration(days: 30));
-  } else {
-    cutoff = DateTime(now.year, 1, 1);
+    final subscriptionInfo = await ref.watch(subscriptionInfoProvider.future);
+    print('👤 filteredRecallsProvider: Subscription tier = ${subscriptionInfo.tier}');
+
+    final tier = subscriptionInfo.tier;
+    final allowedAgencies = subscriptionInfo.getAllowedAgencies();
+    print('🏢 filteredRecallsProvider: Allowed agencies = $allowedAgencies');
+
+    final now = DateTime.now();
+    final DateTime cutoff;
+
+    if (tier == SubscriptionTier.free) {
+      cutoff = now.subtract(const Duration(days: 30));
+      print('📅 filteredRecallsProvider: Free tier - cutoff = ${cutoff.toIso8601String()}');
+    } else {
+      cutoff = DateTime(now.year, 1, 1);
+      print('📅 filteredRecallsProvider: Premium tier - cutoff = ${cutoff.toIso8601String()}');
+    }
+
+    final filtered = allRecalls.where((recall) {
+      return recall.dateIssued.isAfter(cutoff) &&
+             allowedAgencies.contains(recall.agency.toUpperCase());
+    }).toList()
+      ..sort((a, b) => b.dateIssued.compareTo(a.dateIssued));
+
+    print('✅ filteredRecallsProvider: Returning ${filtered.length} filtered recalls');
+    return filtered;
+  } catch (e, stackTrace) {
+    print('❌ filteredRecallsProvider ERROR: $e');
+    print('Stack trace: $stackTrace');
+    rethrow;
   }
-
-  return allRecalls.where((recall) {
-    return recall.dateIssued.isAfter(cutoff) &&
-           allowedAgencies.contains(recall.agency.toUpperCase());
-  }).toList()
-    ..sort((a, b) => b.dateIssued.compareTo(a.dateIssued));
 });
 
 /// Saved Recalls Provider - User's locally saved recalls

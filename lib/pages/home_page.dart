@@ -5,6 +5,7 @@ import 'package:rs_flutter/constants/app_colors.dart';
 import 'package:rs_flutter/widgets/empty_state.dart';
 import 'all_fda_recalls_page.dart';
 import 'all_usda_recalls_page.dart';
+import 'all_cpsc_recalls_page.dart';
 import 'all_recalls_page.dart';
 import 'main_navigation.dart';
 import 'new_recalls_page.dart';
@@ -135,10 +136,11 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
             cutoff = DateTime(now.year, 1, 1);
           }
 
-          // Fetch FDA and USDA recalls
+          // Fetch FDA, USDA, and CPSC recalls
           final recallService = ref.read(recallDataServiceProvider);
           final fdaRecalls = await recallService.getFdaRecalls();
           final usdaRecalls = await recallService.getUsdaRecalls();
+          final cpscRecalls = await recallService.getCpscRecalls();
 
           // Filter by cutoff date and matching categories
           final recentFda = fdaRecalls.where((recall) {
@@ -153,7 +155,13 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
             return categories.any((c) => cat.contains(c.toLowerCase()));
           }).toList();
 
-          final List<RecallData> filtered = [...recentFda, ...recentUsda];
+          final recentCpsc = cpscRecalls.where((recall) {
+            if (!recall.dateIssued.isAfter(cutoff)) return false;
+            final cat = recall.category.toLowerCase();
+            return categories.any((c) => cat.contains(c.toLowerCase()));
+          }).toList();
+
+          final List<RecallData> filtered = [...recentFda, ...recentUsda, ...recentCpsc];
 
           if (mounted) {
             navigator.push(
@@ -314,6 +322,12 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     final subscriptionTier = ref.watch(subscriptionTierProvider);
     final isLoggedIn = ref.watch(isLoggedInProvider);
 
+    // Check if critical data is still loading
+    final isLoadingCriticalData = filteredRecallsAsync.isLoading || categoryCountsAsync.isLoading;
+
+    // Check for errors in critical data
+    final hasCriticalError = filteredRecallsAsync.hasError;
+
     // Extract data from async providers
     final safetyScore = safetyScoreAsync.valueOrNull;
     final categoryCounts = categoryCountsAsync.valueOrNull ?? {};
@@ -326,11 +340,83 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     final totalRecalls = filteredRecalls.length;
     final fdaRecalls = filteredRecalls.where((r) => r.agency.toUpperCase() == 'FDA').length;
     final usdaRecalls = filteredRecalls.where((r) => r.agency.toUpperCase() == 'USDA').length;
+    final cpscRecalls = filteredRecalls.where((r) => r.agency.toUpperCase() == 'CPSC').length;
 
     return Scaffold(
       backgroundColor: AppColors.primary,
       body: SafeArea(
-          child: SingleChildScrollView(
+          child: isLoadingCriticalData
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Loading recalls...',
+                        style: TextStyle(
+                          color: AppColors.textSecondary,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              : hasCriticalError
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: AppColors.error,
+                              size: 64,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              'Unable to load recalls',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            const Text(
+                              'Please check your internet connection and try again.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                // Refresh all providers
+                                ref.invalidate(filteredRecallsProvider);
+                                ref.invalidate(categoryCountsProvider);
+                              },
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accentBlue,
+                                foregroundColor: AppColors.textPrimary,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 24,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -831,6 +917,77 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
                               ],
                             ),
                           ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      // CPSC Button (Full width below FDA/USDA)
+                      Stack(
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: 80,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(12),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const AllCPSCRecallsPage(),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.1,
+                                          ),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Image.asset(
+                                      'assets/images/CPSC_Button.png',
+                                      fit: BoxFit.cover,
+                                      width: double.infinity,
+                                      height: double.infinity,
+                                      errorBuilder:
+                                          (context, error, stackTrace) {
+                                            return Container(
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFF1565C0),
+                                                borderRadius:
+                                                    BorderRadius.circular(12),
+                                              ),
+                                              child: const Center(
+                                                child: Text(
+                                                  'CPSC',
+                                                  style: TextStyle(
+                                                    fontSize: 18,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: AppColors.textPrimary,
+                                                  ),
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          _buildRecallBadge(
+                            cpscRecalls,
+                          ), // Dynamic CPSC recalls count
                         ],
                       ),
 

@@ -35,10 +35,16 @@ void main() async {
   // Initialize Firebase
   try {
     debugPrint('🔥 Starting Firebase initialization...');
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    debugPrint('✅ Firebase initialized successfully');
+
+    // Check if Firebase is already initialized (prevents duplicate initialization)
+    if (Firebase.apps.isEmpty) {
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+      debugPrint('✅ Firebase initialized successfully');
+    } else {
+      debugPrint('ℹ️ Firebase already initialized, skipping...');
+    }
     debugPrint('🌐 Platform: ${kIsWeb ? "Web" : "Desktop"}');
 
     // Initialize Error Reporting (Crashlytics)

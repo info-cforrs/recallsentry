@@ -161,6 +161,72 @@ class AuthService {
     }
   }
 
+  /// Delete user account permanently
+  /// SECURITY: Uses certificate pinning
+  /// COMPLIANCE: Required by App Store (1.4.12) and GDPR Article 17
+  Future<bool> deleteAccount() async {
+    try {
+      // 1. Get current auth token
+      final token = await getAccessToken();
+      if (token == null) {
+        throw Exception('Not logged in');
+      }
+
+      // 2. Call backend API to delete account
+      final response = await _httpClient.delete(
+        Uri.parse('$baseUrl/auth/delete-account/'),
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'application/json',
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        // 3. Account deleted successfully on backend, now clean up locally
+        // Unregister FCM token
+        await FCMService().unregisterToken();
+
+        // Clear auth tokens from secure storage
+        await _storage.deleteAll();
+
+        // Clear subscription cache
+        SubscriptionService().clearCache();
+
+        // Clear saved recalls from local storage
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('saved_recalls');
+        } catch (e) {
+          // Silently fail - not critical
+        }
+
+        // Clear filter preferences from local storage
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.remove('advanced_brand_filters');
+          await prefs.remove('advanced_product_filters');
+          await prefs.remove('has_active_filters');
+        } catch (e) {
+          // Silently fail - not critical
+        }
+
+        return true;
+      } else if (response.statusCode == 401) {
+        throw Exception('Session expired. Please log in again.');
+      } else {
+        final errorData = json.decode(response.body);
+        final message = errorData['message'] ??
+                        errorData['error'] ??
+                        errorData['detail'] ??
+                        'Failed to delete account. Please try again.';
+        throw Exception(message);
+      }
+    } catch (e) {
+      print('❌ Account deletion failed: $e');
+      rethrow;
+    }
+  }
+
   /// Get current access token
   Future<String?> getAccessToken() async {
     return await _storage.read(key: _accessTokenKey);

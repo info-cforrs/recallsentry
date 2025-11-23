@@ -1119,6 +1119,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
 
     return ListView(
       controller: _scrollController,
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: widgets,
     );
@@ -1431,7 +1432,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
               ),
             ),
 
-            // Main Content Area
+            // Main Content Area with pull-to-refresh
             Expanded(
               child: _isLoading
                   ? const Center(
@@ -1469,17 +1470,29 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                             ],
                           ),
                         )
-                      : _filteredRecalls.isNotEmpty
-                          ? _buildInterleavedList()
-                          : const Center(
-                              child: Text(
-                                'No recalls found for the selected filter.',
-                                style: TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 16,
+                      : RefreshIndicator(
+                          onRefresh: _loadFilteredRecalls,
+                          color: const Color(0xFF4A90E2),
+                          backgroundColor: const Color(0xFF2C3E50),
+                          child: _filteredRecalls.isNotEmpty
+                              ? _buildInterleavedList()
+                              : ListView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  children: const [
+                                    SizedBox(height: 100),
+                                    Center(
+                                      child: Text(
+                                        'No recalls found for the selected filter.\nPull down to refresh.',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 16,
+                                        ),
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ),
+                        ),
             ),
           ],
         ),

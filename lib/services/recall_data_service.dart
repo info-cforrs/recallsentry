@@ -15,9 +15,11 @@ class RecallDataService {
   List<RecallData> _cachedRecalls = [];
   List<RecallData> _cachedFdaRecalls = [];
   List<RecallData> _cachedUsdaRecalls = [];
+  List<RecallData> _cachedCpscRecalls = [];
   DateTime? _lastFetch;
   DateTime? _lastFdaFetch;
   DateTime? _lastUsdaFetch;
+  DateTime? _lastCpscFetch;
   String? _currentSpreadsheetId;
 
   // Default spreadsheet ID - users can override this
@@ -151,12 +153,16 @@ class RecallDataService {
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
 
       try {
+        print('🔵 Starting FDA recalls fetch from REST API...');
+
         // If pagination is requested, skip cache and fetch from API
         if (limit != null || offset != null) {
+          print('📄 Pagination requested: limit=$limit, offset=$offset');
           final fdaRecalls = await _apiService.fetchFdaRecalls(
             limit: limit,
             offset: offset,
           );
+          print('✅ FDA recalls fetched successfully (paginated): ${fdaRecalls.length} items');
           return fdaRecalls;
         }
 
@@ -164,15 +170,33 @@ class RecallDataService {
         if (!forceRefresh &&
             _lastFdaFetch != null &&
             DateTime.now().difference(_lastFdaFetch!).inMinutes < 30) {
+          print('📦 Returning cached FDA recalls: ${_cachedFdaRecalls.length} items');
           return _cachedFdaRecalls;
         }
 
+        print('🌐 Fetching FDA recalls from API...');
         final fdaRecalls = await _apiService.fetchFdaRecalls();
+        print('✅ FDA recalls fetched successfully: ${fdaRecalls.length} items');
 
         _cachedFdaRecalls = fdaRecalls;
         _lastFdaFetch = DateTime.now();
+        // Save to persistent cache
+        await _saveToPersistentCache('fda_recalls', fdaRecalls);
         return _cachedFdaRecalls;
-      } catch (e) {
+      } catch (e, stackTrace) {
+        print('❌ ERROR fetching FDA recalls from API: $e');
+        print('Stack trace: $stackTrace');
+
+        // Try persistent cache as fallback
+        final cachedData = await _loadFromPersistentCache('fda_recalls');
+        if (cachedData != null && cachedData.isNotEmpty) {
+          print('✅ Returning ${cachedData.length} cached FDA recalls');
+          _cachedFdaRecalls = cachedData;
+          _lastFdaFetch = DateTime.now();
+          return cachedData;
+        }
+
+        print('⚠️ No cached FDA data available, returning empty list');
         return [];
       }
     }
@@ -217,12 +241,16 @@ class RecallDataService {
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
 
       try {
+        print('🔵 Starting USDA recalls fetch from REST API...');
+
         // If pagination is requested, skip cache and fetch from API
         if (limit != null || offset != null) {
+          print('📄 Pagination requested: limit=$limit, offset=$offset');
           final usdaRecalls = await _apiService.fetchUsdaRecalls(
             limit: limit,
             offset: offset,
           );
+          print('✅ USDA recalls fetched successfully (paginated): ${usdaRecalls.length} items');
           return usdaRecalls;
         }
 
@@ -230,15 +258,33 @@ class RecallDataService {
         if (!forceRefresh &&
             _lastUsdaFetch != null &&
             DateTime.now().difference(_lastUsdaFetch!).inMinutes < 30) {
+          print('📦 Returning cached USDA recalls: ${_cachedUsdaRecalls.length} items');
           return _cachedUsdaRecalls;
         }
 
+        print('🌐 Fetching USDA recalls from API...');
         final usdaRecalls = await _apiService.fetchUsdaRecalls();
+        print('✅ USDA recalls fetched successfully: ${usdaRecalls.length} items');
 
         _cachedUsdaRecalls = usdaRecalls;
         _lastUsdaFetch = DateTime.now();
+        // Save to persistent cache
+        await _saveToPersistentCache('usda_recalls', usdaRecalls);
         return _cachedUsdaRecalls;
-      } catch (e) {
+      } catch (e, stackTrace) {
+        print('❌ ERROR fetching USDA recalls from API: $e');
+        print('Stack trace: $stackTrace');
+
+        // Try persistent cache as fallback
+        final cachedData = await _loadFromPersistentCache('usda_recalls');
+        if (cachedData != null && cachedData.isNotEmpty) {
+          print('✅ Returning ${cachedData.length} cached USDA recalls');
+          _cachedUsdaRecalls = cachedData;
+          _lastUsdaFetch = DateTime.now();
+          return cachedData;
+        }
+
+        print('⚠️ No cached USDA data available, returning empty list');
         return [];
       }
     }
@@ -271,6 +317,70 @@ class RecallDataService {
     }
   }
 
+  // Get CPSC-specific recalls
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> getCpscRecalls({
+    bool forceRefresh = false,
+    int? limit,
+    int? offset,
+  }) async {
+
+    // Use REST API if configured
+    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
+
+      try {
+        print('🔵 Starting CPSC recalls fetch from REST API...');
+
+        // If pagination is requested, skip cache and fetch from API
+        if (limit != null || offset != null) {
+          print('📄 Pagination requested: limit=$limit, offset=$offset');
+          final cpscRecalls = await _apiService.fetchCpscRecalls(
+            limit: limit,
+            offset: offset,
+          );
+          print('✅ CPSC recalls fetched successfully (paginated): ${cpscRecalls.length} items');
+          return cpscRecalls;
+        }
+
+        // Cache for 30 minutes (only for non-paginated requests)
+        if (!forceRefresh &&
+            _lastCpscFetch != null &&
+            DateTime.now().difference(_lastCpscFetch!).inMinutes < 30) {
+          print('📦 Returning cached CPSC recalls: ${_cachedCpscRecalls.length} items');
+          return _cachedCpscRecalls;
+        }
+
+        print('🌐 Fetching CPSC recalls from API...');
+        final cpscRecalls = await _apiService.fetchCpscRecalls();
+        print('✅ CPSC recalls fetched successfully: ${cpscRecalls.length} items');
+
+        _cachedCpscRecalls = cpscRecalls;
+        _lastCpscFetch = DateTime.now();
+        // Save to persistent cache
+        await _saveToPersistentCache('cpsc_recalls', cpscRecalls);
+        return _cachedCpscRecalls;
+      } catch (e, stackTrace) {
+        print('❌ ERROR fetching CPSC recalls from API: $e');
+        print('Stack trace: $stackTrace');
+
+        // Try persistent cache as fallback
+        final cachedData = await _loadFromPersistentCache('cpsc_recalls');
+        if (cachedData != null && cachedData.isNotEmpty) {
+          print('✅ Returning ${cachedData.length} cached CPSC recalls');
+          _cachedCpscRecalls = cachedData;
+          _lastCpscFetch = DateTime.now();
+          return cachedData;
+        }
+
+        print('⚠️ No cached CPSC data available, returning empty list');
+        return [];
+      }
+    }
+
+    // No Google Sheets fallback for CPSC
+    return [];
+  }
+
   Future<List<RecallData>> getFilteredRecalls({
     List<String>? brands,
     List<String>? productNames,
@@ -280,7 +390,7 @@ class RecallDataService {
   }) async {
     List<RecallData> allRecalls = [];
 
-    // If a specific agency is requested, use the dedicated spreadsheet
+    // If a specific agency is requested, use the dedicated endpoint
     if (agency != null) {
       switch (agency.toUpperCase()) {
         case 'FDA':
@@ -289,12 +399,15 @@ class RecallDataService {
         case 'USDA':
           allRecalls = await getUsdaRecalls(forceRefresh: true);
           break;
+        case 'CPSC':
+          allRecalls = await getCpscRecalls(forceRefresh: true);
+          break;
         default:
-          // Fall back to main spreadsheet for other agencies
+          // Fall back to main endpoint for other agencies
           allRecalls = await getRecalls(spreadsheetId: spreadsheetId);
       }
     } else {
-      // No specific agency requested, get from main spreadsheet
+      // No specific agency requested, get all recalls
       allRecalls = await getRecalls(spreadsheetId: spreadsheetId);
     }
 

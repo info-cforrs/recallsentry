@@ -135,6 +135,28 @@ class RecallData {
   final String usdaFoodSafetyQuestionsEmail;
   final String recallResolutionStatus;
 
+  // --- CPSC-specific fields ---
+  final String cpscRemedyRecallProof; // Y or blank - requires proof for remedy
+  final String cpscModel; // Product model number
+  final String cpscSerialNumber; // Product serial number
+  final DateTime? cpscSoldByDateStart; // Start date for when product was sold
+  final DateTime? cpscSoldByDateEnd; // End date for when product was sold
+  final String cpscSoldByWalmart; // Y or blank
+  final String cpscSoldByAmazon; // Y or blank
+  final String cpscSoldByEbay; // Y or blank
+  final String cpscSoldByAliExpress; // Y or blank
+  final String cpscSoldByBestBuy; // Y or blank
+  final String cpscSoldByTarget; // Y or blank
+  final String cpscSoldByTikTok; // Y or blank
+  final String cpscSoldByFacebook; // Y or blank
+  final String cpscSoldByEtsy; // Y or blank
+  final String cpscSoldByCostco; // Y or blank
+  final String cpscSoldBySamsClub; // Y or blank
+  final String cpscSoldByDicksSportingGoods; // Y or blank
+  final String cpscSoldByOfficeDepot; // Y or blank
+  final String cpscSoldByKroger; // Y or blank
+  final String cpscSoldByPublix; // Y or blank
+
   RecallData({
     this.usdaRecallId = '',
     this.fdaRecallId = '',
@@ -230,6 +252,27 @@ class RecallData {
     this.usdaFoodSafetyQuestionsPhone = '',
     this.usdaFoodSafetyQuestionsEmail = '',
     this.recallResolutionStatus = 'Not Started',
+    // CPSC-specific fields
+    this.cpscRemedyRecallProof = '',
+    this.cpscModel = '',
+    this.cpscSerialNumber = '',
+    this.cpscSoldByDateStart,
+    this.cpscSoldByDateEnd,
+    this.cpscSoldByWalmart = '',
+    this.cpscSoldByAmazon = '',
+    this.cpscSoldByEbay = '',
+    this.cpscSoldByAliExpress = '',
+    this.cpscSoldByBestBuy = '',
+    this.cpscSoldByTarget = '',
+    this.cpscSoldByTikTok = '',
+    this.cpscSoldByFacebook = '',
+    this.cpscSoldByEtsy = '',
+    this.cpscSoldByCostco = '',
+    this.cpscSoldBySamsClub = '',
+    this.cpscSoldByDicksSportingGoods = '',
+    this.cpscSoldByOfficeDepot = '',
+    this.cpscSoldByKroger = '',
+    this.cpscSoldByPublix = '',
   });
 
   // This converts data FROM a spreadsheet/JSON into a RecallData object
@@ -420,7 +463,45 @@ class RecallData {
       usdaFoodSafetyQuestionsEmail:
           json['USDA-food-safety-questions-email'] ?? '',
       recallResolutionStatus: json['recall_resolution_status'] ?? 'Not Started',
+      // CPSC-specific fields
+      cpscRemedyRecallProof: _parseBoolToYN(json['remedy_recall_proof']),
+      cpscModel: json['model'] ?? '',
+      cpscSerialNumber: json['sn'] ?? json['serial_number'] ?? '',
+      cpscSoldByDateStart:
+          json['sold_by_date_start'] != null && json['sold_by_date_start'] != ''
+              ? DateTime.tryParse(json['sold_by_date_start'])
+              : null,
+      cpscSoldByDateEnd:
+          json['sold_by_date_end'] != null && json['sold_by_date_end'] != ''
+              ? DateTime.tryParse(json['sold_by_date_end'])
+              : null,
+      cpscSoldByWalmart: _parseBoolToYN(json['sold_by_walmart']),
+      cpscSoldByAmazon: _parseBoolToYN(json['sold_by_amazon']),
+      cpscSoldByEbay: _parseBoolToYN(json['sold_by_ebay']),
+      cpscSoldByAliExpress: _parseBoolToYN(json['sold_by_aliexpress']),
+      cpscSoldByBestBuy: _parseBoolToYN(json['sold_by_bestbuy']),
+      cpscSoldByTarget: _parseBoolToYN(json['sold_by_target']),
+      cpscSoldByTikTok: _parseBoolToYN(json['sold_by_tiktok']),
+      cpscSoldByFacebook: _parseBoolToYN(json['sold_by_facebook']),
+      cpscSoldByEtsy: _parseBoolToYN(json['sold_by_etsy']),
+      cpscSoldByCostco: _parseBoolToYN(json['sold_by_costco']),
+      cpscSoldBySamsClub: _parseBoolToYN(json['sold_by_samsclub']),
+      cpscSoldByDicksSportingGoods: _parseBoolToYN(json['sold_by_dickssportinggoods']),
+      cpscSoldByOfficeDepot: _parseBoolToYN(json['sold_by_officedepot']),
+      cpscSoldByKroger: _parseBoolToYN(json['sold_by_kroger']),
+      cpscSoldByPublix: _parseBoolToYN(json['sold_by_publix']),
     );
+  }
+
+  /// Helper to convert bool/string values to 'Y' or ''
+  static String _parseBoolToYN(dynamic value) {
+    if (value == null) return '';
+    if (value is bool) return value ? 'Y' : '';
+    if (value is String) {
+      final lower = value.toLowerCase().trim();
+      return (lower == 'y' || lower == 'yes' || lower == 'true' || lower == '1') ? 'Y' : '';
+    }
+    return '';
   }
 
   // This converts a RecallData object TO a format for spreadsheet/JSON storage
@@ -524,6 +605,27 @@ class RecallData {
       'USDA-food-safety-questions-phone': usdaFoodSafetyQuestionsPhone,
       'USDA-food-safety-questions-email': usdaFoodSafetyQuestionsEmail,
       'recall_resolution_status': recallResolutionStatus,
+      // CPSC-specific fields
+      'remedy_recall_proof': cpscRemedyRecallProof,
+      'model': cpscModel,
+      'sn': cpscSerialNumber,
+      'sold_by_date_start': cpscSoldByDateStart?.toIso8601String() ?? '',
+      'sold_by_date_end': cpscSoldByDateEnd?.toIso8601String() ?? '',
+      'sold_by_walmart': cpscSoldByWalmart,
+      'sold_by_amazon': cpscSoldByAmazon,
+      'sold_by_ebay': cpscSoldByEbay,
+      'sold_by_aliexpress': cpscSoldByAliExpress,
+      'sold_by_bestbuy': cpscSoldByBestBuy,
+      'sold_by_target': cpscSoldByTarget,
+      'sold_by_tiktok': cpscSoldByTikTok,
+      'sold_by_facebook': cpscSoldByFacebook,
+      'sold_by_etsy': cpscSoldByEtsy,
+      'sold_by_costco': cpscSoldByCostco,
+      'sold_by_samsclub': cpscSoldBySamsClub,
+      'sold_by_dickssportinggoods': cpscSoldByDicksSportingGoods,
+      'sold_by_officedepot': cpscSoldByOfficeDepot,
+      'sold_by_kroger': cpscSoldByKroger,
+      'sold_by_publix': cpscSoldByPublix,
     };
   }
 

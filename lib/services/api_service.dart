@@ -174,6 +174,39 @@ class ApiService {
     }
   }
 
+  /// Fetch CPSC recalls only
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> fetchCpscRecalls({
+    int? limit,
+    int? offset,
+  }) async {
+    try {
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (limit != null) queryParams['limit'] = limit.toString();
+      if (offset != null) queryParams['offset'] = offset.toString();
+
+      final uri = Uri.parse('$baseUrl${AppConfig.apiCpscEndpoint}')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+      final response = await _httpClient.get(uri);
+      ApiUtils.checkResponse(response, context: 'Fetch CPSC recalls');
+
+      final results = ApiUtils.parseJsonList(response.body);
+      return results
+          .map((json) => _convertFromApi(json as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to fetch CPSC recalls',
+        originalException: e,
+        stackTrace: stack,
+      );
+    }
+  }
+
   /// Fetch recalls with active resolution status (not 'Not Started')
   Future<List<RecallData>> fetchActiveRecalls() async {
     try {
@@ -391,7 +424,44 @@ class ApiService {
 
       // Recall resolution status
       recallResolutionStatus: json['recall_resolution_status']?.toString() ?? 'Not Started',
+
+      // CPSC-specific fields
+      cpscRemedyRecallProof: _parseBoolToYN(json['remedy_recall_proof']),
+      cpscModel: json['model']?.toString() ?? '',
+      cpscSerialNumber: json['sn']?.toString() ?? json['serial_number']?.toString() ?? '',
+      cpscSoldByDateStart: json['sold_by_date_start'] != null
+          ? DateTime.tryParse(json['sold_by_date_start'].toString())
+          : null,
+      cpscSoldByDateEnd: json['sold_by_date_end'] != null
+          ? DateTime.tryParse(json['sold_by_date_end'].toString())
+          : null,
+      cpscSoldByWalmart: _parseBoolToYN(json['sold_by_walmart']),
+      cpscSoldByAmazon: _parseBoolToYN(json['sold_by_amazon']),
+      cpscSoldByEbay: _parseBoolToYN(json['sold_by_ebay']),
+      cpscSoldByAliExpress: _parseBoolToYN(json['sold_by_aliexpress']),
+      cpscSoldByBestBuy: _parseBoolToYN(json['sold_by_bestbuy']),
+      cpscSoldByTarget: _parseBoolToYN(json['sold_by_target']),
+      cpscSoldByTikTok: _parseBoolToYN(json['sold_by_tiktok']),
+      cpscSoldByFacebook: _parseBoolToYN(json['sold_by_facebook']),
+      cpscSoldByEtsy: _parseBoolToYN(json['sold_by_etsy']),
+      cpscSoldByCostco: _parseBoolToYN(json['sold_by_costco']),
+      cpscSoldBySamsClub: _parseBoolToYN(json['sold_by_samsclub']),
+      cpscSoldByDicksSportingGoods: _parseBoolToYN(json['sold_by_dickssportinggoods']),
+      cpscSoldByOfficeDepot: _parseBoolToYN(json['sold_by_officedepot']),
+      cpscSoldByKroger: _parseBoolToYN(json['sold_by_kroger']),
+      cpscSoldByPublix: _parseBoolToYN(json['sold_by_publix']),
     );
+  }
+
+  /// Helper to convert bool/string values to 'Y' or ''
+  static String _parseBoolToYN(dynamic value) {
+    if (value == null) return '';
+    if (value is bool) return value ? 'Y' : '';
+    if (value is String) {
+      final lower = value.toLowerCase().trim();
+      return (lower == 'y' || lower == 'yes' || lower == 'true' || lower == '1') ? 'Y' : '';
+    }
+    return '';
   }
 
   /// Update recall resolution status

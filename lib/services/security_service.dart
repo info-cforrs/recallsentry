@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:http/io_client.dart';
 import 'package:crypto/crypto.dart';
@@ -30,9 +31,19 @@ class SecurityService {
   ];
 
   // Enable/disable certificate pinning
-  // WARNING: Set to false during development if testing with self-signed certificates
-  // PRODUCTION: Must be true for app store submission
-  static const bool _enableCertificatePinning = true;
+  // Automatically disabled on desktop (Windows/macOS/Linux) due to platform limitations
+  // Enabled on iOS/Android for production security
+  static bool get _enableCertificatePinning {
+    if (kIsWeb) return false; // Web doesn't support certificate pinning
+
+    // Disable on desktop platforms (Windows, macOS, Linux) - known SSL issues
+    if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+      return false;
+    }
+
+    // Enable on mobile platforms (iOS, Android) for production security
+    return true;
+  }
 
   /// Create HTTP client with certificate pinning
   http.Client createSecureHttpClient() {
