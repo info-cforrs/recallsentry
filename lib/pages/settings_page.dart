@@ -13,6 +13,7 @@ import 'push_notifications_page.dart';
 import 'email_notifications_page.dart';
 import '../services/auth_service.dart';
 import '../services/subscription_service.dart';
+import '../services/data_saver_service.dart';
 import '../providers/data_providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -471,6 +472,35 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         MaterialPageRoute(
                           builder: (context) => const EmailNotificationsPage(),
                         ),
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, color: Colors.white24),
+                  // Low Data Mode toggle for users on limited data plans
+                  FutureBuilder<bool>(
+                    future: DataSaverService().isLowDataModeEnabled(),
+                    builder: (context, snapshot) {
+                      final isEnabled = snapshot.data ?? false;
+                      return SwitchListTile(
+                        secondary: const Icon(
+                          Icons.data_saver_on,
+                          color: Colors.white70,
+                        ),
+                        title: const Text(
+                          'Low Data Mode',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                        subtitle: const Text(
+                          'Reduce data usage on cellular',
+                          style: TextStyle(color: Colors.white54, fontSize: 12),
+                        ),
+                        value: isEnabled,
+                        activeTrackColor: const Color(0xFF64B5F6).withValues(alpha: 0.5),
+                        activeThumbColor: const Color(0xFF64B5F6),
+                        onChanged: (value) async {
+                          await DataSaverService().setLowDataMode(value);
+                          setState(() {}); // Rebuild to reflect change
+                        },
                       );
                     },
                   ),

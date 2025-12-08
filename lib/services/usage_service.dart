@@ -80,6 +80,8 @@ class UsageData {
 class UsageService {
   final String _baseUrl = AppConfig.apiBaseUrl;
   late final http.Client _httpClient;
+  // OPTIMIZATION: Store AuthService reference instead of creating new instances
+  final AuthService _authService = AuthService();
 
   UsageService() {
     _httpClient = SecurityService().createSecureHttpClient();
@@ -102,7 +104,7 @@ class UsageService {
     }
 
     try {
-      final token = await AuthService().getAccessToken();
+      final token = await _authService.getAccessToken();
       if (token == null) {
         return null;
       }
@@ -133,7 +135,7 @@ class UsageService {
   /// SECURITY: Uses certificate pinning
   Future<bool> trackUsage(String actionType) async {
     try {
-      final token = await AuthService().getAccessToken();
+      final token = await _authService.getAccessToken();
       if (token == null) {
         return false;
       }

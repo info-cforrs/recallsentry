@@ -15,9 +15,10 @@ class ArticleService {
   }
 
   // Cache for articles
+  // OPTIMIZATION: Extended from 1 to 12 hours since article content changes infrequently
   final Map<String, List<Article>> _cachedArticles = {};
   final Map<String, DateTime> _cacheTimestamps = {};
-  static const Duration _cacheDuration = Duration(hours: 1);
+  static const Duration _cacheDuration = Duration(hours: 12);
 
   /// Fetch articles filtered by tag (FDA, USDA, CPSC, NHTSA)
   /// Only returns articles from last 3 months

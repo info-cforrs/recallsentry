@@ -230,9 +230,10 @@ class SubscriptionService {
   }
 
   // Cache subscription info to avoid repeated API calls
+  // OPTIMIZATION: Extended from 5 to 15 minutes since subscription status changes infrequently
   SubscriptionInfo? _cachedSubscription;
   DateTime? _cacheTime;
-  static const Duration _cacheDuration = Duration(minutes: 5);
+  static const Duration _cacheDuration = Duration(minutes: 15);
 
   /// Get current user's subscription info
   /// SECURITY: Uses certificate pinning

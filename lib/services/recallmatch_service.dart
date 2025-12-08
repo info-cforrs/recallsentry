@@ -1029,11 +1029,10 @@ class RecallMatchService {
           try {
             if (json['user_item'] != null && json['recall'] != null) {
               validMatches.add(RecallMatchSummary.fromJson(json));
-            } else {
-              print('⚠️ Skipping match ${json['id']}: Missing user_item or recall');
             }
+            // Silently skip invalid matches
           } catch (e) {
-            print('❌ Error parsing match ${json['id']}: $e');
+            // Silently skip matches that fail to parse
           }
         }
         return validMatches;
@@ -1114,7 +1113,6 @@ class RecallMatchService {
       }
       return roomCounts;
     } catch (e) {
-      print('❌ Error getting RMC enrolled counts: $e');
       return {};
     }
   }
@@ -1172,7 +1170,6 @@ class RecallMatchService {
 
       return null; // No recall status
     } catch (e) {
-      print('❌ Error getting item recall status: $e');
       return null;
     }
   }
@@ -1231,7 +1228,6 @@ class RecallMatchService {
 
       return statuses;
     } catch (e) {
-      print('❌ Error getting item recall statuses: $e');
       return {};
     }
   }
@@ -1264,7 +1260,6 @@ class RecallMatchService {
 
       return null;
     } catch (e) {
-      print('❌ Error getting match for item: $e');
       return null;
     }
   }

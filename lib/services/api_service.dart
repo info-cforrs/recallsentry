@@ -16,12 +16,40 @@ class ApiService {
   final String baseUrl = AppConfig.apiBaseUrl;
   late final http.Client _httpClient;
 
+  // REQUEST DEDUPLICATION: Track pending requests to prevent duplicate API calls
+  // When a request is in-flight, subsequent identical requests will await the same future
+  static final Map<String, Future<dynamic>> _pendingRequests = {};
+
   ApiService() {
     _httpClient = SecurityService().createSecureHttpClient();
   }
 
   // Default timeout for API requests
   static const Duration _defaultTimeout = Duration(seconds: 30);
+
+  /// Deduplicates concurrent identical requests
+  /// If a request with the same key is already in progress, returns that pending future
+  /// Otherwise, starts a new request and tracks it
+  Future<T> _deduplicatedRequest<T>(
+    String cacheKey,
+    Future<T> Function() operation,
+  ) async {
+    // Check if there's already a pending request with this key
+    if (_pendingRequests.containsKey(cacheKey)) {
+      return await _pendingRequests[cacheKey] as T;
+    }
+
+    // Create and track the new request
+    final future = operation();
+    _pendingRequests[cacheKey] = future;
+
+    try {
+      return await future;
+    } finally {
+      // Remove from pending requests when complete
+      _pendingRequests.remove(cacheKey);
+    }
+  }
 
   /// Wraps HTTP requests with timeout and error logging
   Future<T> _withTimeout<T>(
@@ -113,200 +141,230 @@ class ApiService {
 
   /// Fetch FDA recalls only
   /// PAGINATION: Supports limit and offset for infinite scroll
+  /// OPTIMIZATION: Uses request deduplication to prevent duplicate API calls
   Future<List<RecallData>> fetchFdaRecalls({
     int? limit,
     int? offset,
   }) async {
-    try {
-      // Build query parameters
-      final queryParams = <String, String>{};
-      if (limit != null) queryParams['limit'] = limit.toString();
-      if (offset != null) queryParams['offset'] = offset.toString();
+    final cacheKey = 'fda_${limit}_$offset';
 
-      final uri = Uri.parse('$baseUrl${AppConfig.apiFdaEndpoint}')
-          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    return _deduplicatedRequest<List<RecallData>>(cacheKey, () async {
+      try {
+        // Build query parameters
+        final queryParams = <String, String>{};
+        if (limit != null) queryParams['limit'] = limit.toString();
+        if (offset != null) queryParams['offset'] = offset.toString();
 
-      final response = await _httpClient.get(uri);
-      ApiUtils.checkResponse(response, context: 'Fetch FDA recalls');
+        final uri = Uri.parse('$baseUrl${AppConfig.apiFdaEndpoint}')
+            .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
-      final results = ApiUtils.parseJsonList(response.body);
-      return results
-          .map((json) => _convertFromApi(json as Map<String, dynamic>))
-          .toList();
-    } on ApiException {
-      rethrow;
-    } catch (e, stack) {
-      throw ApiException(
-        'Failed to fetch FDA recalls',
-        originalException: e,
-        stackTrace: stack,
-      );
-    }
+        final response = await _httpClient.get(uri);
+        ApiUtils.checkResponse(response, context: 'Fetch FDA recalls');
+
+        final results = ApiUtils.parseJsonList(response.body);
+        return results
+            .map((json) => _convertFromApi(json as Map<String, dynamic>))
+            .toList();
+      } on ApiException {
+        rethrow;
+      } catch (e, stack) {
+        throw ApiException(
+          'Failed to fetch FDA recalls',
+          originalException: e,
+          stackTrace: stack,
+        );
+      }
+    });
   }
 
   /// Fetch USDA recalls only
   /// PAGINATION: Supports limit and offset for infinite scroll
+  /// OPTIMIZATION: Uses request deduplication to prevent duplicate API calls
   Future<List<RecallData>> fetchUsdaRecalls({
     int? limit,
     int? offset,
   }) async {
-    try {
-      // Build query parameters
-      final queryParams = <String, String>{};
-      if (limit != null) queryParams['limit'] = limit.toString();
-      if (offset != null) queryParams['offset'] = offset.toString();
+    final cacheKey = 'usda_${limit}_$offset';
 
-      final uri = Uri.parse('$baseUrl${AppConfig.apiUsdaEndpoint}')
-          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    return _deduplicatedRequest<List<RecallData>>(cacheKey, () async {
+      try {
+        // Build query parameters
+        final queryParams = <String, String>{};
+        if (limit != null) queryParams['limit'] = limit.toString();
+        if (offset != null) queryParams['offset'] = offset.toString();
 
-      final response = await _httpClient.get(uri);
-      ApiUtils.checkResponse(response, context: 'Fetch USDA recalls');
+        final uri = Uri.parse('$baseUrl${AppConfig.apiUsdaEndpoint}')
+            .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
-      final results = ApiUtils.parseJsonList(response.body);
-      return results
-          .map((json) => _convertFromApi(json as Map<String, dynamic>))
-          .toList();
-    } on ApiException {
-      rethrow;
-    } catch (e, stack) {
-      throw ApiException(
-        'Failed to fetch USDA recalls',
-        originalException: e,
-        stackTrace: stack,
-      );
-    }
+        final response = await _httpClient.get(uri);
+        ApiUtils.checkResponse(response, context: 'Fetch USDA recalls');
+
+        final results = ApiUtils.parseJsonList(response.body);
+        return results
+            .map((json) => _convertFromApi(json as Map<String, dynamic>))
+            .toList();
+      } on ApiException {
+        rethrow;
+      } catch (e, stack) {
+        throw ApiException(
+          'Failed to fetch USDA recalls',
+          originalException: e,
+          stackTrace: stack,
+        );
+      }
+    });
   }
 
   /// Fetch CPSC recalls only
   /// PAGINATION: Supports limit and offset for infinite scroll
+  /// OPTIMIZATION: Uses request deduplication to prevent duplicate API calls
   Future<List<RecallData>> fetchCpscRecalls({
     int? limit,
     int? offset,
   }) async {
-    try {
-      // Build query parameters
-      final queryParams = <String, String>{};
-      if (limit != null) queryParams['limit'] = limit.toString();
-      if (offset != null) queryParams['offset'] = offset.toString();
+    final cacheKey = 'cpsc_${limit}_$offset';
 
-      final uri = Uri.parse('$baseUrl${AppConfig.apiCpscEndpoint}')
-          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    return _deduplicatedRequest<List<RecallData>>(cacheKey, () async {
+      try {
+        // Build query parameters
+        final queryParams = <String, String>{};
+        if (limit != null) queryParams['limit'] = limit.toString();
+        if (offset != null) queryParams['offset'] = offset.toString();
 
-      final response = await _httpClient.get(uri);
-      ApiUtils.checkResponse(response, context: 'Fetch CPSC recalls');
+        final uri = Uri.parse('$baseUrl${AppConfig.apiCpscEndpoint}')
+            .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
-      final results = ApiUtils.parseJsonList(response.body);
-      return results
-          .map((json) => _convertFromApi(json as Map<String, dynamic>))
-          .toList();
-    } on ApiException {
-      rethrow;
-    } catch (e, stack) {
-      throw ApiException(
-        'Failed to fetch CPSC recalls',
-        originalException: e,
-        stackTrace: stack,
-      );
-    }
+        final response = await _httpClient.get(uri);
+        ApiUtils.checkResponse(response, context: 'Fetch CPSC recalls');
+
+        final results = ApiUtils.parseJsonList(response.body);
+        return results
+            .map((json) => _convertFromApi(json as Map<String, dynamic>))
+            .toList();
+      } on ApiException {
+        rethrow;
+      } catch (e, stack) {
+        throw ApiException(
+          'Failed to fetch CPSC recalls',
+          originalException: e,
+          stackTrace: stack,
+        );
+      }
+    });
   }
 
   /// Fetch NHTSA vehicle recalls only
   /// PAGINATION: Supports limit and offset for infinite scroll
+  /// OPTIMIZATION: Uses request deduplication to prevent duplicate API calls
   Future<List<RecallData>> fetchNhtsaVehicleRecalls({
     int? limit,
     int? offset,
   }) async {
-    try {
-      // Build query parameters
-      final queryParams = <String, String>{};
-      if (limit != null) queryParams['limit'] = limit.toString();
-      if (offset != null) queryParams['offset'] = offset.toString();
+    final cacheKey = 'nhtsa_vehicle_${limit}_$offset';
 
-      final uri = Uri.parse('$baseUrl${AppConfig.apiNhtsaVehiclesEndpoint}')
-          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    return _deduplicatedRequest<List<RecallData>>(cacheKey, () async {
+      try {
+        // Build query parameters
+        final queryParams = <String, String>{};
+        if (limit != null) queryParams['limit'] = limit.toString();
+        if (offset != null) queryParams['offset'] = offset.toString();
 
-      final response = await _httpClient.get(uri);
-      ApiUtils.checkResponse(response, context: 'Fetch NHTSA vehicle recalls');
+        final uri = Uri.parse('$baseUrl${AppConfig.apiNhtsaVehiclesEndpoint}')
+            .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
-      final results = ApiUtils.parseJsonList(response.body);
-      return results
-          .map((json) => _convertFromApi(json as Map<String, dynamic>))
-          .toList();
-    } on ApiException {
-      rethrow;
-    } catch (e, stack) {
-      throw ApiException(
-        'Failed to fetch NHTSA vehicle recalls',
-        originalException: e,
-        stackTrace: stack,
-      );
-    }
+        final response = await _httpClient.get(uri);
+        ApiUtils.checkResponse(response, context: 'Fetch NHTSA vehicle recalls');
+
+        final results = ApiUtils.parseJsonList(response.body);
+        return results
+            .map((json) => _convertFromApi(json as Map<String, dynamic>))
+            .toList();
+      } on ApiException {
+        rethrow;
+      } catch (e, stack) {
+        throw ApiException(
+          'Failed to fetch NHTSA vehicle recalls',
+          originalException: e,
+          stackTrace: stack,
+        );
+      }
+    });
   }
 
   /// Fetch NHTSA tire recalls only
   /// PAGINATION: Supports limit and offset for infinite scroll
+  /// OPTIMIZATION: Uses request deduplication to prevent duplicate API calls
   Future<List<RecallData>> fetchNhtsaTireRecalls({
     int? limit,
     int? offset,
   }) async {
-    try {
-      // Build query parameters
-      final queryParams = <String, String>{};
-      if (limit != null) queryParams['limit'] = limit.toString();
-      if (offset != null) queryParams['offset'] = offset.toString();
+    final cacheKey = 'nhtsa_tire_${limit}_$offset';
 
-      final uri = Uri.parse('$baseUrl${AppConfig.apiNhtsaTiresEndpoint}')
-          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    return _deduplicatedRequest<List<RecallData>>(cacheKey, () async {
+      try {
+        // Build query parameters
+        final queryParams = <String, String>{};
+        if (limit != null) queryParams['limit'] = limit.toString();
+        if (offset != null) queryParams['offset'] = offset.toString();
 
-      final response = await _httpClient.get(uri);
-      ApiUtils.checkResponse(response, context: 'Fetch NHTSA tire recalls');
+        final uri = Uri.parse('$baseUrl${AppConfig.apiNhtsaTiresEndpoint}')
+            .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
-      final results = ApiUtils.parseJsonList(response.body);
-      return results
-          .map((json) => _convertFromApi(json as Map<String, dynamic>))
-          .toList();
-    } on ApiException {
-      rethrow;
-    } catch (e, stack) {
-      throw ApiException(
-        'Failed to fetch NHTSA tire recalls',
-        originalException: e,
-        stackTrace: stack,
-      );
-    }
+        final response = await _httpClient.get(uri);
+        ApiUtils.checkResponse(response, context: 'Fetch NHTSA tire recalls');
+
+        final results = ApiUtils.parseJsonList(response.body);
+        return results
+            .map((json) => _convertFromApi(json as Map<String, dynamic>))
+            .toList();
+      } on ApiException {
+        rethrow;
+      } catch (e, stack) {
+        throw ApiException(
+          'Failed to fetch NHTSA tire recalls',
+          originalException: e,
+          stackTrace: stack,
+        );
+      }
+    });
   }
 
   /// Fetch NHTSA child seat recalls only
   /// PAGINATION: Supports limit and offset for infinite scroll
+  /// OPTIMIZATION: Uses request deduplication to prevent duplicate API calls
   Future<List<RecallData>> fetchNhtsaChildSeatRecalls({
     int? limit,
     int? offset,
   }) async {
-    try {
-      // Build query parameters
-      final queryParams = <String, String>{};
-      if (limit != null) queryParams['limit'] = limit.toString();
-      if (offset != null) queryParams['offset'] = offset.toString();
+    final cacheKey = 'nhtsa_child_seat_${limit}_$offset';
 
-      final uri = Uri.parse('$baseUrl${AppConfig.apiNhtsaChildSeatsEndpoint}')
-          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+    return _deduplicatedRequest<List<RecallData>>(cacheKey, () async {
+      try {
+        // Build query parameters
+        final queryParams = <String, String>{};
+        if (limit != null) queryParams['limit'] = limit.toString();
+        if (offset != null) queryParams['offset'] = offset.toString();
 
-      final response = await _httpClient.get(uri);
-      ApiUtils.checkResponse(response, context: 'Fetch NHTSA child seat recalls');
+        final uri = Uri.parse('$baseUrl${AppConfig.apiNhtsaChildSeatsEndpoint}')
+            .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
-      final results = ApiUtils.parseJsonList(response.body);
-      return results
-          .map((json) => _convertFromApi(json as Map<String, dynamic>))
-          .toList();
-    } on ApiException {
-      rethrow;
-    } catch (e, stack) {
-      throw ApiException(
-        'Failed to fetch NHTSA child seat recalls',
-        originalException: e,
-        stackTrace: stack,
-      );
-    }
+        final response = await _httpClient.get(uri);
+        ApiUtils.checkResponse(response, context: 'Fetch NHTSA child seat recalls');
+
+        final results = ApiUtils.parseJsonList(response.body);
+        return results
+            .map((json) => _convertFromApi(json as Map<String, dynamic>))
+            .toList();
+      } on ApiException {
+        rethrow;
+      } catch (e, stack) {
+        throw ApiException(
+          'Failed to fetch NHTSA child seat recalls',
+          originalException: e,
+          stackTrace: stack,
+        );
+      }
+    });
   }
 
   /// Fetch recalls with active resolution status (not 'Not Started')

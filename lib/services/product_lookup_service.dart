@@ -88,7 +88,6 @@ class ProductLookupService {
       }
     } catch (e) {
       // Fall back to direct API calls if backend is unavailable
-      print('Backend lookup failed, falling back to direct API: $e');
       return lookupByUpc(upc, isFood: isFood);
     }
   }
@@ -121,7 +120,6 @@ class ProductLookupService {
         );
       }
     } catch (e) {
-      print('Open Food Facts lookup error: $e');
       return ProductLookupResult.error('Network error: $e');
     }
   }
@@ -160,7 +158,6 @@ class ProductLookupService {
         );
       }
     } catch (e) {
-      print('UPCitemdb lookup error: $e');
       return ProductLookupResult.error('Network error: $e');
     }
   }

@@ -25,7 +25,6 @@ class AllergyPreferencesService {
       }
       return null;
     } catch (e) {
-      print('Error getting allergy preferences: $e');
       return null;
     }
   }
@@ -45,7 +44,6 @@ class AllergyPreferencesService {
       }
       return null;
     } catch (e) {
-      print('Error updating allergy preferences: $e');
       return null;
     }
   }

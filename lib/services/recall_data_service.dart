@@ -159,16 +159,12 @@ class RecallDataService {
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
 
       try {
-        print('🔵 Starting FDA recalls fetch from REST API...');
-
         // If pagination is requested, skip cache and fetch from API
         if (limit != null || offset != null) {
-          print('📄 Pagination requested: limit=$limit, offset=$offset');
           final fdaRecalls = await _apiService.fetchFdaRecalls(
             limit: limit,
             offset: offset,
           );
-          print('✅ FDA recalls fetched successfully (paginated): ${fdaRecalls.length} items');
           return fdaRecalls;
         }
 
@@ -176,33 +172,25 @@ class RecallDataService {
         if (!forceRefresh &&
             _lastFdaFetch != null &&
             DateTime.now().difference(_lastFdaFetch!).inMinutes < 30) {
-          print('📦 Returning cached FDA recalls: ${_cachedFdaRecalls.length} items');
           return _cachedFdaRecalls;
         }
 
-        print('🌐 Fetching FDA recalls from API...');
         final fdaRecalls = await _apiService.fetchFdaRecalls();
-        print('✅ FDA recalls fetched successfully: ${fdaRecalls.length} items');
 
         _cachedFdaRecalls = fdaRecalls;
         _lastFdaFetch = DateTime.now();
         // Save to persistent cache
         await _saveToPersistentCache('fda_recalls', fdaRecalls);
         return _cachedFdaRecalls;
-      } catch (e, stackTrace) {
-        print('❌ ERROR fetching FDA recalls from API: $e');
-        print('Stack trace: $stackTrace');
-
+      } catch (e) {
         // Try persistent cache as fallback
         final cachedData = await _loadFromPersistentCache('fda_recalls');
         if (cachedData != null && cachedData.isNotEmpty) {
-          print('✅ Returning ${cachedData.length} cached FDA recalls');
           _cachedFdaRecalls = cachedData;
           _lastFdaFetch = DateTime.now();
           return cachedData;
         }
 
-        print('⚠️ No cached FDA data available, returning empty list');
         return [];
       }
     }
@@ -247,16 +235,12 @@ class RecallDataService {
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
 
       try {
-        print('🔵 Starting USDA recalls fetch from REST API...');
-
         // If pagination is requested, skip cache and fetch from API
         if (limit != null || offset != null) {
-          print('📄 Pagination requested: limit=$limit, offset=$offset');
           final usdaRecalls = await _apiService.fetchUsdaRecalls(
             limit: limit,
             offset: offset,
           );
-          print('✅ USDA recalls fetched successfully (paginated): ${usdaRecalls.length} items');
           return usdaRecalls;
         }
 
@@ -264,33 +248,25 @@ class RecallDataService {
         if (!forceRefresh &&
             _lastUsdaFetch != null &&
             DateTime.now().difference(_lastUsdaFetch!).inMinutes < 30) {
-          print('📦 Returning cached USDA recalls: ${_cachedUsdaRecalls.length} items');
           return _cachedUsdaRecalls;
         }
 
-        print('🌐 Fetching USDA recalls from API...');
         final usdaRecalls = await _apiService.fetchUsdaRecalls();
-        print('✅ USDA recalls fetched successfully: ${usdaRecalls.length} items');
 
         _cachedUsdaRecalls = usdaRecalls;
         _lastUsdaFetch = DateTime.now();
         // Save to persistent cache
         await _saveToPersistentCache('usda_recalls', usdaRecalls);
         return _cachedUsdaRecalls;
-      } catch (e, stackTrace) {
-        print('❌ ERROR fetching USDA recalls from API: $e');
-        print('Stack trace: $stackTrace');
-
+      } catch (e) {
         // Try persistent cache as fallback
         final cachedData = await _loadFromPersistentCache('usda_recalls');
         if (cachedData != null && cachedData.isNotEmpty) {
-          print('✅ Returning ${cachedData.length} cached USDA recalls');
           _cachedUsdaRecalls = cachedData;
           _lastUsdaFetch = DateTime.now();
           return cachedData;
         }
 
-        print('⚠️ No cached USDA data available, returning empty list');
         return [];
       }
     }
@@ -335,16 +311,12 @@ class RecallDataService {
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
 
       try {
-        print('🔵 Starting CPSC recalls fetch from REST API...');
-
         // If pagination is requested, skip cache and fetch from API
         if (limit != null || offset != null) {
-          print('📄 Pagination requested: limit=$limit, offset=$offset');
           final cpscRecalls = await _apiService.fetchCpscRecalls(
             limit: limit,
             offset: offset,
           );
-          print('✅ CPSC recalls fetched successfully (paginated): ${cpscRecalls.length} items');
           return cpscRecalls;
         }
 
@@ -352,33 +324,25 @@ class RecallDataService {
         if (!forceRefresh &&
             _lastCpscFetch != null &&
             DateTime.now().difference(_lastCpscFetch!).inMinutes < 30) {
-          print('📦 Returning cached CPSC recalls: ${_cachedCpscRecalls.length} items');
           return _cachedCpscRecalls;
         }
 
-        print('🌐 Fetching CPSC recalls from API...');
         final cpscRecalls = await _apiService.fetchCpscRecalls();
-        print('✅ CPSC recalls fetched successfully: ${cpscRecalls.length} items');
 
         _cachedCpscRecalls = cpscRecalls;
         _lastCpscFetch = DateTime.now();
         // Save to persistent cache
         await _saveToPersistentCache('cpsc_recalls', cpscRecalls);
         return _cachedCpscRecalls;
-      } catch (e, stackTrace) {
-        print('❌ ERROR fetching CPSC recalls from API: $e');
-        print('Stack trace: $stackTrace');
-
+      } catch (e) {
         // Try persistent cache as fallback
         final cachedData = await _loadFromPersistentCache('cpsc_recalls');
         if (cachedData != null && cachedData.isNotEmpty) {
-          print('✅ Returning ${cachedData.length} cached CPSC recalls');
           _cachedCpscRecalls = cachedData;
           _lastCpscFetch = DateTime.now();
           return cachedData;
         }
 
-        print('⚠️ No cached CPSC data available, returning empty list');
         return [];
       }
     }
@@ -399,16 +363,12 @@ class RecallDataService {
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
 
       try {
-        print('🔵 Starting NHTSA Vehicle recalls fetch from REST API...');
-
         // If pagination is requested, skip cache and fetch from API
         if (limit != null || offset != null) {
-          print('📄 Pagination requested: limit=$limit, offset=$offset');
           final recalls = await _apiService.fetchNhtsaVehicleRecalls(
             limit: limit,
             offset: offset,
           );
-          print('✅ NHTSA Vehicle recalls fetched successfully (paginated): ${recalls.length} items');
           return recalls;
         }
 
@@ -416,33 +376,25 @@ class RecallDataService {
         if (!forceRefresh &&
             _lastNhtsaVehicleFetch != null &&
             DateTime.now().difference(_lastNhtsaVehicleFetch!).inMinutes < 30) {
-          print('📦 Returning cached NHTSA Vehicle recalls: ${_cachedNhtsaVehicleRecalls.length} items');
           return _cachedNhtsaVehicleRecalls;
         }
 
-        print('🌐 Fetching NHTSA Vehicle recalls from API...');
         final recalls = await _apiService.fetchNhtsaVehicleRecalls();
-        print('✅ NHTSA Vehicle recalls fetched successfully: ${recalls.length} items');
 
         _cachedNhtsaVehicleRecalls = recalls;
         _lastNhtsaVehicleFetch = DateTime.now();
         // Save to persistent cache
         await _saveToPersistentCache('nhtsa_vehicle_recalls', recalls);
         return _cachedNhtsaVehicleRecalls;
-      } catch (e, stackTrace) {
-        print('❌ ERROR fetching NHTSA Vehicle recalls from API: $e');
-        print('Stack trace: $stackTrace');
-
+      } catch (e) {
         // Try persistent cache as fallback
         final cachedData = await _loadFromPersistentCache('nhtsa_vehicle_recalls');
         if (cachedData != null && cachedData.isNotEmpty) {
-          print('✅ Returning ${cachedData.length} cached NHTSA Vehicle recalls');
           _cachedNhtsaVehicleRecalls = cachedData;
           _lastNhtsaVehicleFetch = DateTime.now();
           return cachedData;
         }
 
-        print('⚠️ No cached NHTSA Vehicle data available, returning empty list');
         return [];
       }
     }
@@ -463,16 +415,12 @@ class RecallDataService {
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
 
       try {
-        print('🔵 Starting NHTSA Tire recalls fetch from REST API...');
-
         // If pagination is requested, skip cache and fetch from API
         if (limit != null || offset != null) {
-          print('📄 Pagination requested: limit=$limit, offset=$offset');
           final recalls = await _apiService.fetchNhtsaTireRecalls(
             limit: limit,
             offset: offset,
           );
-          print('✅ NHTSA Tire recalls fetched successfully (paginated): ${recalls.length} items');
           return recalls;
         }
 
@@ -480,33 +428,25 @@ class RecallDataService {
         if (!forceRefresh &&
             _lastNhtsaTireFetch != null &&
             DateTime.now().difference(_lastNhtsaTireFetch!).inMinutes < 30) {
-          print('📦 Returning cached NHTSA Tire recalls: ${_cachedNhtsaTireRecalls.length} items');
           return _cachedNhtsaTireRecalls;
         }
 
-        print('🌐 Fetching NHTSA Tire recalls from API...');
         final recalls = await _apiService.fetchNhtsaTireRecalls();
-        print('✅ NHTSA Tire recalls fetched successfully: ${recalls.length} items');
 
         _cachedNhtsaTireRecalls = recalls;
         _lastNhtsaTireFetch = DateTime.now();
         // Save to persistent cache
         await _saveToPersistentCache('nhtsa_tire_recalls', recalls);
         return _cachedNhtsaTireRecalls;
-      } catch (e, stackTrace) {
-        print('❌ ERROR fetching NHTSA Tire recalls from API: $e');
-        print('Stack trace: $stackTrace');
-
+      } catch (e) {
         // Try persistent cache as fallback
         final cachedData = await _loadFromPersistentCache('nhtsa_tire_recalls');
         if (cachedData != null && cachedData.isNotEmpty) {
-          print('✅ Returning ${cachedData.length} cached NHTSA Tire recalls');
           _cachedNhtsaTireRecalls = cachedData;
           _lastNhtsaTireFetch = DateTime.now();
           return cachedData;
         }
 
-        print('⚠️ No cached NHTSA Tire data available, returning empty list');
         return [];
       }
     }
@@ -527,16 +467,12 @@ class RecallDataService {
     if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
 
       try {
-        print('🔵 Starting NHTSA Child Seat recalls fetch from REST API...');
-
         // If pagination is requested, skip cache and fetch from API
         if (limit != null || offset != null) {
-          print('📄 Pagination requested: limit=$limit, offset=$offset');
           final recalls = await _apiService.fetchNhtsaChildSeatRecalls(
             limit: limit,
             offset: offset,
           );
-          print('✅ NHTSA Child Seat recalls fetched successfully (paginated): ${recalls.length} items');
           return recalls;
         }
 
@@ -544,33 +480,25 @@ class RecallDataService {
         if (!forceRefresh &&
             _lastNhtsaChildSeatFetch != null &&
             DateTime.now().difference(_lastNhtsaChildSeatFetch!).inMinutes < 30) {
-          print('📦 Returning cached NHTSA Child Seat recalls: ${_cachedNhtsaChildSeatRecalls.length} items');
           return _cachedNhtsaChildSeatRecalls;
         }
 
-        print('🌐 Fetching NHTSA Child Seat recalls from API...');
         final recalls = await _apiService.fetchNhtsaChildSeatRecalls();
-        print('✅ NHTSA Child Seat recalls fetched successfully: ${recalls.length} items');
 
         _cachedNhtsaChildSeatRecalls = recalls;
         _lastNhtsaChildSeatFetch = DateTime.now();
         // Save to persistent cache
         await _saveToPersistentCache('nhtsa_child_seat_recalls', recalls);
         return _cachedNhtsaChildSeatRecalls;
-      } catch (e, stackTrace) {
-        print('❌ ERROR fetching NHTSA Child Seat recalls from API: $e');
-        print('Stack trace: $stackTrace');
-
+      } catch (e) {
         // Try persistent cache as fallback
         final cachedData = await _loadFromPersistentCache('nhtsa_child_seat_recalls');
         if (cachedData != null && cachedData.isNotEmpty) {
-          print('✅ Returning ${cachedData.length} cached NHTSA Child Seat recalls');
           _cachedNhtsaChildSeatRecalls = cachedData;
           _lastNhtsaChildSeatFetch = DateTime.now();
           return cachedData;
         }
 
-        print('⚠️ No cached NHTSA Child Seat data available, returning empty list');
         return [];
       }
     }
