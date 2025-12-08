@@ -14,16 +14,16 @@ class IntroPage3 extends StatelessWidget {
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              const SizedBox(height: 60),
+              const SizedBox(height: 40),
 
               // Exclamation Triangle Image
               SizedBox(
-                width: 240,
-                height: 240,
+                width: 200,
+                height: 200,
                 child: Image.asset(
                   'assets/images/exclamation-triangle-blue-large.png',
-                  width: 240,
-                  height: 240,
+                  width: 200,
+                  height: 200,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
@@ -50,7 +50,7 @@ class IntroPage3 extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 50),
+              const SizedBox(height: 40),
 
               // Title
               const Text(
@@ -64,7 +64,7 @@ class IntroPage3 extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
 
-              const SizedBox(height: 40),
+              const SizedBox(height: 24),
 
               // Description
               const Padding(
@@ -79,6 +79,8 @@ class IntroPage3 extends StatelessWidget {
                   textAlign: TextAlign.center,
                 ),
               ),
+
+              const SizedBox(height: 24),
 
               const Spacer(),
 
@@ -133,7 +135,7 @@ class IntroPage3 extends StatelessWidget {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
 
               // Page Indicator Dots
               Row(
