@@ -2,12 +2,13 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/app_config.dart';
 import 'subscription_service.dart';
 import 'fcm_service.dart';
 import 'security_service.dart';
 import 'gamification_service.dart';
+import 'saved_recalls_service.dart';
+import 'filter_state_service.dart';
 
 class AuthService {
   final _storage = const FlutterSecureStorage();
@@ -150,24 +151,12 @@ class AuthService {
     // 4. Clear subscription cache
     SubscriptionService().clearCache();
 
-    // Clear saved recalls from local storage
+    // Clear saved recalls from secure storage
     // (We can't clear backend saved recalls since we just logged out)
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('saved_recalls');
-    } catch (e) {
-      // Silently fail - not critical
-    }
+    await SavedRecallsService().clearAllSavedRecalls();
 
-    // Clear filter preferences from local storage
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove('advanced_brand_filters');
-      await prefs.remove('advanced_product_filters');
-      await prefs.remove('has_active_filters');
-    } catch (e) {
-      // Silently fail - not critical
-    }
+    // Clear filter preferences from secure storage
+    await FilterStateService().clearAllFilters();
   }
 
   /// Delete user account permanently
@@ -201,23 +190,11 @@ class AuthService {
         // Clear subscription cache
         SubscriptionService().clearCache();
 
-        // Clear saved recalls from local storage
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove('saved_recalls');
-        } catch (e) {
-          // Silently fail - not critical
-        }
+        // Clear saved recalls from secure storage
+        await SavedRecallsService().clearAllSavedRecalls();
 
-        // Clear filter preferences from local storage
-        try {
-          final prefs = await SharedPreferences.getInstance();
-          await prefs.remove('advanced_brand_filters');
-          await prefs.remove('advanced_product_filters');
-          await prefs.remove('has_active_filters');
-        } catch (e) {
-          // Silently fail - not critical
-        }
+        // Clear filter preferences from secure storage
+        await FilterStateService().clearAllFilters();
 
         return true;
       } else if (response.statusCode == 401) {

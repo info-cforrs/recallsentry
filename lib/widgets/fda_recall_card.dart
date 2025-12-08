@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import '../models/recall_data.dart';
 import '../pages/fda_recall_details_page.dart';
 import '../services/saved_recalls_service.dart';
@@ -151,8 +150,8 @@ class _FdaRecallCardState extends ConsumerState<FdaRecallCard> {
               const SizedBox(height: 10),
               Row(
                 children: <Widget>[
-                  FaIcon(
-                    FontAwesomeIcons.solidSquarePlus,
+                  Icon(
+                    Icons.add_box,
                     color: Colors.red,
                     size: 17,
                   ),
@@ -281,8 +280,8 @@ class _FdaRecallCardState extends ConsumerState<FdaRecallCard> {
             children: <Widget>[
               Row(
                 children: <Widget>[
-                  FaIcon(
-                    FontAwesomeIcons.clipboardCheck,
+                  Icon(
+                    Icons.assignment_turned_in,
                     color: Colors.green.shade700,
                     size: 16,
                   ),
@@ -655,36 +654,36 @@ class _FdaRecallCardState extends ConsumerState<FdaRecallCard> {
 
     // Add burger icon if category contains "food"
     if (category.contains('food')) {
-      return FaIcon(FontAwesomeIcons.burger, color: Colors.brown, size: 18);
+      return const Icon(Icons.lunch_dining, color: Colors.brown, size: 18);
     }
     // Add pills icon if category contains "drug"
     if (category.contains('drug')) {
-      return FaIcon(FontAwesomeIcons.pills, color: Colors.blue, size: 18);
+      return const Icon(Icons.medication, color: Colors.blue, size: 18);
     }
     // Add medical kit icon for FDA medical device category
     if (category.contains('medical device')) {
-      return FaIcon(FontAwesomeIcons.kitMedical, color: Colors.red, size: 18);
+      return const Icon(Icons.medical_services, color: Colors.red, size: 18);
     }
     // Add dog icon if category contains "veterinary"
     if (category.contains('veterinary')) {
-      return FaIcon(FontAwesomeIcons.dog, color: Colors.brown, size: 18);
+      return const Icon(Icons.pets, color: Colors.brown, size: 18);
     }
     // Add disease icon if category contains "allergens"
     if (category.contains('allergens')) {
-      return FaIcon(FontAwesomeIcons.disease, color: Colors.green, size: 18);
+      return const Icon(Icons.sick, color: Colors.green, size: 18);
     }
     // Add viruses icon if category contains "contamination"
     if (category.contains('contamination')) {
-      return FaIcon(
-        FontAwesomeIcons.viruses,
+      return Icon(
+        Icons.coronavirus,
         color: Colors.green.shade800,
         size: 18,
       );
     }
     // Add tag icon if category contains "mislabeling"
     if (category.contains('mislabeling')) {
-      return FaIcon(
-        FontAwesomeIcons.tag,
+      return Icon(
+        Icons.label,
         color: Colors.blue.shade800,
         size: 18,
       );
@@ -698,8 +697,8 @@ class _FdaRecallCardState extends ConsumerState<FdaRecallCard> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        FaIcon(
-          isChecked ? FontAwesomeIcons.squareCheck : FontAwesomeIcons.square,
+        Icon(
+          isChecked ? Icons.check_box : Icons.check_box_outline_blank,
           color: Colors.black,
           size: 20,
         ),

@@ -24,7 +24,13 @@ class RmcSyncService {
   Stream<SyncStatus> get syncStatusStream => _syncStatusController.stream;
 
   /// Initialize sync service and start listening for connectivity changes
+  /// MEMORY: Guards against duplicate initialization to prevent subscription leaks
   Future<void> initialize() async {
+    // Guard: If already initialized, cancel existing subscription first
+    // to prevent multiple subscriptions from accumulating
+    if (_connectivitySubscription != null) {
+      await _connectivitySubscription!.cancel();
+    }
 
     // Listen to connectivity changes
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(

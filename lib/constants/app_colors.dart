@@ -152,6 +152,38 @@ class AppColors {
   /// Shadow color
   static const Color shadow = Colors.black26;
 
+  // ==================== Form & Input Colors ====================
+
+  /// Form field fill color
+  /// Used for: Input backgrounds, dialog backgrounds
+  static const Color formFieldFill = Color(0xFF2A4A5C);
+
+  /// Form field fill with transparency
+  /// Used for: Lighter input backgrounds
+  static Color get formFieldFillLight => formFieldFill.withValues(alpha: 0.3);
+
+  // ==================== Selection & Highlight Colors ====================
+
+  /// Selected state highlight (golden/yellow)
+  /// Used for: Selected items, active states, golden highlights
+  static const Color selectedHighlight = Color(0xFFFFB300);
+
+  /// Interactive surface when selected
+  /// Used for: Selected card backgrounds, active tab backgrounds
+  static const Color selectedSurface = Color(0xFF2C5F7C);
+
+  /// Muted surface for inactive states
+  /// Used for: Disabled backgrounds, inactive elements
+  static const Color mutedSurface = Color(0xFF5A6C7D);
+
+  // ==================== Agency Category Colors ====================
+
+  /// NHTSA (vehicle) category color
+  static const Color categoryNHTSA = Color(0xFF9C27B0);
+
+  /// CPSC (consumer product) category color
+  static const Color categoryCPSC = Color(0xFFFF5722);
+
   // ==================== Helper Methods ====================
 
   /// Get risk level color based on classification

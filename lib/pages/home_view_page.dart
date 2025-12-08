@@ -566,69 +566,75 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
   Future<void> _handleRenameRoom(UserRoom room) async {
     final TextEditingController controller = TextEditingController(text: room.name);
 
-    final newName = await showDialog<String>(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: AppColors.tertiary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          title: const Text(
-            'Rename Room',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+    // MEMORY: Use try-finally to ensure controller disposal
+    String? newName;
+    try {
+      newName = await showDialog<String>(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: AppColors.tertiary,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
             ),
-          ),
-          content: TextField(
-            controller: controller,
-            autofocus: true,
-            style: const TextStyle(color: AppColors.textPrimary),
-            decoration: InputDecoration(
-              labelText: 'Room Name',
-              labelStyle: const TextStyle(color: AppColors.textSecondary),
-              filled: true,
-              fillColor: AppColors.secondary,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
+            title: const Text(
+              'Rename Room',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(
-                  color: AppColors.accentBlue,
-                  width: 2,
+            ),
+            content: TextField(
+              controller: controller,
+              autofocus: true,
+              style: const TextStyle(color: AppColors.textPrimary),
+              decoration: InputDecoration(
+                labelText: 'Room Name',
+                labelStyle: const TextStyle(color: AppColors.textSecondary),
+                filled: true,
+                fillColor: AppColors.secondary,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(
+                    color: AppColors.accentBlue,
+                    width: 2,
+                  ),
                 ),
               ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: AppColors.textSecondary),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text(
+                  'Cancel',
+                  style: TextStyle(color: AppColors.textSecondary),
+                ),
               ),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                final name = controller.text.trim();
-                if (name.isNotEmpty) {
-                  Navigator.pop(context, name);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.accentBlue,
-                foregroundColor: AppColors.textPrimary,
+              ElevatedButton(
+                onPressed: () {
+                  final name = controller.text.trim();
+                  if (name.isNotEmpty) {
+                    Navigator.pop(context, name);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentBlue,
+                  foregroundColor: AppColors.textPrimary,
+                ),
+                child: const Text('Rename'),
               ),
-              child: const Text('Rename'),
-            ),
-          ],
-        );
-      },
-    );
+            ],
+          );
+        },
+      );
+    } finally {
+      controller.dispose();
+    }
 
     if (newName != null && newName != room.name) {
       try {
@@ -1448,11 +1454,20 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
   }
 
   /// Show edit dialog for vehicle/item
+  /// MEMORY: Disposes all TextEditingControllers after dialog closes
   void _showEditItemDialog(UserItem item) {
     final makeController = TextEditingController(text: item.vehicleMake ?? '');
     final modelController = TextEditingController(text: item.vehicleModel ?? '');
     final yearController = TextEditingController(text: item.vehicleYear ?? '');
     final vinController = TextEditingController(text: item.vehicleVin ?? '');
+
+    // Helper to dispose all controllers
+    void disposeControllers() {
+      makeController.dispose();
+      modelController.dispose();
+      yearController.dispose();
+      vinController.dispose();
+    }
 
     showDialog(
       context: context,
@@ -1578,7 +1593,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
           ),
         ],
       ),
-    );
+    ).then((_) => disposeControllers());
   }
 
   /// Update item via API
