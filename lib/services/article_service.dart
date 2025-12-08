@@ -7,10 +7,15 @@ import '../utils/api_utils.dart';
 import 'security_service.dart';
 
 class ArticleService {
+  // Singleton pattern - ensures all ArticleService() calls return the same instance
+  // IMPORTANT: This ensures the article cache is shared across the app
+  static final ArticleService _instance = ArticleService._internal();
+  factory ArticleService() => _instance;
+
   final String _baseUrl = AppConfig.apiBaseUrl;
   late final http.Client _httpClient;
 
-  ArticleService() {
+  ArticleService._internal() {
     _httpClient = SecurityService().createSecureHttpClient();
   }
 

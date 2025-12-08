@@ -78,12 +78,16 @@ class UsageData {
 }
 
 class UsageService {
+  // Singleton pattern - ensures all UsageService() calls return the same instance
+  static final UsageService _instance = UsageService._internal();
+  factory UsageService() => _instance;
+
   final String _baseUrl = AppConfig.apiBaseUrl;
   late final http.Client _httpClient;
   // OPTIMIZATION: Store AuthService reference instead of creating new instances
   final AuthService _authService = AuthService();
 
-  UsageService() {
+  UsageService._internal() {
     _httpClient = SecurityService().createSecureHttpClient();
   }
 

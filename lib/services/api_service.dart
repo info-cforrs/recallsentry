@@ -13,6 +13,10 @@ import 'security_service.dart';
 import 'error_logger.dart';
 
 class ApiService {
+  // Singleton pattern - ensures all ApiService() calls return the same instance
+  static final ApiService _instance = ApiService._internal();
+  factory ApiService() => _instance;
+
   final String baseUrl = AppConfig.apiBaseUrl;
   late final http.Client _httpClient;
 
@@ -20,7 +24,7 @@ class ApiService {
   // When a request is in-flight, subsequent identical requests will await the same future
   static final Map<String, Future<dynamic>> _pendingRequests = {};
 
-  ApiService() {
+  ApiService._internal() {
     _httpClient = SecurityService().createSecureHttpClient();
   }
 

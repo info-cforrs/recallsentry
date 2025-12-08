@@ -27,12 +27,18 @@ class SavedRecallsLimitException implements Exception {
 }
 
 class SavedRecallsService {
+  // Singleton pattern - ensures all SavedRecallsService() calls return the same instance
+  static final SavedRecallsService _instance = SavedRecallsService._internal();
+  factory SavedRecallsService() => _instance;
+
   static const String _savedRecallsKey = 'saved_recalls';
   final AuthService _authService = AuthService();
   final UsageService _usageService = UsageService();
   final GamificationService _gamificationService = GamificationService();
   final String baseUrl = AppConfig.apiBaseUrl;
   final _secureStorage = const FlutterSecureStorage();
+
+  SavedRecallsService._internal();
 
   /// SECURITY: Validate recall_id format before sending to API
   /// Allows alphanumeric characters, hyphens, underscores, and periods

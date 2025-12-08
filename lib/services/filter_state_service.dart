@@ -2,8 +2,14 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class FilterStateService {
+  // Singleton pattern - ensures all FilterStateService() calls return the same instance
+  static final FilterStateService _instance = FilterStateService._internal();
+  factory FilterStateService() => _instance;
+
   static const String _filterStateKey = 'filter_state_encrypted';
   final _secureStorage = const FlutterSecureStorage();
+
+  FilterStateService._internal();
 
   // Save current filter state
   // SECURITY: Now uses FlutterSecureStorage for encryption

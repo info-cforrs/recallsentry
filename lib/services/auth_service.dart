@@ -11,11 +11,15 @@ import 'saved_recalls_service.dart';
 import 'filter_state_service.dart';
 
 class AuthService {
+  // Singleton pattern - ensures all AuthService() calls return the same instance
+  static final AuthService _instance = AuthService._internal();
+  factory AuthService() => _instance;
+
   final _storage = const FlutterSecureStorage();
   final String baseUrl = AppConfig.apiBaseUrl;
   late final http.Client _httpClient;
 
-  AuthService() {
+  AuthService._internal() {
     _httpClient = SecurityService().createSecureHttpClient();
   }
 

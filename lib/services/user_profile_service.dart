@@ -7,11 +7,15 @@ import '../utils/api_utils.dart';
 import 'security_service.dart';
 
 class UserProfileService {
+  // Singleton pattern - ensures all UserProfileService() calls return the same instance
+  static final UserProfileService _instance = UserProfileService._internal();
+  factory UserProfileService() => _instance;
+
   final AuthService _authService = AuthService();
   final String baseUrl = AppConfig.apiBaseUrl;
   late final http.Client _httpClient;
 
-  UserProfileService() {
+  UserProfileService._internal() {
     _httpClient = SecurityService().createSecureHttpClient();
   }
 

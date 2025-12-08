@@ -15,13 +15,17 @@ import 'security_service.dart';
 import 'error_logger.dart';
 
 class RecallMatchService {
+  // Singleton pattern - ensures all RecallMatchService() calls return the same instance
+  static final RecallMatchService _instance = RecallMatchService._internal();
+  factory RecallMatchService() => _instance;
+
   final String baseUrl = AppConfig.apiBaseUrl;
   late final http.Client _httpClient;
 
   // Default timeout for API requests
   static const Duration _defaultTimeout = Duration(seconds: 30);
 
-  RecallMatchService() {
+  RecallMatchService._internal() {
     _httpClient = SecurityService().createSecureHttpClient();
   }
 

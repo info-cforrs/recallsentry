@@ -2,14 +2,21 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/saved_filter.dart';
+import '../exceptions/api_exceptions.dart';
 import 'auth_service.dart';
 import 'gamification_service.dart';
 
 /// Service for managing saved filter presets via API
 /// Integrates with backend /api/saved-filters/ endpoint
 class SavedFilterService {
+  // Singleton pattern - ensures all SavedFilterService() calls return the same instance
+  static final SavedFilterService _instance = SavedFilterService._internal();
+  factory SavedFilterService() => _instance;
+
   final String baseUrl = AppConfig.apiBaseUrl;
   final AuthService _authService = AuthService();
+
+  SavedFilterService._internal();
 
   /// Sanitize user input before sending to API
   /// SECURITY: Defense-in-depth input validation
@@ -52,12 +59,25 @@ class SavedFilterService {
             .map((json) => SavedFilter.fromJson(json as Map<String, dynamic>))
             .toList();
       } else if (response.statusCode == 401) {
-        throw Exception('Please log in to access saved filters');
+        throw AuthException(
+          'Please log in to access saved filters',
+          statusCode: 401,
+          shouldLogout: true,
+        );
       } else {
-        throw Exception('Failed to load saved filters: ${response.statusCode}');
+        throw ApiException(
+          'Failed to load saved filters',
+          statusCode: response.statusCode,
+        );
       }
-    } catch (e) {
+    } on ApiException {
       rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to load saved filters',
+        originalException: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -74,13 +94,13 @@ class SavedFilterService {
   }) async {
     // Validate input lengths
     if (name.trim().isEmpty) {
-      throw Exception('Filter name is required');
+      throw ValidationException('Filter name is required');
     }
     if (name.length > 50) {
-      throw Exception('Filter name must be 50 characters or less');
+      throw ValidationException('Filter name must be 50 characters or less');
     }
     if (description.length > 200) {
-      throw Exception('Description must be 200 characters or less');
+      throw ValidationException('Description must be 200 characters or less');
     }
 
     try {
@@ -110,16 +130,32 @@ class SavedFilterService {
         return SavedFilter.fromJson(jsonData as Map<String, dynamic>);
       } else if (response.statusCode == 403) {
         final errorData = json.decode(response.body);
-        throw TierLimitException(errorData['error']);
+        throw TierLimitException(
+          errorData['error'] ?? 'Filter limit reached - upgrade your plan',
+        );
       } else if (response.statusCode == 401) {
-        throw Exception('Please log in to save filters');
+        throw AuthException(
+          'Please log in to save filters',
+          statusCode: 401,
+          shouldLogout: true,
+        );
       } else {
         final errorBody = json.decode(response.body);
-        throw Exception(
-            'Failed to create saved filter: ${errorBody['error'] ?? response.statusCode}');
+        throw ApiException(
+          'Failed to create saved filter: ${errorBody['error'] ?? response.statusCode}',
+          statusCode: response.statusCode,
+        );
       }
-    } catch (e) {
+    } on TierLimitException {
       rethrow;
+    } on ApiException {
+      rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to create saved filter',
+        originalException: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -135,13 +171,13 @@ class SavedFilterService {
   }) async {
     // Validate input lengths
     if (name.trim().isEmpty) {
-      throw Exception('Filter name is required');
+      throw ValidationException('Filter name is required');
     }
     if (name.length > 50) {
-      throw Exception('Filter name must be 50 characters or less');
+      throw ValidationException('Filter name must be 50 characters or less');
     }
     if (description.length > 200) {
-      throw Exception('Description must be 200 characters or less');
+      throw ValidationException('Description must be 200 characters or less');
     }
 
     try {
@@ -163,14 +199,16 @@ class SavedFilterService {
         final jsonData = json.decode(response.body);
         return SavedFilter.fromJson(jsonData as Map<String, dynamic>);
       } else if (response.statusCode == 401) {
-        throw Exception('Please log in to update filters');
+        throw AuthException('Please log in to update filters', statusCode: 401, shouldLogout: true);
       } else if (response.statusCode == 404) {
-        throw Exception('Filter not found');
+        throw NotFoundException('Filter not found', resourceType: 'SavedFilter', resourceId: id.toString());
       } else {
-        throw Exception('Failed to update saved filter: ${response.statusCode}');
+        throw ApiException('Failed to update saved filter', statusCode: response.statusCode);
       }
-    } catch (e) {
+    } on ApiException {
       rethrow;
+    } catch (e, stack) {
+      throw ApiException('Failed to update saved filter', originalException: e, stackTrace: stack);
     }
   }
 
@@ -186,14 +224,16 @@ class SavedFilterService {
       if (response.statusCode == 204) {
         // Successfully deleted
       } else if (response.statusCode == 401) {
-        throw Exception('Please log in to delete filters');
+        throw AuthException('Please log in to delete filters', statusCode: 401, shouldLogout: true);
       } else if (response.statusCode == 404) {
-        throw Exception('Filter not found');
+        throw NotFoundException('Filter not found', resourceType: 'SavedFilter', resourceId: id.toString());
       } else {
-        throw Exception('Failed to delete saved filter: ${response.statusCode}');
+        throw ApiException('Failed to delete saved filter', statusCode: response.statusCode);
       }
-    } catch (e) {
+    } on ApiException {
       rethrow;
+    } catch (e, stack) {
+      throw ApiException('Failed to delete saved filter', originalException: e, stackTrace: stack);
     }
   }
 
@@ -210,19 +250,22 @@ class SavedFilterService {
         final jsonData = json.decode(response.body);
         return SavedFilter.fromJson(jsonData as Map<String, dynamic>);
       } else if (response.statusCode == 401) {
-        throw Exception('Please log in to apply filters');
+        throw AuthException('Please log in to apply filters', statusCode: 401, shouldLogout: true);
       } else if (response.statusCode == 404) {
-        throw Exception('Filter not found');
+        throw NotFoundException('Filter not found', resourceType: 'SavedFilter', resourceId: id.toString());
       } else {
-        throw Exception('Failed to apply saved filter: ${response.statusCode}');
+        throw ApiException('Failed to apply saved filter', statusCode: response.statusCode);
       }
-    } catch (e) {
+    } on ApiException {
       rethrow;
+    } catch (e, stack) {
+      throw ApiException('Failed to apply saved filter', originalException: e, stackTrace: stack);
     }
   }
 }
 
 /// Exception thrown when user reaches tier limit for saved filters
+/// Kept for backward compatibility with existing catch blocks in UI code
 class TierLimitException implements Exception {
   final String message;
   TierLimitException(this.message);

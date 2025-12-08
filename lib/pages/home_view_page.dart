@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/app_colors.dart';
 import '../models/user_home.dart';
 import '../models/user_room.dart';
 import '../models/user_item.dart';
-import '../models/rmc_enrollment.dart';
-import '../services/recallmatch_service.dart';
-import '../services/api_service.dart';
+import '../providers/data_providers.dart';
+import '../providers/service_providers.dart';
 import '../utils/room_icon_helper.dart';
 import 'room_selection_page.dart';
 import 'user_item_list_page.dart';
@@ -21,7 +21,7 @@ import 'add_new_child_seat_photo_page.dart';
 /// Long press on home icon: Add Room, Add Item
 /// Long press on room: Add Item, Rename Room, Delete Room
 /// Tap on room: View items in that room
-class HomeViewPage extends StatefulWidget {
+class HomeViewPage extends ConsumerStatefulWidget {
   final UserHome home;
 
   const HomeViewPage({
@@ -30,30 +30,18 @@ class HomeViewPage extends StatefulWidget {
   });
 
   @override
-  State<HomeViewPage> createState() => _HomeViewPageState();
+  ConsumerState<HomeViewPage> createState() => _HomeViewPageState();
 }
 
-class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver {
-  final RecallMatchService _service = RecallMatchService();
-  List<UserRoom> _rooms = [];
-  Map<int, int> _roomItemCounts = {}; // roomId -> item count
-  Map<int, int> _roomRecallCounts = {}; // roomId -> recall count (RMC enrolled only)
-  Map<int, String> _itemRecallStatuses = {}; // itemId -> status ("Recall Started" or "Needs Review")
-  int _homeRecallCount = 0; // Total recall count for the home
-  int _homeTotalItems = 0; // Total items in the home
-  bool _isLoading = true;
-  String? _errorMessage;
-
-  // Garage items (vehicles, tires, child seats) - stored as UserItems, not rooms
-  List<UserItem> _garageVehicles = [];
-  List<UserItem> _garageTires = [];
-  List<UserItem> _garageChildSeats = [];
+class _HomeViewPageState extends ConsumerState<HomeViewPage> with WidgetsBindingObserver {
+  // Item recall statuses are still loaded separately (not in main provider)
+  Map<int, String> _itemRecallStatuses = {};
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadRooms();
+    _loadItemRecallStatuses();
   }
 
   @override
@@ -66,112 +54,48 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       // Refresh data when app resumes
-      _loadRooms();
+      _refreshData();
     }
   }
 
-  Future<void> _loadRooms() async {
-    setState(() {
-      _isLoading = true;
-      _errorMessage = null;
-    });
+  /// Refresh all data by invalidating the provider
+  void _refreshData() {
+    ref.invalidate(homeViewDataProvider(widget.home.id));
+    _loadItemRecallStatuses();
+  }
 
+  /// Load item recall statuses separately (not cached in provider)
+  Future<void> _loadItemRecallStatuses() async {
+    final recallMatchService = ref.read(recallMatchServiceProvider);
     try {
-      // Fetch rooms, items, enrollments, and room counts in PARALLEL for faster loading
-      final results = await Future.wait([
-        _service.getRoomsByHome(widget.home.id),
-        _service.getUserItems(),
-        ApiService().fetchRmcEnrollments().catchError((_) => <RmcEnrollment>[]),
-        _service.getRmcEnrolledCountsByHome(widget.home.id).catchError((_) => <int, int>{}),
-      ]);
+      final homeData = ref.read(homeViewDataProvider(widget.home.id)).valueOrNull;
+      if (homeData == null) return;
 
-      final rooms = results[0] as List<UserRoom>;
-      final items = results[1] as List<UserItem>;
-      final enrollments = results[2] as List<RmcEnrollment>;
-      final recallCounts = results[3] as Map<int, int>; // Per-room counts for room display
+      final roomIds = homeData.rooms.map((room) => room.id).toList();
+      if (roomIds.isEmpty) return;
 
-      // Count "In Progress" enrollments using SAME logic as Home Page
-      // This ensures Home View Page matches Home Page "Recalled Items" count
-      int homeRecallCount = 0;
-      for (var enrollment in enrollments) {
-        final status = enrollment.status.trim().toLowerCase();
-        // In Progress: excludes closed, completed, not started, stopped using, mfr contacted
-        if (status != 'closed' &&
-            status != 'completed' &&
-            status != 'not started' &&
-            status != 'stopped using' &&
-            status != 'mfr contacted') {
-          homeRecallCount++;
-        }
-      }
+      final statusResults = await Future.wait(
+        roomIds.map((roomId) =>
+          recallMatchService.getItemRecallStatusesByRoom(roomId).catchError((_) => <int, String>{})
+        ),
+      );
 
-      // Process items to count per room and categorize garage items
-      final Map<int, int> itemCounts = {};
-      final List<UserItem> vehicles = [];
-      final List<UserItem> tires = [];
-      final List<UserItem> childSeats = [];
-
-      for (var item in items) {
-        if (item.homeId == widget.home.id) {
-          itemCounts[item.roomId] = (itemCounts[item.roomId] ?? 0) + 1;
-
-          // Categorize garage items
-          if (item.isVehicle) {
-            vehicles.add(item);
-          } else if (item.isTires) {
-            tires.add(item);
-          } else if (item.isChildSeat) {
-            childSeats.add(item);
-          }
-        }
-      }
-
-      // Load recall statuses for all rooms in PARALLEL
       Map<int, String> itemStatuses = {};
-      try {
-        final roomIds = rooms.map((room) => room.id).toList();
-        if (roomIds.isNotEmpty) {
-          // Fetch all room statuses in parallel
-          final statusResults = await Future.wait(
-            roomIds.map((roomId) => _service.getItemRecallStatusesByRoom(roomId).catchError((_) => <int, String>{})),
-          );
-          // Merge all status maps
-          for (final statusMap in statusResults) {
-            itemStatuses.addAll(statusMap);
-          }
-        }
-      } catch (e) {
-        debugPrint('Warning: Could not fetch item recall statuses: $e');
+      for (final statusMap in statusResults) {
+        itemStatuses.addAll(statusMap);
       }
-
-      // Calculate total items in this home
-      final totalHomeItems = itemCounts.values.fold(0, (sum, count) => sum + count);
 
       if (mounted) {
         setState(() {
-          _rooms = rooms;
-          _roomItemCounts = itemCounts;
-          _roomRecallCounts = recallCounts;
           _itemRecallStatuses = itemStatuses;
-          _homeRecallCount = homeRecallCount;
-          _homeTotalItems = totalHomeItems;
-          _garageVehicles = vehicles;
-          _garageTires = tires;
-          _garageChildSeats = childSeats;
-          _isLoading = false;
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _errorMessage = 'Error loading rooms: $e';
-          _isLoading = false;
-        });
-      }
+      debugPrint('Warning: Could not fetch item recall statuses: $e');
     }
   }
 
-  void _showHomeMenu() {
+  void _showHomeMenu(HomeViewData homeData) {
     showModalBottomSheet(
       context: context,
       backgroundColor: AppColors.tertiary,
@@ -212,7 +136,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
                 ),
                 onTap: () {
                   Navigator.pop(context);
-                  _handleAddItemToHome();
+                  _handleAddItemToHome(homeData);
                 },
               ),
               const SizedBox(height: 12),
@@ -312,9 +236,9 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
     );
   }
 
-  Future<void> _handleAddItemToHome() async {
+  Future<void> _handleAddItemToHome(HomeViewData homeData) async {
     // If there are no rooms, prompt user to create one first
-    if (_rooms.isEmpty) {
+    if (homeData.rooms.isEmpty) {
       if (mounted) {
         final createRoom = await showDialog<bool>(
           context: context,
@@ -368,7 +292,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
     }
 
     // Show item type selection menu (use first room as context)
-    _showItemTypeMenu(_rooms.first);
+    _showItemTypeMenu(homeData.rooms.first);
   }
 
   Future<void> _handleAddItemToRoom(UserRoom room) async {
@@ -516,7 +440,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
         builder: (context) => const AddNewHouseholdItemPhotoPage(),
       ),
     );
-    _loadRooms();
+    _refreshData();
   }
 
   Future<void> _handleAddFood(UserRoom room) async {
@@ -527,7 +451,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
         builder: (context) => const AddNewFoodItemPhotoPage(),
       ),
     );
-    _loadRooms();
+    _refreshData();
   }
 
   Future<void> _handleAddVehicle(UserRoom room) async {
@@ -538,7 +462,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
         builder: (context) => const AddNewVehiclePhotoPage(),
       ),
     );
-    _loadRooms();
+    _refreshData();
   }
 
   Future<void> _handleAddTires(UserRoom room) async {
@@ -549,7 +473,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
         builder: (context) => const AddNewTiresPhotoPage(),
       ),
     );
-    _loadRooms();
+    _refreshData();
   }
 
   Future<void> _handleAddChildSeat(UserRoom room) async {
@@ -560,7 +484,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
         builder: (context) => const AddNewChildSeatPhotoPage(),
       ),
     );
-    _loadRooms();
+    _refreshData();
   }
 
   Future<void> _handleRenameRoom(UserRoom room) async {
@@ -638,7 +562,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
 
     if (newName != null && newName != room.name) {
       try {
-        await _service.updateRoom(
+        await ref.read(recallMatchServiceProvider).updateRoom(
           roomId: room.id,
           name: newName,
           roomType: room.roomType,
@@ -653,7 +577,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
           );
         }
 
-        _loadRooms();
+        _refreshData();
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -669,7 +593,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
 
   Future<void> _createRoom(String roomType, String roomName) async {
     try {
-      await _service.createRoom(
+      await ref.read(recallMatchServiceProvider).createRoom(
         homeId: widget.home.id,
         name: roomName,
         roomType: roomType,
@@ -684,7 +608,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
         );
       }
 
-      _loadRooms();
+      _refreshData();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -698,7 +622,8 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
   }
 
   Future<void> _handleDeleteRoom(UserRoom room) async {
-    final itemCount = _roomItemCounts[room.id] ?? 0;
+    final homeData = ref.read(homeViewDataProvider(widget.home.id)).valueOrNull;
+    final itemCount = homeData?.roomItemCounts[room.id] ?? 0;
 
     final confirmed = await showDialog<bool>(
       context: context,
@@ -759,7 +684,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
     if (confirmed != true) return;
 
     try {
-      await _service.deleteRoom(room.id);
+      await ref.read(recallMatchServiceProvider).deleteRoom(room.id);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -770,7 +695,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
         );
       }
 
-      _loadRooms();
+      _refreshData();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -794,10 +719,10 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
         ),
       ),
     );
-    _loadRooms();
+    _refreshData();
   }
 
-  Widget _buildHomeIcon() {
+  Widget _buildHomeIcon(HomeViewData homeData) {
     return Center(
       child: GestureDetector(
         onTap: () {
@@ -810,9 +735,9 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
                 initialRecallStatuses: _itemRecallStatuses,
               ),
             ),
-          ).then((_) => _loadRooms());
+          ).then((_) => _refreshData());
         },
-        onLongPress: _showHomeMenu,
+        onLongPress: () => _showHomeMenu(homeData),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -849,7 +774,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
                     },
                   ),
                   // Item count badge (upper left) - green
-                  if (_homeTotalItems > 0)
+                  if (homeData.homeTotalItems > 0)
                     Positioned(
                       top: -8,
                       left: -8,
@@ -862,7 +787,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
                         ),
                         child: Center(
                           child: Text(
-                            _homeTotalItems > 99 ? '99+' : _homeTotalItems.toString(),
+                            homeData.homeTotalItems > 99 ? '99+' : homeData.homeTotalItems.toString(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -873,7 +798,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
                       ),
                     ),
                   // Recall count badge (upper right) - red
-                  if (_homeRecallCount > 0)
+                  if (homeData.homeRecallCount > 0)
                     Positioned(
                       top: -8,
                       right: -8,
@@ -886,7 +811,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
                         ),
                         child: Center(
                           child: Text(
-                            _homeRecallCount > 99 ? '99+' : _homeRecallCount.toString(),
+                            homeData.homeRecallCount > 99 ? '99+' : homeData.homeRecallCount.toString(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
@@ -924,23 +849,23 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
     );
   }
 
-  Widget _buildRoomsLayout() {
+  Widget _buildRoomsLayout(HomeViewData homeData) {
     // Group rooms by category
-    final bedrooms = _rooms.where((r) => r.roomType == 'bedroom').toList();
-    final bathrooms = _rooms.where((r) => r.roomType == 'bathroom').toList();
+    final bedrooms = homeData.rooms.where((r) => r.roomType == 'bedroom').toList();
+    final bathrooms = homeData.rooms.where((r) => r.roomType == 'bathroom').toList();
 
     // Garage rooms (physical spaces)
-    final garages = _rooms.where((r) => r.roomType == 'garage').toList();
+    final garages = homeData.rooms.where((r) => r.roomType == 'garage').toList();
 
     // Check if garage section should show (garage rooms OR garage items exist)
     final hasGarageSection = garages.isNotEmpty ||
-                             _garageVehicles.isNotEmpty ||
-                             _garageTires.isNotEmpty ||
-                             _garageChildSeats.isNotEmpty;
+                             homeData.garageVehicles.isNotEmpty ||
+                             homeData.garageTires.isNotEmpty ||
+                             homeData.garageChildSeats.isNotEmpty;
 
     // Individual rooms exclude bedroom, bathroom, and garage
     // Note: vehicle, child_seat, tires are now UserItems, not rooms
-    final individualRooms = _rooms.where((r) =>
+    final individualRooms = homeData.rooms.where((r) =>
       r.roomType != 'bedroom' &&
       r.roomType != 'bathroom' &&
       r.roomType != 'garage' &&
@@ -971,7 +896,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
               ),
               itemCount: individualRooms.length,
               itemBuilder: (context, index) {
-                return _buildRoomCard(individualRooms[index]);
+                return _buildRoomCard(individualRooms[index], homeData);
               },
             ),
           ),
@@ -986,6 +911,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
             'Bedrooms',
             Icons.bed,
             bedrooms,
+            homeData,
           ),
 
         // Spacing between Bedrooms and next grouped section
@@ -998,6 +924,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
             'Bathrooms',
             Icons.bathtub,
             bathrooms,
+            homeData,
           ),
 
         // Spacing between Bathrooms and Garage section
@@ -1008,9 +935,9 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
         if (hasGarageSection)
           _buildGarageVehicleSection(
             garages: garages,
-            vehicles: _garageVehicles,
-            childSeats: _garageChildSeats,
-            tires: _garageTires,
+            vehicles: homeData.garageVehicles,
+            childSeats: homeData.garageChildSeats,
+            tires: homeData.garageTires,
           ),
 
         const SizedBox(height: 16),
@@ -1018,7 +945,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
     );
   }
 
-  Widget _buildGroupedRoomSection(String title, IconData icon, List<UserRoom> rooms) {
+  Widget _buildGroupedRoomSection(String title, IconData icon, List<UserRoom> rooms, HomeViewData homeData) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       padding: const EdgeInsets.all(16),
@@ -1057,7 +984,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
             ),
             itemCount: rooms.length,
             itemBuilder: (context, index) {
-              return _buildCompactRoomCard(rooms[index]);
+              return _buildCompactRoomCard(rooms[index], homeData);
             },
           ),
         ],
@@ -1291,7 +1218,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
     );
     // Refresh data when returning (recall status may have changed)
     if (mounted) {
-      _loadRooms();
+      _refreshData();
     }
   }
 
@@ -1608,7 +1535,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
       // Build product name from make/model
       String productName = '$make $model'.trim();
 
-      await _service.updateUserItem(
+      await ref.read(recallMatchServiceProvider).updateUserItem(
         itemId: item.id,
         vehicleMake: make.isNotEmpty ? make : null,
         vehicleModel: model.isNotEmpty ? model : null,
@@ -1625,7 +1552,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
             backgroundColor: Colors.green,
           ),
         );
-        _loadRooms(); // Refresh the list
+        _refreshData(); // Refresh the list
       }
     } catch (e) {
       if (mounted) {
@@ -1676,7 +1603,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
   /// Delete item via API
   Future<void> _deleteItem(UserItem item) async {
     try {
-      await _service.deleteUserItem(item.id);
+      await ref.read(recallMatchServiceProvider).deleteUserItem(item.id);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1685,7 +1612,7 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
             backgroundColor: Colors.green,
           ),
         );
-        _loadRooms(); // Refresh the list
+        _refreshData(); // Refresh the list
       }
     } catch (e) {
       if (mounted) {
@@ -1699,9 +1626,9 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
     }
   }
 
-  Widget _buildCompactRoomCard(UserRoom room) {
-    final itemCount = _roomItemCounts[room.id] ?? 0;
-    final recallCount = _roomRecallCounts[room.id] ?? 0;
+  Widget _buildCompactRoomCard(UserRoom room, HomeViewData homeData) {
+    final itemCount = homeData.roomItemCounts[room.id] ?? 0;
+    final recallCount = homeData.roomRecallCounts[room.id] ?? 0;
     final iconPath = RoomIconHelper.getIconPath(room.roomType);
 
     return GestureDetector(
@@ -1806,9 +1733,9 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
     );
   }
 
-  Widget _buildRoomCard(UserRoom room) {
-    final itemCount = _roomItemCounts[room.id] ?? 0;
-    final recallCount = _roomRecallCounts[room.id] ?? 0;
+  Widget _buildRoomCard(UserRoom room, HomeViewData homeData) {
+    final itemCount = homeData.roomItemCounts[room.id] ?? 0;
+    final recallCount = homeData.roomRecallCounts[room.id] ?? 0;
     final iconPath = RoomIconHelper.getIconPath(room.roomType);
 
     return GestureDetector(
@@ -1915,6 +1842,8 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
 
   @override
   Widget build(BuildContext context) {
+    final homeDataAsync = ref.watch(homeViewDataProvider(widget.home.id));
+
     return Scaffold(
       backgroundColor: AppColors.primary,
       appBar: AppBar(
@@ -1924,112 +1853,130 @@ class _HomeViewPageState extends State<HomeViewPage> with WidgetsBindingObserver
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text(
-          '${_rooms.length} room${_rooms.length == 1 ? '' : 's'}',
-          style: const TextStyle(
-            color: AppColors.textPrimary,
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
+        title: homeDataAsync.when(
+          data: (homeData) => Text(
+            '${homeData.rooms.length} room${homeData.rooms.length == 1 ? '' : 's'}',
+            style: const TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          loading: () => const Text(
+            'Loading...',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          error: (_, __) => const Text(
+            'Error',
+            style: TextStyle(
+              color: AppColors.textPrimary,
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh, color: AppColors.textPrimary),
-            onPressed: _loadRooms,
+            onPressed: _refreshData,
           ),
         ],
       ),
       body: SafeArea(
-        child: _isLoading
-            ? const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
-                ),
-              )
-            : _errorMessage != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
+        child: homeDataAsync.when(
+          loading: () => const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
+            ),
+          ),
+          error: (error, _) => Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: AppColors.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error loading rooms: $error',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: _refreshData,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentBlue,
+                      foregroundColor: AppColors.textPrimary,
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          data: (homeData) => SingleChildScrollView(
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Home Icon at top
+                _buildHomeIcon(homeData),
+
+                // Rooms Section
+                if (homeData.rooms.isNotEmpty) ...[
+                  _buildRoomsLayout(homeData),
+                ] else ...[
+                  // Empty state
+                  Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(
                       child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Icon(
-                            Icons.error_outline,
-                            size: 64,
-                            color: AppColors.error,
+                          Icon(
+                            Icons.meeting_room_outlined,
+                            size: 80,
+                            color: AppColors.textDisabled.withValues(alpha: 0.5),
                           ),
                           const SizedBox(height: 16),
-                          Text(
-                            _errorMessage!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(
+                          const Text(
+                            'No Rooms Yet',
+                            style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontSize: 16,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
-                          const SizedBox(height: 24),
-                          ElevatedButton(
-                            onPressed: _loadRooms,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accentBlue,
-                              foregroundColor: AppColors.textPrimary,
+                          const SizedBox(height: 8),
+                          Text(
+                            'Long press the home icon above to add a room',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
                             ),
-                            child: const Text('Retry'),
                           ),
                         ],
                       ),
                     ),
-                  )
-                : SingleChildScrollView(
-                    physics: const ClampingScrollPhysics(),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Home Icon at top
-                        _buildHomeIcon(),
-
-                        // Rooms Section
-                        if (_rooms.isNotEmpty) ...[
-                          _buildRoomsLayout(),
-                        ] else ...[
-                          // Empty state
-                          Padding(
-                            padding: const EdgeInsets.all(32),
-                            child: Center(
-                              child: Column(
-                                children: [
-                                  Icon(
-                                    Icons.meeting_room_outlined,
-                                    size: 80,
-                                    color: AppColors.textDisabled.withValues(alpha: 0.5),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Text(
-                                    'No Rooms Yet',
-                                    style: TextStyle(
-                                      color: AppColors.textPrimary,
-                                      fontSize: 20,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Long press the home icon above to add a room',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 24),
-                      ],
-                    ),
                   ),
+                ],
+                const SizedBox(height: 24),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

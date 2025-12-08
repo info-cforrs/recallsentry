@@ -12,6 +12,10 @@ import '../models/safety_score.dart';
 import '../services/subscription_service.dart';
 import '../services/user_profile_service.dart';
 import '../models/saved_filter.dart';
+import '../models/user_home.dart';
+import '../models/user_room.dart';
+import '../models/user_item.dart';
+import '../models/rmc_enrollment.dart';
 
 // ============================================================================
 // SUBSCRIPTION & USER DATA PROVIDERS
@@ -419,3 +423,136 @@ final categoryCountsProvider = FutureProvider<Map<String, int>>((ref) async {
 
   return counts;
 });
+
+// ============================================================================
+// HOME & ROOM DATA PROVIDERS
+// ============================================================================
+
+/// User Homes Provider - Fetches all homes for authenticated user
+final userHomesProvider = FutureProvider<List<UserHome>>((ref) async {
+  await ref.watch(userProfileProvider.future);
+  final recallMatchService = ref.watch(recallMatchServiceProvider);
+  return recallMatchService.getUserHomes();
+});
+
+/// User Items Provider - Fetches all user items
+final userItemsProvider = FutureProvider<List<UserItem>>((ref) async {
+  await ref.watch(userProfileProvider.future);
+  final recallMatchService = ref.watch(recallMatchServiceProvider);
+  return recallMatchService.getUserItems();
+});
+
+/// RMC Enrollments Provider - Fetches all RMC enrollments for the user
+final rmcEnrollmentsProvider = FutureProvider<List<RmcEnrollment>>((ref) async {
+  await ref.watch(userProfileProvider.future);
+  final apiService = ref.watch(apiServiceProvider);
+  try {
+    return await apiService.fetchRmcEnrollments();
+  } catch (e) {
+    return <RmcEnrollment>[];
+  }
+});
+
+/// Home Rooms Provider - Fetches rooms for a specific home
+/// Uses .family modifier to accept homeId parameter
+final homeRoomsProvider = FutureProvider.family<List<UserRoom>, int>((ref, homeId) async {
+  await ref.watch(userProfileProvider.future);
+  final recallMatchService = ref.watch(recallMatchServiceProvider);
+  return recallMatchService.getRoomsByHome(homeId);
+});
+
+/// Home Recall Counts Provider - Gets RMC enrolled counts by room for a home
+final homeRecallCountsProvider = FutureProvider.family<Map<int, int>, int>((ref, homeId) async {
+  await ref.watch(userProfileProvider.future);
+  final recallMatchService = ref.watch(recallMatchServiceProvider);
+  try {
+    return await recallMatchService.getRmcEnrolledCountsByHome(homeId);
+  } catch (e) {
+    return <int, int>{};
+  }
+});
+
+/// Home Data Provider - Combined provider for all data needed by HomeViewPage
+/// Returns a record with all the computed data for a home
+final homeViewDataProvider = FutureProvider.family<HomeViewData, int>((ref, homeId) async {
+  // Fetch all data in parallel
+  final results = await Future.wait([
+    ref.watch(homeRoomsProvider(homeId).future),
+    ref.watch(userItemsProvider.future),
+    ref.watch(rmcEnrollmentsProvider.future),
+    ref.watch(homeRecallCountsProvider(homeId).future),
+  ]);
+
+  final rooms = results[0] as List<UserRoom>;
+  final allItems = results[1] as List<UserItem>;
+  final enrollments = results[2] as List<RmcEnrollment>;
+  final recallCounts = results[3] as Map<int, int>;
+
+  // Count "In Progress" enrollments (same logic as Home Page)
+  int homeRecallCount = 0;
+  for (var enrollment in enrollments) {
+    final status = enrollment.status.trim().toLowerCase();
+    if (status != 'closed' &&
+        status != 'completed' &&
+        status != 'not started' &&
+        status != 'stopped using' &&
+        status != 'mfr contacted') {
+      homeRecallCount++;
+    }
+  }
+
+  // Process items for this home
+  final Map<int, int> itemCounts = {};
+  final List<UserItem> vehicles = [];
+  final List<UserItem> tires = [];
+  final List<UserItem> childSeats = [];
+
+  for (var item in allItems) {
+    if (item.homeId == homeId) {
+      itemCounts[item.roomId] = (itemCounts[item.roomId] ?? 0) + 1;
+      if (item.isVehicle) {
+        vehicles.add(item);
+      } else if (item.isTires) {
+        tires.add(item);
+      } else if (item.isChildSeat) {
+        childSeats.add(item);
+      }
+    }
+  }
+
+  final totalHomeItems = itemCounts.values.fold(0, (sum, count) => sum + count);
+
+  return HomeViewData(
+    rooms: rooms,
+    roomItemCounts: itemCounts,
+    roomRecallCounts: recallCounts,
+    homeRecallCount: homeRecallCount,
+    homeTotalItems: totalHomeItems,
+    garageVehicles: vehicles,
+    garageTires: tires,
+    garageChildSeats: childSeats,
+  );
+});
+
+/// Data class for HomeViewPage state
+class HomeViewData {
+  final List<UserRoom> rooms;
+  final Map<int, int> roomItemCounts;
+  final Map<int, int> roomRecallCounts;
+  final int homeRecallCount;
+  final int homeTotalItems;
+  final List<UserItem> garageVehicles;
+  final List<UserItem> garageTires;
+  final List<UserItem> garageChildSeats;
+
+  const HomeViewData({
+    required this.rooms,
+    required this.roomItemCounts,
+    required this.roomRecallCounts,
+    required this.homeRecallCount,
+    required this.homeTotalItems,
+    required this.garageVehicles,
+    required this.garageTires,
+    required this.garageChildSeats,
+  });
+}
