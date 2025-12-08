@@ -1463,10 +1463,12 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> with HideOnScro
                 child: TextField(
                   controller: _searchController,
                   style: const TextStyle(color: Colors.white),
+                  maxLength: 100, // SECURITY: Limit input length to prevent abuse
                   decoration: InputDecoration(
                     hintText: 'Search USDA recalls...',
                     hintStyle: const TextStyle(color: Colors.white54),
                     prefixIcon: const Icon(Icons.search, color: Colors.white54),
+                    counterText: '', // Hide character counter
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
                             icon: const Icon(Icons.clear, color: Colors.white54),

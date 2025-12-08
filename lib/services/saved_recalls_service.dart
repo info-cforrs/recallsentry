@@ -34,6 +34,17 @@ class SavedRecallsService {
   final String baseUrl = AppConfig.apiBaseUrl;
   final _secureStorage = const FlutterSecureStorage();
 
+  /// SECURITY: Validate recall_id format before sending to API
+  /// Allows alphanumeric characters, hyphens, underscores, and periods
+  /// Max length 100 characters to prevent abuse
+  static final RegExp _recallIdPattern = RegExp(r'^[A-Za-z0-9\-_.]{1,100}$');
+
+  /// Validates that a recall ID has a safe format
+  bool _isValidRecallId(String id) {
+    if (id.isEmpty || id.length > 100) return false;
+    return _recallIdPattern.hasMatch(id);
+  }
+
   // Get all saved recalls
   Future<List<RecallData>> getSavedRecalls() async {
     try {
@@ -93,6 +104,11 @@ class SavedRecallsService {
   // Save a recall
   Future<bool> saveRecall(RecallData recall) async {
     try {
+      // SECURITY: Validate recall_id format before processing
+      if (!_isValidRecallId(recall.id)) {
+        throw Exception('Invalid recall ID format');
+      }
+
       // Check if user is logged in
       final isLoggedIn = await _authService.isLoggedIn();
 

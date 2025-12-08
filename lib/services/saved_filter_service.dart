@@ -93,8 +93,9 @@ class SavedFilterService {
         'filter_data': {
           'brand_filters': brandFilters.map((f) => _sanitizeInput(f)).toList(),
           'product_filters': productFilters.map((f) => _sanitizeInput(f)).toList(),
-          'state_filters': stateFilters ?? [],
-          'allergen_filters': allergenFilters ?? [],
+          // SECURITY: Apply sanitization to all filter arrays
+          'state_filters': (stateFilters ?? []).map((f) => _sanitizeInput(f)).toList(),
+          'allergen_filters': (allergenFilters ?? []).map((f) => _sanitizeInput(f)).toList(),
         },
       });
 
