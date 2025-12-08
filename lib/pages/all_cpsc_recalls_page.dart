@@ -5,9 +5,11 @@ import '../services/article_service.dart';
 import '../services/subscription_service.dart';
 import '../models/recall_data.dart';
 import '../models/article.dart';
-import '../widgets/small_fda_recall_card.dart';
+import '../widgets/small_cpsc_recall_card.dart';
 import '../widgets/article_card.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 import 'subscribe_page.dart';
 
 class AllCPSCRecallsPage extends StatefulWidget {
@@ -17,12 +19,11 @@ class AllCPSCRecallsPage extends StatefulWidget {
   State<AllCPSCRecallsPage> createState() => _AllCPSCRecallsPageState();
 }
 
-class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
+class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> with HideOnScrollMixin {
   final RecallDataService _recallService = RecallDataService();
   final ArticleService _articleService = ArticleService();
   final SubscriptionService _subscriptionService = SubscriptionService();
   final TextEditingController _searchController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
   List<RecallData> _cpscRecalls = [];
   List<RecallData> _filteredRecalls = [];
@@ -49,13 +50,14 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
     _loadCPSCRecalls();
-    _scrollController.addListener(_onScroll);
+    hideOnScrollController.addListener(_onScroll);
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients) {
-      final isAtTop = _scrollController.offset <= 10;
+    if (hideOnScrollController.hasClients) {
+      final isAtTop = hideOnScrollController.offset <= 10;
       final shouldShow = isAtTop;
 
       if (shouldShow != _showSearchAndFilters) {
@@ -65,8 +67,8 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
       }
 
       // PAGINATION: Load more recalls when near bottom
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      final currentScroll = _scrollController.position.pixels;
+      final maxScroll = hideOnScrollController.position.maxScrollExtent;
+      final currentScroll = hideOnScrollController.position.pixels;
       final delta = 200.0;
 
       if (maxScroll - currentScroll <= delta &&
@@ -327,21 +329,15 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
                   children: [
                     ListTile(
                       title: const Text('Date (Newest First)'),
-                      leading: Radio<String>(
-                        value: 'date',
-                      ),
+                      leading: Radio<String>(value: 'date'),
                     ),
                     ListTile(
                       title: const Text('Brand Name (A-Z)'),
-                      leading: Radio<String>(
-                        value: 'brand_az',
-                      ),
+                      leading: Radio<String>(value: 'brand_az'),
                     ),
                     ListTile(
                       title: const Text('Brand Name (Z-A)'),
-                      leading: Radio<String>(
-                        value: 'brand_za',
-                      ),
+                      leading: Radio<String>(value: 'brand_za'),
                     ),
                   ],
                 ),
@@ -373,10 +369,15 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
 
             return AlertDialog(
               backgroundColor: const Color(0xFF2A4A5C),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               title: const Text(
                 'Filter Options',
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               content: SingleChildScrollView(
                 child: Column(
@@ -386,7 +387,10 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
                     // Risk Level Filter
                     const Text(
                       'Risk Level:',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     if (riskOptions.isEmpty ||
@@ -421,7 +425,10 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
                     // Category Filter
                     const Text(
                       'Category:',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     if (categoryOptions.isEmpty ||
@@ -460,14 +467,20 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
                     // State Filter
                     const Text(
                       'States:',
-                      style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       stateLimit == 999
                           ? 'Select states (unlimited)'
                           : 'Select up to $stateLimit state${stateLimit == 1 ? '' : 's'}',
-                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     Wrap(
@@ -475,7 +488,9 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
                       runSpacing: 8,
                       children: _getUsStates().map((state) {
                         final isSelected = tempSelectedStates.contains(state);
-                        final canSelect = isSelected || tempSelectedStates.length < stateLimit;
+                        final canSelect =
+                            isSelected ||
+                            tempSelectedStates.length < stateLimit;
 
                         return FilterChip(
                           label: Text(state),
@@ -541,8 +556,8 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
     if (_filteredRecalls.isEmpty) return 0;
 
     final articlesCount = _cpscArticles.isEmpty
-      ? 0
-      : (_filteredRecalls.length / 3).floor().clamp(0, _cpscArticles.length);
+        ? 0
+        : (_filteredRecalls.length / 3).floor().clamp(0, _cpscArticles.length);
 
     return _filteredRecalls.length + articlesCount + 1;
   }
@@ -679,7 +694,7 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
       final recall = _filteredRecalls[recallIndex];
       return Padding(
         padding: const EdgeInsets.only(bottom: 10),
-        child: SmallFdaRecallCard(recall: recall),
+        child: SmallCpscRecallCard(recall: recall),
       );
     }
 
@@ -688,11 +703,56 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
 
   List<String> _getUsStates() {
     return [
-      'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
-      'HI', 'ID', 'IL', 'IN', 'IA', 'KS', 'KY', 'LA', 'ME', 'MD',
-      'MA', 'MI', 'MN', 'MS', 'MO', 'MT', 'NE', 'NV', 'NH', 'NJ',
-      'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
-      'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
+      'AL',
+      'AK',
+      'AZ',
+      'AR',
+      'CA',
+      'CO',
+      'CT',
+      'DE',
+      'FL',
+      'GA',
+      'HI',
+      'ID',
+      'IL',
+      'IN',
+      'IA',
+      'KS',
+      'KY',
+      'LA',
+      'ME',
+      'MD',
+      'MA',
+      'MI',
+      'MN',
+      'MS',
+      'MO',
+      'MT',
+      'NE',
+      'NV',
+      'NH',
+      'NJ',
+      'NM',
+      'NY',
+      'NC',
+      'ND',
+      'OH',
+      'OK',
+      'OR',
+      'PA',
+      'RI',
+      'SC',
+      'SD',
+      'TN',
+      'TX',
+      'UT',
+      'VT',
+      'VA',
+      'WA',
+      'WV',
+      'WI',
+      'WY',
     ];
   }
 
@@ -702,9 +762,7 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            _errorMessage.isNotEmpty
-                ? Icons.error_outline
-                : Icons.info_outline,
+            _errorMessage.isNotEmpty ? Icons.error_outline : Icons.info_outline,
             size: 80,
             color: _errorMessage.isNotEmpty ? Colors.red : Colors.white54,
           ),
@@ -755,7 +813,7 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
       color: const Color(0xFF64B5F6),
       backgroundColor: const Color(0xFF2C3E50),
       child: SingleChildScrollView(
-        controller: _scrollController,
+        controller: hideOnScrollController,
         padding: const EdgeInsets.all(16),
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
@@ -785,10 +843,7 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
                     const SizedBox(width: 12),
                     Text(
                       'Loading more recalls...',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
+                      style: TextStyle(color: Colors.white70, fontSize: 14),
                     ),
                   ],
                 ),
@@ -798,10 +853,7 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
                 padding: const EdgeInsets.symmetric(vertical: 24.0),
                 child: Text(
                   'All recalls loaded',
-                  style: TextStyle(
-                    color: Colors.white54,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.white54, fontSize: 14),
                 ),
               ),
           ],
@@ -813,8 +865,8 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
   @override
   void dispose() {
     _searchController.dispose();
-    _scrollController.dispose();
     _searchFocusNode.dispose();
+    disposeHideOnScroll();
     super.dispose();
   }
 
@@ -826,68 +878,77 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
         child: Column(
           children: [
             // Custom Header with Back Button and Centered App Icon + Title
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Stack(
-                children: [
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: CustomBackButton(),
-                  ),
-                  Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 40,
-                          height: 40,
-                          child: Image.asset(
-                            'assets/images/shield_logo4.png',
+            AnimatedVisibilityWrapper(
+              isVisible: isHeaderVisible,
+              direction: SlideDirection.up,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Stack(
+                  children: [
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: CustomBackButton(),
+                    ),
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
                             width: 40,
                             height: 40,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.1),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
+                            child: Image.asset(
+                              'assets/images/shield_logo4.png',
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        Color(0xFF4CAF50),
+                                        Color(0xFF2E7D32),
+                                      ],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
                                     ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              );
-                            },
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'All CPSC Recalls',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Atlanta',
-                            color: Colors.white,
+                          const SizedBox(width: 12),
+                          const Text(
+                            'All CPSC Recalls',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Atlanta',
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             if (_showSearchAndFilters) ...[
@@ -905,7 +966,10 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
                     prefixIcon: const Icon(Icons.search, color: Colors.white54),
                     suffixIcon: _searchQuery.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, color: Colors.white54),
+                            icon: const Icon(
+                              Icons.clear,
+                              color: Colors.white54,
+                            ),
                             onPressed: () {
                               _searchController.clear();
                               setState(() {
@@ -990,53 +1054,57 @@ class _AllCPSCRecallsPageState extends State<AllCPSCRecallsPage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: _currentIndex,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: _currentIndex,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

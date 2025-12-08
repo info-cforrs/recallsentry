@@ -8,14 +8,17 @@ import '../config/app_config.dart';
 import '../constants/rmc_status.dart';
 import '../exceptions/api_exceptions.dart';
 import '../utils/api_utils.dart';
-import '../utils/retry_helper.dart';
 import 'auth_service.dart';
 import 'security_service.dart';
 import 'error_logger.dart';
 
 class ApiService {
   final String baseUrl = AppConfig.apiBaseUrl;
-  final http.Client _httpClient = SecurityService().createSecureHttpClient();
+  late final http.Client _httpClient;
+
+  ApiService() {
+    _httpClient = SecurityService().createSecureHttpClient();
+  }
 
   // Default timeout for API requests
   static const Duration _defaultTimeout = Duration(seconds: 30);
@@ -201,6 +204,105 @@ class ApiService {
     } catch (e, stack) {
       throw ApiException(
         'Failed to fetch CPSC recalls',
+        originalException: e,
+        stackTrace: stack,
+      );
+    }
+  }
+
+  /// Fetch NHTSA vehicle recalls only
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> fetchNhtsaVehicleRecalls({
+    int? limit,
+    int? offset,
+  }) async {
+    try {
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (limit != null) queryParams['limit'] = limit.toString();
+      if (offset != null) queryParams['offset'] = offset.toString();
+
+      final uri = Uri.parse('$baseUrl${AppConfig.apiNhtsaVehiclesEndpoint}')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+      final response = await _httpClient.get(uri);
+      ApiUtils.checkResponse(response, context: 'Fetch NHTSA vehicle recalls');
+
+      final results = ApiUtils.parseJsonList(response.body);
+      return results
+          .map((json) => _convertFromApi(json as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to fetch NHTSA vehicle recalls',
+        originalException: e,
+        stackTrace: stack,
+      );
+    }
+  }
+
+  /// Fetch NHTSA tire recalls only
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> fetchNhtsaTireRecalls({
+    int? limit,
+    int? offset,
+  }) async {
+    try {
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (limit != null) queryParams['limit'] = limit.toString();
+      if (offset != null) queryParams['offset'] = offset.toString();
+
+      final uri = Uri.parse('$baseUrl${AppConfig.apiNhtsaTiresEndpoint}')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+      final response = await _httpClient.get(uri);
+      ApiUtils.checkResponse(response, context: 'Fetch NHTSA tire recalls');
+
+      final results = ApiUtils.parseJsonList(response.body);
+      return results
+          .map((json) => _convertFromApi(json as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to fetch NHTSA tire recalls',
+        originalException: e,
+        stackTrace: stack,
+      );
+    }
+  }
+
+  /// Fetch NHTSA child seat recalls only
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> fetchNhtsaChildSeatRecalls({
+    int? limit,
+    int? offset,
+  }) async {
+    try {
+      // Build query parameters
+      final queryParams = <String, String>{};
+      if (limit != null) queryParams['limit'] = limit.toString();
+      if (offset != null) queryParams['offset'] = offset.toString();
+
+      final uri = Uri.parse('$baseUrl${AppConfig.apiNhtsaChildSeatsEndpoint}')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
+      final response = await _httpClient.get(uri);
+      ApiUtils.checkResponse(response, context: 'Fetch NHTSA child seat recalls');
+
+      final results = ApiUtils.parseJsonList(response.body);
+      return results
+          .map((json) => _convertFromApi(json as Map<String, dynamic>))
+          .toList();
+    } on ApiException {
+      rethrow;
+    } catch (e, stack) {
+      throw ApiException(
+        'Failed to fetch NHTSA child seat recalls',
         originalException: e,
         stackTrace: stack,
       );
@@ -450,6 +552,34 @@ class ApiService {
       cpscSoldByOfficeDepot: _parseBoolToYN(json['sold_by_officedepot']),
       cpscSoldByKroger: _parseBoolToYN(json['sold_by_kroger']),
       cpscSoldByPublix: _parseBoolToYN(json['sold_by_publix']),
+
+      // NHTSA-specific fields
+      nhtsaRecallId: json['nhtsa_recall_id']?.toString() ?? '',
+      nhtsaCampaignNumber: json['nhtsa_campaign_number']?.toString() ?? '',
+      nhtsaMfrCampaignNumber: json['nhtsa_mfr_campaign_number']?.toString() ?? '',
+      nhtsaComponent: json['nhtsa_component']?.toString() ?? '',
+      nhtsaRecallType: json['nhtsa_recall_type']?.toString() ?? '',
+      nhtsaPotentiallyAffected: json['nhtsa_potentially_affected'] as int?,
+      nhtsaFireRisk: json['nhtsa_fire_risk'] == true,
+      nhtsaDoNotDrive: json['nhtsa_do_not_drive'] == true,
+      nhtsaCompletionRate: json['nhtsa_completion_rate']?.toString() ?? '',
+      nhtsaVehicleMake: json['nhtsa_vehicle_make']?.toString() ?? '',
+      nhtsaVehicleModel: json['nhtsa_vehicle_model']?.toString() ?? '',
+      nhtsaVehicleYearStart: json['nhtsa_vehicle_year_start']?.toString() ?? '',
+      nhtsaVehicleYearEnd: json['nhtsa_vehicle_year_end']?.toString() ?? '',
+      remedyOtaUpdate: json['remedy_ota_update'] == true,
+      nhtsaPlannedDealerNotificationDate: json['nhtsa_planned_dealer_notification_date'] != null
+          ? DateTime.tryParse(json['nhtsa_planned_dealer_notification_date'].toString())
+          : null,
+      nhtsaPlannedOwnerNotificationDate: json['nhtsa_planned_owner_notification_date'] != null
+          ? DateTime.tryParse(json['nhtsa_planned_owner_notification_date'].toString())
+          : null,
+      nhtsaOwnerNotificationLetterMailedDate: json['nhtsa_owner_notification_letter_mailed_date'] != null
+          ? DateTime.tryParse(json['nhtsa_owner_notification_letter_mailed_date'].toString())
+          : null,
+      nhtsaManufPhone: json['nhtsa_manuf_phone']?.toString() ?? '',
+      nhtsaModelNum: json['nhtsa_model_num']?.toString() ?? '',
+      nhtsaUpc: json['nhtsa_upc']?.toString() ?? '',
     );
   }
 
@@ -704,6 +834,83 @@ class ApiService {
         return RmcEnrollment.fromJson(jsonData as Map<String, dynamic>);
       } else {
         throw Exception('Failed to update RMC enrollment: ${response.statusCode}');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Update RMC enrollment with proof branch data including photos
+  /// Uses multipart request to upload photo files
+  Future<RmcEnrollment> updateRmcEnrollmentWithProof({
+    required int enrollmentId,
+    String? status,
+    String? proofPurchaseLocation,
+    String? proofPurchaseDate,
+    String? proofSerialNumber,
+    String? proofPhoto1Path,
+    String? proofPhoto2Path,
+  }) async {
+    try {
+      final uri = Uri.parse('$baseUrl/rmc-enrollments/$enrollmentId/');
+
+      // Create multipart request
+      final request = http.MultipartRequest('PATCH', uri);
+
+      // Add authorization header
+      final token = await AuthService().getAccessToken();
+      if (token == null) {
+        throw Exception('Not authenticated');
+      }
+      request.headers['Authorization'] = 'Bearer $token';
+
+      // Add text fields
+      if (status != null) {
+        if (!RmcStatus.isValid(status)) {
+          throw ArgumentError('Invalid RMC status: $status');
+        }
+        request.fields['rmc_status'] = status;
+      }
+
+      if (proofPurchaseLocation != null && proofPurchaseLocation.isNotEmpty) {
+        request.fields['proof_purchase_location'] = proofPurchaseLocation;
+      }
+
+      if (proofPurchaseDate != null && proofPurchaseDate.isNotEmpty) {
+        request.fields['proof_purchase_date'] = proofPurchaseDate;
+      }
+
+      if (proofSerialNumber != null && proofSerialNumber.isNotEmpty) {
+        request.fields['proof_serial_number'] = proofSerialNumber;
+      }
+
+      // Set proof email sent timestamp
+      request.fields['proof_email_sent_at'] = DateTime.now().toIso8601String();
+
+      // Add photo files if provided
+      if (proofPhoto1Path != null && proofPhoto1Path.isNotEmpty) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'proof_photo_1',
+          proofPhoto1Path,
+        ));
+      }
+
+      if (proofPhoto2Path != null && proofPhoto2Path.isNotEmpty) {
+        request.files.add(await http.MultipartFile.fromPath(
+          'proof_photo_2',
+          proofPhoto2Path,
+        ));
+      }
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final jsonData = json.decode(response.body);
+        return RmcEnrollment.fromJson(jsonData as Map<String, dynamic>);
+      } else {
+        throw Exception('Failed to update RMC enrollment with proof: ${response.statusCode} - ${response.body}');
       }
     } catch (e) {
       rethrow;

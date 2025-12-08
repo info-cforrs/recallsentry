@@ -2,11 +2,30 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/recall_data.dart';
 import 'main_navigation.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 
-class ManufacturerRetailerPage extends StatelessWidget {
+class ManufacturerRetailerPage extends StatefulWidget {
   final RecallData recall;
 
   const ManufacturerRetailerPage({super.key, required this.recall});
+
+  @override
+  State<ManufacturerRetailerPage> createState() => _ManufacturerRetailerPageState();
+}
+
+class _ManufacturerRetailerPageState extends State<ManufacturerRetailerPage> with HideOnScrollMixin {
+  @override
+  void initState() {
+    super.initState();
+    initHideOnScroll();
+  }
+
+  @override
+  void dispose() {
+    disposeHideOnScroll();
+    super.dispose();
+  }
 
   Future<void> _launchUrl(String url) async {
     final Uri uri = Uri.parse(url);
@@ -18,7 +37,7 @@ class ManufacturerRetailerPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Check if this is an FDA recall
-    final bool isFDA = recall.agency.toUpperCase() == 'FDA';
+    final bool isFDA = widget.recall.agency.toUpperCase() == 'FDA';
 
     return Scaffold(
       backgroundColor: const Color(0xFF2A4A5C),
@@ -39,6 +58,7 @@ class ManufacturerRetailerPage extends StatelessWidget {
         elevation: 0,
       ),
       body: SingleChildScrollView(
+        controller: hideOnScrollController,
         padding: const EdgeInsets.all(20),
         child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -73,100 +93,100 @@ class ManufacturerRetailerPage extends StatelessWidget {
                     // FDA Firm Contact Fields
                     if (isFDA) ...[
                       // Recalling Firm
-                      if (recall.recallingFdaFirm.isNotEmpty)
-                        _buildRow('Recalling Firm:', recall.recallingFdaFirm),
+                      if (widget.recall.recallingFdaFirm.isNotEmpty)
+                        _buildRow('Recalling Firm:', widget.recall.recallingFdaFirm),
 
                       // Firm Contact Name
-                      if (recall.firmContactName.isNotEmpty)
-                        _buildRow('Contact Name:', recall.firmContactName),
+                      if (widget.recall.firmContactName.isNotEmpty)
+                        _buildRow('Contact Name:', widget.recall.firmContactName),
 
                       // Firm Contact Phone
-                      if (recall.firmContactPhone.isNotEmpty)
+                      if (widget.recall.firmContactPhone.isNotEmpty)
                         _buildClickableRow(
                           'Phone:',
-                          recall.firmContactPhone,
-                          'tel:${recall.firmContactPhone}',
+                          widget.recall.firmContactPhone,
+                          'tel:${widget.recall.firmContactPhone}',
                         ),
 
                       // Firm Contact Email
-                      if (recall.firmContactEmail.isNotEmpty)
+                      if (widget.recall.firmContactEmail.isNotEmpty)
                         _buildClickableRow(
                           'Email:',
-                          recall.firmContactEmail,
-                          'mailto:${recall.firmContactEmail}',
+                          widget.recall.firmContactEmail,
+                          'mailto:${widget.recall.firmContactEmail}',
                         ),
 
                       // Firm Contact Business Hours
-                      if (recall.firmContactBusinessHoursDays.isNotEmpty)
+                      if (widget.recall.firmContactBusinessHoursDays.isNotEmpty)
                         _buildRow(
                           'Business Hours:',
-                          recall.firmContactBusinessHoursDays,
+                          widget.recall.firmContactBusinessHoursDays,
                         ),
 
                       // Firm Contact Website
-                      if (recall.firmContactWebSite.isNotEmpty)
+                      if (widget.recall.firmContactWebSite.isNotEmpty)
                         _buildClickableRow(
                           'Website:',
-                          recall.firmContactWebSite,
-                          recall.firmContactWebSite.startsWith('http')
-                              ? recall.firmContactWebSite
-                              : 'https://${recall.firmContactWebSite}',
+                          widget.recall.firmContactWebSite,
+                          widget.recall.firmContactWebSite.startsWith('http')
+                              ? widget.recall.firmContactWebSite
+                              : 'https://${widget.recall.firmContactWebSite}',
                         ),
 
                       // Firm Website Info
-                      if (recall.firmWebSiteInfo.isNotEmpty)
-                        _buildRow('Website Info:', recall.firmWebSiteInfo),
+                      if (widget.recall.firmWebSiteInfo.isNotEmpty)
+                        _buildRow('Website Info:', widget.recall.firmWebSiteInfo),
 
                       // Firm Contact Form
-                      if (recall.firmContactForm.isNotEmpty)
+                      if (widget.recall.firmContactForm.isNotEmpty)
                         _buildClickableRow(
                           'Contact Form:',
                           'Submit Contact Form',
-                          recall.firmContactForm.startsWith('http')
-                              ? recall.firmContactForm
-                              : 'https://${recall.firmContactForm}',
+                          widget.recall.firmContactForm.startsWith('http')
+                              ? widget.recall.firmContactForm
+                              : 'https://${widget.recall.firmContactForm}',
                         ),
                     ] else ...[
                       // USDA Establishment Fields
                       // Row 1: Name
-                      if (recall.establishmentManufacturer.isNotEmpty)
-                        _buildRow('Name:', recall.establishmentManufacturer),
+                      if (widget.recall.establishmentManufacturer.isNotEmpty)
+                        _buildRow('Name:', widget.recall.establishmentManufacturer),
 
                       // Row 3: Contact
-                      if (recall.establishmentManufacturerContactName.isNotEmpty)
-                        _buildRow('Contact:', recall.establishmentManufacturerContactName),
+                      if (widget.recall.establishmentManufacturerContactName.isNotEmpty)
+                        _buildRow('Contact:', widget.recall.establishmentManufacturerContactName),
 
                       // Row 4: Phone
-                      if (recall.establishmentManufacturerContactPhone.isNotEmpty)
+                      if (widget.recall.establishmentManufacturerContactPhone.isNotEmpty)
                         _buildClickableRow(
                           'Phone:',
-                          recall.establishmentManufacturerContactPhone,
-                          'tel:${recall.establishmentManufacturerContactPhone}',
+                          widget.recall.establishmentManufacturerContactPhone,
+                          'tel:${widget.recall.establishmentManufacturerContactPhone}',
                         ),
 
                       // Row 5: Business Hours
-                      if (recall.establishmentManufacturerContactBusinessHoursDays.isNotEmpty)
+                      if (widget.recall.establishmentManufacturerContactBusinessHoursDays.isNotEmpty)
                         _buildRow(
                           'Business Hours:',
-                          recall.establishmentManufacturerContactBusinessHoursDays,
+                          widget.recall.establishmentManufacturerContactBusinessHoursDays,
                         ),
 
                       // Row 6: Email
-                      if (recall.establishmentManufacturerContactEmail.isNotEmpty)
+                      if (widget.recall.establishmentManufacturerContactEmail.isNotEmpty)
                         _buildClickableRow(
                           'Email:',
-                          recall.establishmentManufacturerContactEmail,
-                          'mailto:${recall.establishmentManufacturerContactEmail}',
+                          widget.recall.establishmentManufacturerContactEmail,
+                          'mailto:${widget.recall.establishmentManufacturerContactEmail}',
                         ),
 
                       // Row 7: Website
-                      if (recall.establishmentManufacturerWebsite.isNotEmpty)
+                      if (widget.recall.establishmentManufacturerWebsite.isNotEmpty)
                         _buildClickableRow(
                           'Website:',
-                          recall.establishmentManufacturerWebsite,
-                          recall.establishmentManufacturerWebsite.startsWith('http')
-                              ? recall.establishmentManufacturerWebsite
-                              : 'https://${recall.establishmentManufacturerWebsite}',
+                          widget.recall.establishmentManufacturerWebsite,
+                          widget.recall.establishmentManufacturerWebsite.startsWith('http')
+                              ? widget.recall.establishmentManufacturerWebsite
+                              : 'https://${widget.recall.establishmentManufacturerWebsite}',
                         ),
                     ],
 
@@ -205,69 +225,69 @@ class ManufacturerRetailerPage extends StatelessWidget {
                       ),
 
                       // Retailer Name
-                      if (recall.retailer1.isNotEmpty)
-                        _buildRow('Name:', recall.retailer1),
+                      if (widget.recall.retailer1.isNotEmpty)
+                        _buildRow('Name:', widget.recall.retailer1),
 
                       // Retailer Contact
-                      if (recall.retailer1ContactName.isNotEmpty)
-                        _buildRow('Contact:', recall.retailer1ContactName),
+                      if (widget.recall.retailer1ContactName.isNotEmpty)
+                        _buildRow('Contact:', widget.recall.retailer1ContactName),
 
                       // Retailer Phone
-                      if (recall.retailer1ContactPhone.isNotEmpty)
+                      if (widget.recall.retailer1ContactPhone.isNotEmpty)
                         _buildClickableRow(
                           'Phone:',
-                          recall.retailer1ContactPhone,
-                          'tel:${recall.retailer1ContactPhone}',
+                          widget.recall.retailer1ContactPhone,
+                          'tel:${widget.recall.retailer1ContactPhone}',
                         ),
 
                       // Retailer Business Hours
-                      if (recall.retailer1ContactBusinessHoursDays.isNotEmpty)
+                      if (widget.recall.retailer1ContactBusinessHoursDays.isNotEmpty)
                         _buildRow(
                           'Business Hours:',
-                          recall.retailer1ContactBusinessHoursDays,
+                          widget.recall.retailer1ContactBusinessHoursDays,
                         ),
 
                       // Retailer Email
-                      if (recall.retailer1ContactEmail.isNotEmpty)
+                      if (widget.recall.retailer1ContactEmail.isNotEmpty)
                         _buildClickableRow(
                           'Email:',
-                          recall.retailer1ContactEmail,
-                          'mailto:${recall.retailer1ContactEmail}',
+                          widget.recall.retailer1ContactEmail,
+                          'mailto:${widget.recall.retailer1ContactEmail}',
                         ),
 
                       // Retailer Website
-                      if (recall.retailer1ContactWebSite.isNotEmpty)
+                      if (widget.recall.retailer1ContactWebSite.isNotEmpty)
                         _buildClickableRow(
                           'Website:',
-                          recall.retailer1ContactWebSite,
-                          recall.retailer1ContactWebSite.startsWith('http')
-                              ? recall.retailer1ContactWebSite
-                              : 'https://${recall.retailer1ContactWebSite}',
+                          widget.recall.retailer1ContactWebSite,
+                          widget.recall.retailer1ContactWebSite.startsWith('http')
+                              ? widget.recall.retailer1ContactWebSite
+                              : 'https://${widget.recall.retailer1ContactWebSite}',
                         ),
                     ],
 
                     // No data message
                     if (isFDA
-                        ? (recall.recallingFdaFirm.isEmpty &&
-                            recall.firmContactName.isEmpty &&
-                            recall.firmContactPhone.isEmpty &&
-                            recall.firmContactEmail.isEmpty &&
-                            recall.firmContactBusinessHoursDays.isEmpty &&
-                            recall.firmContactWebSite.isEmpty &&
-                            recall.firmWebSiteInfo.isEmpty &&
-                            recall.firmContactForm.isEmpty)
-                        : (recall.establishmentManufacturer.isEmpty &&
-                            recall.establishmentManufacturerContactName.isEmpty &&
-                            recall.establishmentManufacturerContactPhone.isEmpty &&
-                            recall.establishmentManufacturerContactBusinessHoursDays.isEmpty &&
-                            recall.establishmentManufacturerContactEmail.isEmpty &&
-                            recall.establishmentManufacturerWebsite.isEmpty &&
-                            recall.retailer1.isEmpty &&
-                            recall.retailer1ContactName.isEmpty &&
-                            recall.retailer1ContactPhone.isEmpty &&
-                            recall.retailer1ContactBusinessHoursDays.isEmpty &&
-                            recall.retailer1ContactEmail.isEmpty &&
-                            recall.retailer1ContactWebSite.isEmpty))
+                        ? (widget.recall.recallingFdaFirm.isEmpty &&
+                            widget.recall.firmContactName.isEmpty &&
+                            widget.recall.firmContactPhone.isEmpty &&
+                            widget.recall.firmContactEmail.isEmpty &&
+                            widget.recall.firmContactBusinessHoursDays.isEmpty &&
+                            widget.recall.firmContactWebSite.isEmpty &&
+                            widget.recall.firmWebSiteInfo.isEmpty &&
+                            widget.recall.firmContactForm.isEmpty)
+                        : (widget.recall.establishmentManufacturer.isEmpty &&
+                            widget.recall.establishmentManufacturerContactName.isEmpty &&
+                            widget.recall.establishmentManufacturerContactPhone.isEmpty &&
+                            widget.recall.establishmentManufacturerContactBusinessHoursDays.isEmpty &&
+                            widget.recall.establishmentManufacturerContactEmail.isEmpty &&
+                            widget.recall.establishmentManufacturerWebsite.isEmpty &&
+                            widget.recall.retailer1.isEmpty &&
+                            widget.recall.retailer1ContactName.isEmpty &&
+                            widget.recall.retailer1ContactPhone.isEmpty &&
+                            widget.recall.retailer1ContactBusinessHoursDays.isEmpty &&
+                            widget.recall.retailer1ContactEmail.isEmpty &&
+                            widget.recall.retailer1ContactWebSite.isEmpty))
                       Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -296,53 +316,57 @@ class ManufacturerRetailerPage extends StatelessWidget {
                   ],
                 ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: 1,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: 1,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

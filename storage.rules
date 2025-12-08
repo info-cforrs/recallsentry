@@ -1,0 +1,142 @@
+// RecallSentry Firebase Storage Security Rules
+// Deploy with: firebase deploy --only storage:rules
+//
+// IMPORTANT: Review and customize these rules for your specific needs
+// before deploying to production.
+
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user owns the file
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Validate file size (in bytes)
+    function isValidSize(maxSizeBytes) {
+      return request.resource.size <= maxSizeBytes;
+    }
+
+    // Validate image content type
+    function isImage() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Validate specific image types
+    function isValidImageType() {
+      return request.resource.contentType == 'image/jpeg'
+          || request.resource.contentType == 'image/png'
+          || request.resource.contentType == 'image/webp';
+    }
+
+    // ============================================
+    // DEFAULT RULE - DENY ALL
+    // ============================================
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // ============================================
+    // PUBLIC ASSETS (Read-only)
+    // ============================================
+
+    // Recall product images - publicly readable
+    match /recall_images/{imageId} {
+      allow read: if true;
+      allow write: if false; // Server only via Admin SDK
+    }
+
+    // Distribution map images - publicly readable
+    match /distribution_maps/{mapId} {
+      allow read: if true;
+      allow write: if false; // Server only
+    }
+
+    // App assets (logos, icons, etc.)
+    match /app_assets/{assetId} {
+      allow read: if true;
+      allow write: if false; // Admin only
+    }
+
+    // ============================================
+    // USER UPLOADS (Authenticated)
+    // ============================================
+
+    // User profile pictures
+    match /user_avatars/{userId}/{fileName} {
+      // Users can read their own avatar
+      allow read: if isOwner(userId);
+
+      // Users can upload their own avatar with restrictions
+      allow create: if isOwner(userId)
+        && isImage()
+        && isValidImageType()
+        && isValidSize(2 * 1024 * 1024); // 2MB max
+
+      // Users can update their avatar
+      allow update: if isOwner(userId)
+        && isImage()
+        && isValidImageType()
+        && isValidSize(2 * 1024 * 1024);
+
+      // Users can delete their avatar
+      allow delete: if isOwner(userId);
+    }
+
+    // RMC proof images (receipts, product photos)
+    match /rmc_proofs/{userId}/{enrollmentId}/{fileName} {
+      // Users can read their own proof images
+      allow read: if isOwner(userId);
+
+      // Users can upload proof images with restrictions
+      allow create: if isOwner(userId)
+        && isImage()
+        && isValidImageType()
+        && isValidSize(5 * 1024 * 1024); // 5MB max
+
+      // Users can delete their own proofs
+      allow delete: if isOwner(userId);
+
+      // No updates - must delete and re-upload
+      allow update: if false;
+    }
+
+    // ============================================
+    // TEMPORARY UPLOADS
+    // ============================================
+
+    // Temporary upload area (auto-deleted after processing)
+    match /temp/{userId}/{fileName} {
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId)
+        && isValidSize(10 * 1024 * 1024); // 10MB max
+      allow delete: if isOwner(userId);
+      allow update: if false;
+    }
+
+    // ============================================
+    // ADMIN / SYSTEM FILES
+    // ============================================
+
+    // Admin uploads - server only
+    match /admin/{allPaths=**} {
+      allow read, write: if false; // Admin SDK only
+    }
+
+    // System files - server only
+    match /system/{allPaths=**} {
+      allow read, write: if false; // Admin SDK only
+    }
+  }
+}

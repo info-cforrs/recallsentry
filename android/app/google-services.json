@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "17657815993",
+    "project_id": "recallsentry-app",
+    "storage_bucket": "recallsentry-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:17657815993:android:3523b52fb049cf2fd90c68",
+        "android_client_info": {
+          "package_name": "com.centerforrecallsafety.recallsentry"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAybzPb1vVgJgqz6BbpYIGdZLkmeg-tQeU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

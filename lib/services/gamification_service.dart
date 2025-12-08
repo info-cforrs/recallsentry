@@ -11,12 +11,14 @@ import 'security_service.dart';
 class GamificationService {
   final String baseUrl = AppConfig.apiBaseUrl;
   final AuthService _authService = AuthService();
-  final http.Client _httpClient = SecurityService().createSecureHttpClient();
+  late final http.Client _httpClient;
 
   // Singleton pattern
   static final GamificationService _instance = GamificationService._internal();
   factory GamificationService() => _instance;
-  GamificationService._internal();
+  GamificationService._internal() {
+    _httpClient = SecurityService().createSecureHttpClient();
+  }
 
   // Cache for safety score
   SafetyScore? _cachedScore;

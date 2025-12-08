@@ -5,6 +5,8 @@ import '../services/rmc_sync_service.dart';
 import 'rmc_status_page.dart';
 import 'main_navigation.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 
 class RmcPage extends StatefulWidget {
   const RmcPage({super.key});
@@ -13,7 +15,7 @@ class RmcPage extends StatefulWidget {
   State<RmcPage> createState() => _RmcPageState();
 }
 
-class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
+class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver, HideOnScrollMixin {
   List<RmcEnrollment> _enrollments = [];
   bool _isLoading = true;
   String? _error;
@@ -26,6 +28,7 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
     WidgetsBinding.instance.addObserver(this);
     _initializeSyncService();
     _loadEnrollments();
@@ -35,6 +38,7 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
   void dispose() {
     _syncStatusSubscription?.cancel();
     WidgetsBinding.instance.removeObserver(this);
+    disposeHideOnScroll();
     super.dispose();
   }
 
@@ -379,6 +383,7 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
               : RefreshIndicator(
                   onRefresh: _loadEnrollments,
                   child: SingleChildScrollView(
+                    controller: hideOnScrollController,
                     physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16),
                     child: Column(
@@ -495,6 +500,21 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
                                   child: DropdownButton<String>(
                                     value: _selectedTimePeriod,
                                     isExpanded: true,
+                                    dropdownColor: const Color(0xFF2A4A5C),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                    selectedItemBuilder: (BuildContext context) {
+                                      return <Widget>[
+                                        const Center(child: Text('TODAY', style: TextStyle(color: Colors.black, fontSize: 16))),
+                                        const Center(child: Text('LAST WEEK', style: TextStyle(color: Colors.black, fontSize: 16))),
+                                        const Center(child: Text('LAST MONTH', style: TextStyle(color: Colors.black, fontSize: 16))),
+                                        const Center(child: Text('LAST 3 MONTHS', style: TextStyle(color: Colors.black, fontSize: 16))),
+                                        const Center(child: Text('LAST YEAR', style: TextStyle(color: Colors.black, fontSize: 16))),
+                                        const Center(child: Text('ALL', style: TextStyle(color: Colors.black, fontSize: 16))),
+                                      ];
+                                    },
                                     items: const [
                                       DropdownMenuItem(
                                         value: 'TODAY',
@@ -561,53 +581,57 @@ class _RmcPageState extends State<RmcPage> with WidgetsBindingObserver {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: 2,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: 2,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

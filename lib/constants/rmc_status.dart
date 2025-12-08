@@ -32,6 +32,9 @@ class RmcStatus {
   /// User selected Dispose path
   static const String disposeSelected = 'Dispose Selected';
 
+  /// User selected Proof path
+  static const String proofSelected = 'Proof Selected';
+
   // ===== RETURN BRANCH STATUSES =====
 
   /// User is in process of shipping items back
@@ -106,6 +109,20 @@ class RmcStatus {
   /// User properly disposed of the item
   static const String dispose2A = 'Dispose 2A: Disposed of Item';
 
+  // ===== PROOF BRANCH STATUSES =====
+
+  /// User has damaged the item per manufacturer instructions
+  static const String itemDamaged = 'Item Damaged';
+
+  /// User has sent proof to manufacturer
+  static const String proofSentToManuf = 'Proof sent to Manuf';
+
+  /// User is waiting for refund
+  static const String waitingRefund = 'Waiting Refund';
+
+  /// User has received refund
+  static const String receivedRefund = 'Received Refund';
+
   // ===== COMPLETION STATUSES =====
 
   /// Recall process successfully completed
@@ -166,6 +183,14 @@ class RmcStatus {
     dispose2A,
   ];
 
+  /// All Proof branch statuses
+  static const List<String> proofStatuses = [
+    itemDamaged,
+    proofSentToManuf,
+    waitingRefund,
+    receivedRefund,
+  ];
+
   /// All completion statuses
   static const List<String> completionStatuses = [
     completed,
@@ -183,6 +208,7 @@ class RmcStatus {
     repairSelected,
     replaceSelected,
     disposeSelected,
+    proofSelected,
     // Return branch
     shippingItemsBack,
     shippedItemBack,
@@ -209,6 +235,11 @@ class RmcStatus {
     dispose1A,
     dispose1B,
     dispose2A,
+    // Proof branch
+    itemDamaged,
+    proofSentToManuf,
+    waitingRefund,
+    receivedRefund,
     // Completion
     completed,
     closed,
@@ -251,6 +282,7 @@ class RmcStatus {
     if (repairStatuses.contains(status)) return 'Repair';
     if (replaceStatuses.contains(status)) return 'Replace';
     if (disposeStatuses.contains(status)) return 'Dispose';
+    if (proofStatuses.contains(status)) return 'Proof';
     return null;
   }
 }

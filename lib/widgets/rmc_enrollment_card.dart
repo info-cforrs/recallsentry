@@ -155,52 +155,57 @@ class RmcEnrollmentCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      // Product Image (optimized thumbnail for better performance)
+                      // Product Image
                       ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: recall.getPrimaryImageUrl().isNotEmpty
-                            ? Image.network(
-                                recall.getImageUrlForContext(ImageSize.thumbnail),
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
+                        child: Builder(
+                          builder: (context) {
+                            final imageUrl = recall.getPrimaryImageUrl();
+                            return imageUrl.isNotEmpty
+                                ? Image.network(
+                                    imageUrl,
+                                    width: 80,
+                                    height: 80,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (context, error, stackTrace) {
+                                      return Container(
+                                        width: 80,
+                                        height: 80,
+                                        color: Colors.black26,
+                                        child: const Icon(
+                                          Icons.image_not_supported,
+                                          color: AppColors.textDisabled,
+                                          size: 32,
+                                        ),
+                                      );
+                                    },
+                                    loadingBuilder: (context, child, loadingProgress) {
+                                      if (loadingProgress == null) return child;
+                                      return Container(
+                                        width: 80,
+                                        height: 80,
+                                        color: Colors.black26,
+                                        child: const Center(
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: AppColors.textDisabled,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  )
+                                : Container(
                                     width: 80,
                                     height: 80,
                                     color: Colors.black26,
                                     child: const Icon(
-                                      Icons.image_not_supported,
+                                      Icons.photo,
                                       color: AppColors.textDisabled,
                                       size: 32,
                                     ),
                                   );
-                                },
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    width: 80,
-                                    height: 80,
-                                    color: Colors.black26,
-                                    child: const Center(
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppColors.textDisabled,
-                                      ),
-                                    ),
-                                  );
-                                },
-                              )
-                            : Container(
-                                width: 80,
-                                height: 80,
-                                color: Colors.black26,
-                                child: const Icon(
-                                  Icons.photo,
-                                  color: AppColors.textDisabled,
-                                  size: 32,
-                                ),
-                              ),
+                          },
+                        ),
                       ),
                     ],
                   ),

@@ -6,12 +6,15 @@ import '../widgets/shared/shared_product_distribution_accordion.dart';
 import '../widgets/shared/shared_recommended_products_accordion.dart';
 import '../widgets/shared/shared_fda_resources_section.dart';
 import '../widgets/fda_recall_details_card.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 import '../services/recall_data_service.dart';
 import '../services/api_service.dart';
 import '../services/recall_sharing_service.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'main_navigation.dart';
 import 'rmc_details_page.dart';
+import 'add_item_from_recall_page.dart';
 import '../models/rmc_enrollment.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
 import 'package:rs_flutter/widgets/custom_loading_indicator.dart';
@@ -26,7 +29,7 @@ class FdaRecallDetailsPage extends StatefulWidget {
   State<FdaRecallDetailsPage> createState() => _FdaRecallDetailsPageState();
 }
 
-class _FdaRecallDetailsPageState extends State<FdaRecallDetailsPage> {
+class _FdaRecallDetailsPageState extends State<FdaRecallDetailsPage> with HideOnScrollMixin {
   RecallData? _freshRecall;
   bool _isLoading = true;
   String? _error;
@@ -34,7 +37,14 @@ class _FdaRecallDetailsPageState extends State<FdaRecallDetailsPage> {
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
     _fetchLatestRecall();
+  }
+
+  @override
+  void dispose() {
+    disposeHideOnScroll();
+    super.dispose();
   }
 
   Future<void> _fetchLatestRecall() async {
@@ -119,6 +129,7 @@ class _FdaRecallDetailsPageState extends State<FdaRecallDetailsPage> {
       body: Container(
         color: AppColors.primary,
         child: SingleChildScrollView(
+          controller: hideOnScrollController,
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -463,53 +474,57 @@ class _FdaRecallDetailsPageState extends State<FdaRecallDetailsPage> {
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: AppColors.secondary,
-        selectedItemColor: AppColors.accentBlue,
-        unselectedItemColor: AppColors.textTertiary,
-        currentIndex: 1, // Recalls tab selected
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: AppColors.secondary,
+          selectedItemColor: AppColors.accentBlue,
+          unselectedItemColor: AppColors.textTertiary,
+          currentIndex: 1, // Recalls tab selected
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -763,88 +778,20 @@ class _FdaRecallDetailsPageState extends State<FdaRecallDetailsPage> {
                           _showRmcUpgradeModal();
                         }
                       : !hasEnrollment
-                  ? () {
-                      // Only show confirmation dialog if not started
-                      showDialog(
-                        context: context,
-                        builder: (BuildContext context) {
-                          return AlertDialog(
-                            backgroundColor: AppColors.secondary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            title: const Text(
-                              'Start Recall Process',
-                              style: TextStyle(
-                                color: AppColors.textPrimary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            content: const Text(
-                              'Are you ready to start managing this recall? This will activate the Recall Management Center for this item.',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text(
-                                  'Cancel',
-                                  style: TextStyle(color: Colors.white70),
-                                ),
-                              ),
-                              ElevatedButton(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.success,
-                                ),
-                                onPressed: () async {
-                                  // Capture navigator and messenger before async gap
-                                  final navigator = Navigator.of(context);
-                                  final messenger = ScaffoldMessenger.of(context);
-
-                                  // Enroll recall in RMC with new enrollment system
-                                  try {
-                                    // Create RMC enrollment with "Not Started" status
-                                    final enrollment = await ApiService()
-                                        .enrollRecallInRmc(
-                                          recallId: recall.databaseId!,
-                                          rmcStatus: 'Not Started',
-                                        );
-
-                                    if (!mounted) return;
-                                    navigator.pop();
-
-                                    // Navigate to RMC Details workflow page
-                                    navigator.push(
-                                      MaterialPageRoute(
-                                        builder: (context) => RmcDetailsPage(
-                                          recall: recall,
-                                          enrollment: enrollment,
-                                        ),
-                                      ),
-                                    );
-                                  } catch (e) {
-                                    if (!mounted) return;
-                                    navigator.pop();
-                                    messenger.showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Failed to enroll recall in RMC: $e',
-                                        ),
-                                        backgroundColor: Colors.red,
-                                        duration: const Duration(seconds: 3),
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: const Text(
-                                  'Start Process',
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ),
-                            ],
-                          );
-                        },
+                  ? () async {
+                      // Navigate to Add Item from Recall flow
+                      // Simple flow to add item and auto-enroll in RMC
+                      await Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => AddItemFromRecallPage(
+                            recall: recall,
+                          ),
+                        ),
                       );
+                      // Refresh to show updated enrollment status
+                      if (mounted) {
+                        setState(() {});
+                      }
                     }
                   : () async {
                       // If already enrolled, use the enrollment from snapshot data

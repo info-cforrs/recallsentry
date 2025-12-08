@@ -220,12 +220,14 @@ class SubscriptionInfo {
 class SubscriptionService {
   final String baseUrl = AppConfig.apiBaseUrl;
   final AuthService _authService = AuthService();
-  final http.Client _httpClient = SecurityService().createSecureHttpClient();
+  late final http.Client _httpClient;
 
   // Singleton pattern
   static final SubscriptionService _instance = SubscriptionService._internal();
   factory SubscriptionService() => _instance;
-  SubscriptionService._internal();
+  SubscriptionService._internal() {
+    _httpClient = SecurityService().createSecureHttpClient();
+  }
 
   // Cache subscription info to avoid repeated API calls
   SubscriptionInfo? _cachedSubscription;

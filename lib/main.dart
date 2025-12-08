@@ -10,6 +10,7 @@ import 'firebase_options.dart';
 import 'services/fcm_service.dart';
 import 'services/saved_recalls_service.dart';
 import 'services/error_reporting_service.dart';
+import 'services/deep_link_service.dart';
 import 'pages/intro_page1.dart';
 import 'widgets/iphone_simulator.dart';
 import 'widgets/notification_banner.dart';
@@ -65,6 +66,7 @@ void main() async {
   // This is useful for testing the guest user flow
   // print('🧹 DEBUG: Clearing stored auth tokens for guest user testing...');
   // await AuthService().logout();
+
   // SubscriptionService().clearCache();
   // print('✅ DEBUG: Auth tokens cleared - app will run as guest');
 
@@ -120,8 +122,31 @@ void main() async {
 // Global navigator key for navigation from services
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Initialize deep links after the first frame (when navigator is ready)
+    // Only on mobile platforms where deep links are used
+    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _initDeepLinks();
+      });
+    }
+  }
+
+  Future<void> _initDeepLinks() async {
+    debugPrint('🔗 Initializing Deep Link Service...');
+    await DeepLinkService().initialize(navigatorKey);
+    debugPrint('✅ Deep Link Service initialized');
+  }
 
   @override
   Widget build(BuildContext context) {

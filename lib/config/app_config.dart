@@ -20,6 +20,10 @@ class AppConfig {
   static const String apiFdaEndpoint = '/recalls/fda/';
   static const String apiUsdaEndpoint = '/recalls/usda/';
   static const String apiCpscEndpoint = '/recalls/cpsc/';
+  static const String apiNhtsaEndpoint = '/recalls/nhtsa/';
+  static const String apiNhtsaVehiclesEndpoint = '/recalls/vehicles/';
+  static const String apiNhtsaTiresEndpoint = '/recalls/tires/';
+  static const String apiNhtsaChildSeatsEndpoint = '/recalls/child_seats/';
   static const String apiStatsEndpoint = '/recalls/stats/';
 
   // Google Sheets Configuration (Legacy - for testing only)

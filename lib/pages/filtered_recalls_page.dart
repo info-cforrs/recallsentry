@@ -6,6 +6,8 @@ import '../models/recall_data.dart';
 import '../widgets/small_fda_recall_card.dart';
 import '../widgets/small_usda_recall_card.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 
 class FilteredRecallsPage extends StatefulWidget {
   final List<String> brandFilters;
@@ -21,7 +23,7 @@ class FilteredRecallsPage extends StatefulWidget {
   State<FilteredRecallsPage> createState() => _FilteredRecallsPageState();
 }
 
-class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
+class _FilteredRecallsPageState extends State<FilteredRecallsPage> with HideOnScrollMixin {
   final RecallDataService _recallService = RecallDataService();
   List<RecallData> _filteredRecalls = [];
   bool _isLoading = true;
@@ -31,7 +33,14 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
     _loadFilteredRecalls();
+  }
+
+  @override
+  void dispose() {
+    disposeHideOnScroll();
+    super.dispose();
   }
 
   Future<void> _loadFilteredRecalls() async {
@@ -402,6 +411,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
                             )
                           : _filteredRecalls.isNotEmpty
                           ? ListView.builder(
+                              controller: hideOnScrollController,
                               itemCount: _filteredRecalls.length,
                               itemBuilder: (context, index) {
                                 final recall = _filteredRecalls[index];
@@ -461,55 +471,57 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: _currentIndex,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.error), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: _currentIndex,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.error), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

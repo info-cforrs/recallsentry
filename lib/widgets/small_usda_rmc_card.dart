@@ -198,32 +198,35 @@ class _SmallUsdaRmcCardState extends State<SmallUsdaRmcCard> {
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(8),
                               ),
-                              child: widget.recall.imageUrl.isNotEmpty
-                                  ? ClipRRect(
-                                      borderRadius: BorderRadius.circular(8),
-                                      child: Image.network(
-                                        widget.recall.imageUrl.startsWith('http')
-                                            ? widget.recall.imageUrl
-                                            : 'https://api.centerforrecallsafety.com${widget.recall.imageUrl}',
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return const Center(
+                              child: Builder(
+                                  builder: (context) {
+                                    final imageUrl = widget.recall.getPrimaryImageUrl();
+                                    return imageUrl.isNotEmpty
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(8),
+                                            child: Image.network(
+                                              imageUrl,
+                                              fit: BoxFit.cover,
+                                              errorBuilder: (context, error, stackTrace) {
+                                                return const Center(
+                                                  child: Icon(
+                                                    Icons.image_not_supported,
+                                                    size: 30,
+                                                    color: Colors.grey,
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                          )
+                                        : const Center(
                                             child: Icon(
                                               Icons.image_not_supported,
                                               size: 30,
                                               color: Colors.grey,
                                             ),
                                           );
-                                        },
-                                      ),
-                                    )
-                                  : const Center(
-                                      child: Icon(
-                                        Icons.image_not_supported,
-                                        size: 30,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
+                                  },
+                                ),
                             ),
                             // Heart/Save overlay (top right corner)
                             Positioned(

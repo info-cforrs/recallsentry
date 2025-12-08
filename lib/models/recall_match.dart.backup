@@ -1,0 +1,450 @@
+// RecallMatch Model
+//
+// Represents an automated match between a user's item and a recall.
+// Created by the daily matching job or immediate re-matching.
+
+import 'user_item.dart';
+import 'recall_data.dart';
+
+/// Match confidence levels
+enum MatchConfidence {
+  high,        // 90-100%
+  mediumHigh,  // 75-89%
+  medium,      // 70-74%
+  low,         // 60-69%
+}
+
+/// Match status
+enum MatchStatus {
+  pendingReview,  // Awaiting user action
+  confirmed,      // User confirmed and enrolled in RMC
+  dismissed,      // User dismissed as false positive
+  expired,        // Match expired (>30 days)
+  invalidated,    // User edited item, match no longer valid
+}
+
+/// Lightweight RecallMatch for list views
+class RecallMatchSummary {
+  final int id;
+  final int userItemId;
+  final String userItemManufacturer;
+  final String userItemBrandName;
+  final String userItemProductName;
+  final String userItemModelNumber;
+  final String userItemName;
+  final String userItemLocation;
+  final List<String> userItemPhotoUrls;
+  final DateTime userItemCreatedAt;
+  final String recallId;
+  final String recallProductName;
+  final String recallBrandName;
+  final String recallAgency;
+  final String recallRiskLevel;
+  final DateTime recallDateIssued;
+  final String recallImageUrl;
+  final double matchScore;
+  final MatchConfidence matchConfidence;
+  final String matchReason;
+  final MatchStatus status;
+  final DateTime matchedAt;
+  final DateTime expiresAt;
+  final bool isExpired;
+  final int daysUntilExpiry;
+
+  RecallMatchSummary({
+    required this.id,
+    required this.userItemId,
+    required this.userItemManufacturer,
+    required this.userItemBrandName,
+    required this.userItemProductName,
+    required this.userItemModelNumber,
+    required this.userItemName,
+    required this.userItemLocation,
+    required this.userItemPhotoUrls,
+    required this.userItemCreatedAt,
+    required this.recallId,
+    required this.recallProductName,
+    required this.recallBrandName,
+    required this.recallAgency,
+    required this.recallRiskLevel,
+    required this.recallDateIssued,
+    required this.recallImageUrl,
+    required this.matchScore,
+    required this.matchConfidence,
+    required this.matchReason,
+    required this.status,
+    required this.matchedAt,
+    required this.expiresAt,
+    required this.isExpired,
+    required this.daysUntilExpiry,
+  });
+
+  factory RecallMatchSummary.fromJson(Map<String, dynamic> json) {
+    return RecallMatchSummary(
+      id: json['id'] as int? ?? 0,
+      userItemId: json['user_item_id'] as int? ?? 0,
+      userItemManufacturer: json['user_item_manufacturer'] as String? ?? '',
+      userItemBrandName: json['user_item_brand_name'] as String? ?? '',
+      userItemProductName: json['user_item_product_name'] as String? ?? '',
+      userItemModelNumber: json['user_item_model_number'] as String? ?? '',
+      userItemName: json['user_item_name'] as String? ?? '',
+      userItemLocation: json['user_item_location'] as String? ?? '',
+      userItemPhotoUrls: (json['user_item_photo_urls'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ?? [],
+      userItemCreatedAt: json['user_item_created_at'] != null
+          ? DateTime.parse(json['user_item_created_at'] as String)
+          : DateTime.now(),
+      recallId: json['recall_id_str'] as String? ?? '',
+      recallProductName: json['recall_product_name'] as String? ?? '',
+      recallBrandName: json['recall_brand_name'] as String? ?? '',
+      recallAgency: json['recall_agency'] as String? ?? '',
+      recallRiskLevel: json['recall_risk_level'] as String? ?? '',
+      recallDateIssued: json['recall_date_issued'] != null
+          ? DateTime.parse(json['recall_date_issued'] as String)
+          : DateTime.now(),
+      recallImageUrl: json['recall_image_url'] as String? ?? '',
+      matchScore: double.tryParse(json['match_score']?.toString() ?? '0') ?? 0.0,
+      matchConfidence: _parseConfidence(json['match_confidence'] as String?),
+      matchReason: json['match_reason'] as String? ?? '',
+      status: _parseStatus(json['status'] as String?),
+      matchedAt: json['matched_at'] != null
+          ? DateTime.parse(json['matched_at'] as String)
+          : DateTime.now(),
+      expiresAt: json['expires_at'] != null
+          ? DateTime.parse(json['expires_at'] as String)
+          : DateTime.now().add(Duration(days: 30)),
+      isExpired: json['is_expired'] as bool? ?? false,
+      daysUntilExpiry: json['days_until_expiry'] as int? ?? 0,
+    );
+  }
+
+  /// Get color for match score display
+  String getScoreColor() {
+    if (matchScore >= 90) return '#28a745'; // Green
+    if (matchScore >= 75) return '#FFA500'; // Orange
+    return '#dc3545'; // Red
+  }
+
+  /// Get display text for confidence level
+  String getConfidenceText() {
+    switch (matchConfidence) {
+      case MatchConfidence.high:
+        return 'High Confidence';
+      case MatchConfidence.mediumHigh:
+        return 'Medium-High';
+      case MatchConfidence.medium:
+        return 'Medium';
+      case MatchConfidence.low:
+        return 'Low';
+    }
+  }
+
+  /// Get display text for status
+  String getStatusText() {
+    switch (status) {
+      case MatchStatus.pendingReview:
+        return 'Pending Review';
+      case MatchStatus.confirmed:
+        return 'Confirmed';
+      case MatchStatus.dismissed:
+        return 'Dismissed';
+      case MatchStatus.expired:
+        return 'Expired';
+      case MatchStatus.invalidated:
+        return 'Invalidated';
+    }
+  }
+
+  static MatchConfidence _parseConfidence(String? value) {
+    switch (value?.toUpperCase()) {
+      case 'HIGH':
+        return MatchConfidence.high;
+      case 'MEDIUM-HIGH':
+        return MatchConfidence.mediumHigh;
+      case 'MEDIUM':
+        return MatchConfidence.medium;
+      case 'LOW':
+        return MatchConfidence.low;
+      default:
+        return MatchConfidence.medium;
+    }
+  }
+
+  static MatchStatus _parseStatus(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'pending_review':
+        return MatchStatus.pendingReview;
+      case 'confirmed':
+        return MatchStatus.confirmed;
+      case 'dismissed':
+        return MatchStatus.dismissed;
+      case 'expired':
+        return MatchStatus.expired;
+      case 'invalidated':
+        return MatchStatus.invalidated;
+      default:
+        return MatchStatus.pendingReview;
+    }
+  }
+}
+
+/// Full RecallMatch detail
+class RecallMatch {
+  final int id;
+  final UserItem userItem;
+  final RecallData recall;
+  final double matchScore;
+  final MatchConfidence matchConfidence;
+  final Map<String, double> matchedFields;
+  final String matchReason;
+  final MatchStatus status;
+  final DateTime matchedAt;
+  final DateTime? reviewedAt;
+  final DateTime? notifiedAt;
+  final DateTime expiresAt;
+  final DateTime? invalidatedAt;
+  final int? timeToReviewSeconds;
+  final String? dismissedReason;
+  final String? invalidationReason;
+  final bool isExpired;
+  final int daysUntilExpiry;
+  final bool canConfirm;
+  final bool canDismiss;
+
+  RecallMatch({
+    required this.id,
+    required this.userItem,
+    required this.recall,
+    required this.matchScore,
+    required this.matchConfidence,
+    required this.matchedFields,
+    required this.matchReason,
+    required this.status,
+    required this.matchedAt,
+    this.reviewedAt,
+    this.notifiedAt,
+    required this.expiresAt,
+    this.invalidatedAt,
+    this.timeToReviewSeconds,
+    this.dismissedReason,
+    this.invalidationReason,
+    required this.isExpired,
+    required this.daysUntilExpiry,
+    required this.canConfirm,
+    required this.canDismiss,
+  });
+
+  factory RecallMatch.fromJson(Map<String, dynamic> json) {
+    // Create fallback user_item if null (should never happen in practice)
+    final userItemData = json['user_item'] as Map<String, dynamic>? ?? {
+      'id': 0,
+      'manufacturer': '',
+      'brand_name': '',
+      'product_name': 'Unknown Item',
+      'model_number': '',
+      'upc': '',
+      'sku': '',
+      'batch_lot_code': '',
+      'serial_number': '',
+      'home_id': 0,
+      'home_name': '',
+      'room_id': 0,
+      'room_name': '',
+      'photo_urls': [],
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+
+    // Create fallback recall if null (should never happen in practice)
+    final recallData = json['recall'] as Map<String, dynamic>? ?? {
+      'id': '',
+      'product_name': 'Unknown Recall',
+      'brand_name': '',
+      'agency': '',
+      'date_issued': DateTime.now().toIso8601String(),
+      'recall_type': '',
+      'classification': '',
+      'reason': '',
+      'description': '',
+      'instructions': '',
+      'image_url': '',
+      'created_at': DateTime.now().toIso8601String(),
+    };
+
+    return RecallMatch(
+      id: json['id'] as int? ?? 0,
+      userItem: UserItem.fromJson(userItemData),
+      recall: RecallData.fromJson(recallData),
+      matchScore: double.tryParse(json['match_score']?.toString() ?? '0') ?? 0.0,
+      matchConfidence: _parseConfidence(json['match_confidence'] as String?),
+      matchedFields: _parseMatchedFields(json['matched_fields'] as Map<String, dynamic>?),
+      matchReason: json['match_reason'] as String? ?? '',
+      status: _parseStatus(json['status'] as String?),
+      matchedAt: json['matched_at'] != null
+          ? DateTime.parse(json['matched_at'] as String)
+          : DateTime.now(),
+      reviewedAt: json['reviewed_at'] != null
+          ? DateTime.parse(json['reviewed_at'] as String)
+          : null,
+      notifiedAt: json['notified_at'] != null
+          ? DateTime.parse(json['notified_at'] as String)
+          : null,
+      expiresAt: json['expires_at'] != null
+          ? DateTime.parse(json['expires_at'] as String)
+          : DateTime.now().add(Duration(days: 30)),
+      invalidatedAt: json['invalidated_at'] != null
+          ? DateTime.parse(json['invalidated_at'] as String)
+          : null,
+      timeToReviewSeconds: json['time_to_review_seconds'] as int?,
+      dismissedReason: json['dismissed_reason'] as String?,
+      invalidationReason: json['invalidation_reason'] as String?,
+      isExpired: json['is_expired'] as bool? ?? false,
+      daysUntilExpiry: json['days_until_expiry'] as int? ?? 0,
+      canConfirm: json['can_confirm'] as bool? ?? false,
+      canDismiss: json['can_dismiss'] as bool? ?? false,
+    );
+  }
+
+  static Map<String, double> _parseMatchedFields(Map<String, dynamic>? json) {
+    if (json == null) return {};
+    return json.map((key, value) => MapEntry(key, (value as num).toDouble()));
+  }
+
+  static MatchConfidence _parseConfidence(String? value) {
+    switch (value?.toUpperCase()) {
+      case 'HIGH':
+        return MatchConfidence.high;
+      case 'MEDIUM-HIGH':
+        return MatchConfidence.mediumHigh;
+      case 'MEDIUM':
+        return MatchConfidence.medium;
+      case 'LOW':
+        return MatchConfidence.low;
+      default:
+        return MatchConfidence.medium;
+    }
+  }
+
+  static MatchStatus _parseStatus(String? value) {
+    switch (value?.toLowerCase()) {
+      case 'pending_review':
+        return MatchStatus.pendingReview;
+      case 'confirmed':
+        return MatchStatus.confirmed;
+      case 'dismissed':
+        return MatchStatus.dismissed;
+      case 'expired':
+        return MatchStatus.expired;
+      case 'invalidated':
+        return MatchStatus.invalidated;
+      default:
+        return MatchStatus.pendingReview;
+    }
+  }
+}
+
+/// Request model for confirming a match
+class ConfirmMatchRequest {
+  final String? lotNumber;
+  final DateTime? purchaseDate;
+  final String? purchaseLocation;
+
+  ConfirmMatchRequest({
+    this.lotNumber,
+    this.purchaseDate,
+    this.purchaseLocation,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (lotNumber != null && lotNumber!.isNotEmpty)
+        'lot_number': lotNumber,
+      if (purchaseDate != null)
+        'purchase_date': purchaseDate!.toIso8601String().split('T')[0], // YYYY-MM-DD
+      if (purchaseLocation != null && purchaseLocation!.isNotEmpty)
+        'purchase_location': purchaseLocation,
+    };
+  }
+}
+
+/// Response model for confirming a match
+class ConfirmMatchResponse {
+  final bool success;
+  final String message;
+  final int matchId;
+  final int rmcId;
+  final String rmcStatus;
+  final String matchStatus;
+  final int timeToReviewSeconds;
+
+  ConfirmMatchResponse({
+    required this.success,
+    required this.message,
+    required this.matchId,
+    required this.rmcId,
+    required this.rmcStatus,
+    required this.matchStatus,
+    required this.timeToReviewSeconds,
+  });
+
+  factory ConfirmMatchResponse.fromJson(Map<String, dynamic> json) {
+    return ConfirmMatchResponse(
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String? ?? '',
+      matchId: json['match_id'] as int? ?? 0,
+      rmcId: json['rmc_id'] as int? ?? 0,
+      rmcStatus: json['rmc_status'] as String? ?? '',
+      matchStatus: json['match_status'] as String? ?? '',
+      timeToReviewSeconds: json['time_to_review_seconds'] as int? ?? 0,
+    );
+  }
+}
+
+/// Request model for dismissing a match
+class DismissMatchRequest {
+  final String reason;
+  final String? reasonCode;
+
+  DismissMatchRequest({
+    required this.reason,
+    this.reasonCode,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'reason': reason,
+      if (reasonCode != null) 'reason_code': reasonCode,
+    };
+  }
+}
+
+/// Response model for dismissing a match
+class DismissMatchResponse {
+  final bool success;
+  final String message;
+  final int matchId;
+  final String matchStatus;
+  final String dismissedReason;
+  final int timeToReviewSeconds;
+
+  DismissMatchResponse({
+    required this.success,
+    required this.message,
+    required this.matchId,
+    required this.matchStatus,
+    required this.dismissedReason,
+    required this.timeToReviewSeconds,
+  });
+
+  factory DismissMatchResponse.fromJson(Map<String, dynamic> json) {
+    return DismissMatchResponse(
+      success: json['success'] as bool? ?? false,
+      message: json['message'] as String? ?? '',
+      matchId: json['match_id'] as int? ?? 0,
+      matchStatus: json['match_status'] as String? ?? '',
+      dismissedReason: json['dismissed_reason'] as String? ?? '',
+      timeToReviewSeconds: json['time_to_review_seconds'] as int? ?? 0,
+    );
+  }
+}

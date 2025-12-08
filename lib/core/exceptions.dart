@@ -40,16 +40,13 @@ class NetworkException extends AppException {
   final int? statusCode;
 
   NetworkException({
-    required String message,
+    required super.message,
     String? code,
     this.statusCode,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-          message: message,
           code: code ?? statusCode?.toString(),
-          originalError: originalError,
-          stackTrace: stackTrace,
         );
 
   @override
@@ -72,17 +69,12 @@ class AuthException extends AppException {
   final bool isTokenExpired;
 
   AuthException({
-    required String message,
-    String? code,
+    required super.message,
+    super.code,
     this.isTokenExpired = false,
-    dynamic originalError,
-    StackTrace? stackTrace,
-  }) : super(
-          message: message,
-          code: code,
-          originalError: originalError,
-          stackTrace: stackTrace,
-        );
+    super.originalError,
+    super.stackTrace,
+  });
 
   @override
   String get displayMessage {
@@ -107,15 +99,12 @@ class ValidationException extends AppException {
   final Map<String, List<String>>? fieldErrors;
 
   ValidationException({
-    required String message,
+    required super.message,
     this.fieldErrors,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-          message: message,
           code: 'validation_error',
-          originalError: originalError,
-          stackTrace: stackTrace,
         );
 
   @override
@@ -139,15 +128,12 @@ class RateLimitException extends AppException {
   final int retryAfterSeconds;
 
   RateLimitException({
-    required String message,
+    required super.message,
     required this.retryAfterSeconds,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-          message: message,
           code: '429',
-          originalError: originalError,
-          stackTrace: stackTrace,
         );
 
   @override
@@ -168,15 +154,12 @@ class ServerException extends AppException {
   final int statusCode;
 
   ServerException({
-    required String message,
+    required super.message,
     required this.statusCode,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-          message: message,
           code: statusCode.toString(),
-          originalError: originalError,
-          stackTrace: stackTrace,
         );
 
   @override
@@ -194,14 +177,11 @@ class ServerException extends AppException {
 /// Exception for data parsing errors
 class DataException extends AppException {
   DataException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    required super.message,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-          message: message,
           code: 'data_error',
-          originalError: originalError,
-          stackTrace: stackTrace,
         );
 
   @override
@@ -211,14 +191,11 @@ class DataException extends AppException {
 /// Exception for cache-related errors (non-critical)
 class CacheException extends AppException {
   CacheException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    required super.message,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-          message: message,
           code: 'cache_error',
-          originalError: originalError,
-          stackTrace: stackTrace,
         );
 
   @override
@@ -233,15 +210,12 @@ class StorageException extends AppException {
   final bool isCritical;
 
   StorageException({
-    required String message,
+    required super.message,
     this.isCritical = false,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-          message: message,
           code: 'storage_error',
-          originalError: originalError,
-          stackTrace: stackTrace,
         );
 
   @override
@@ -263,17 +237,14 @@ class SubscriptionException extends AppException {
   final int? limit;
 
   SubscriptionException({
-    required String message,
+    required super.message,
     required this.currentTier,
     this.currentCount,
     this.limit,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-          message: message,
           code: 'subscription_limit',
-          originalError: originalError,
-          stackTrace: stackTrace,
         );
 
   @override
@@ -286,14 +257,11 @@ class SubscriptionException extends AppException {
 /// Exception for offline/connectivity errors
 class ConnectivityException extends AppException {
   ConnectivityException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    required super.message,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-          message: message,
           code: 'no_connection',
-          originalError: originalError,
-          stackTrace: stackTrace,
         );
 
   @override
@@ -307,14 +275,11 @@ class ConnectivityException extends AppException {
 /// Exception for unknown/unexpected errors
 class UnknownException extends AppException {
   UnknownException({
-    required String message,
-    dynamic originalError,
-    StackTrace? stackTrace,
+    required super.message,
+    super.originalError,
+    super.stackTrace,
   }) : super(
-          message: message,
           code: 'unknown',
-          originalError: originalError,
-          stackTrace: stackTrace,
         );
 
   @override

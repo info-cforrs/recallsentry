@@ -8,7 +8,11 @@ import 'security_service.dart';
 
 class ArticleService {
   final String _baseUrl = AppConfig.apiBaseUrl;
-  final http.Client _httpClient = SecurityService().createSecureHttpClient();
+  late final http.Client _httpClient;
+
+  ArticleService() {
+    _httpClient = SecurityService().createSecureHttpClient();
+  }
 
   // Cache for articles
   final Map<String, List<Article>> _cachedArticles = {};

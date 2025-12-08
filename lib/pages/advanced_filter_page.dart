@@ -5,8 +5,11 @@ import 'subscribe_page.dart';
 import '../services/filter_state_service.dart';
 import '../services/subscription_service.dart';
 import '../models/saved_filter.dart';
+import '../models/allergy_preferences.dart';
 import 'widgets/save_filter_dialog.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 
 class AdvancedFilterPage extends StatefulWidget {
   final bool clearFiltersOnInit;
@@ -20,7 +23,7 @@ class AdvancedFilterPage extends StatefulWidget {
   State<AdvancedFilterPage> createState() => _AdvancedFilterPageState();
 }
 
-class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
+class _AdvancedFilterPageState extends State<AdvancedFilterPage> with HideOnScrollMixin {
   final int _currentIndex = 1; // Recalls tab
   final FilterStateService _filterStateService = FilterStateService();
   SubscriptionTier _subscriptionTier = SubscriptionTier.free;
@@ -36,11 +39,23 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
   // State filter state
   final List<String> _selectedStates = [];
 
+  // Allergy filter state
+  final List<String> _selectedAllergens = [];
+
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
     _loadSavedFilters();
     _loadSubscriptionTier();
+  }
+
+  @override
+  void dispose() {
+    _brandController.dispose();
+    _productController.dispose();
+    disposeHideOnScroll();
+    super.dispose();
   }
 
   Future<void> _loadSubscriptionTier() async {
@@ -79,6 +94,8 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
       _selectedProductNames.addAll(filterState.productFilters);
       _selectedStates.clear();
       _selectedStates.addAll(filterState.stateFilters);
+      _selectedAllergens.clear();
+      _selectedAllergens.addAll(filterState.allergenFilters);
     });
   }
 
@@ -88,12 +105,20 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
       brandFilters: _selectedBrands,
       productFilters: _selectedProductNames,
       stateFilters: _selectedStates,
+      allergenFilters: _selectedAllergens,
     );
   }
 
   // Helper method to get total filter count (brands + products only, states don't count toward 3-filter limit)
   int get _totalFilterCount =>
       _selectedBrands.length + _selectedProductNames.length;
+
+  // Helper method to check if any filters are selected (for showing save button)
+  bool get _hasAnyFiltersSelected =>
+      _selectedBrands.isNotEmpty ||
+      _selectedProductNames.isNotEmpty ||
+      _selectedStates.isNotEmpty ||
+      _selectedAllergens.isNotEmpty;
 
   // Helper method to check if user can add more filters
   bool get _canAddMoreFilters => _totalFilterCount < 3;
@@ -348,6 +373,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
             // Main Content Area
             Expanded(
               child: SingleChildScrollView(
+                controller: hideOnScrollController,
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
@@ -422,12 +448,18 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                     // State Filter Section (Premium Feature)
                     _buildStateFilterSection(),
 
+                    const SizedBox(height: 24),
+
+                    // Allergy Filter Section
+                    _buildAllergyFilterSection(),
+
                     const SizedBox(height: 32),
 
                     // Filter Summary
                     if (_selectedBrands.isNotEmpty ||
                         _selectedProductNames.isNotEmpty ||
-                        _selectedStates.isNotEmpty)
+                        _selectedStates.isNotEmpty ||
+                        _selectedAllergens.isNotEmpty)
                       Container(
                         width: double.infinity,
                         decoration: BoxDecoration(
@@ -469,6 +501,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                                         _selectedBrands.clear();
                                         _selectedProductNames.clear();
                                         _selectedStates.clear();
+                                        _selectedAllergens.clear();
                                       });
                                     },
                                     child: const Text(
@@ -510,6 +543,18 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                                     fontSize: 14,
                                   ),
                                 ),
+                                const SizedBox(height: 8),
+                              ],
+                              if (_selectedAllergens.isNotEmpty) ...[
+                                Text(
+                                  _selectedAllergens.contains('all')
+                                      ? 'Allergens: All 9 major allergens'
+                                      : 'Allergens (${_selectedAllergens.length}): ${_selectedAllergens.map((a) => AllergyPreferences.getAllergenDisplayName(a)).join(', ')}',
+                                  style: const TextStyle(
+                                    color: Colors.orange,
+                                    fontSize: 14,
+                                  ),
+                                ),
                               ],
                             ],
                           ),
@@ -518,8 +563,8 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
 
                     const SizedBox(height: 32),
 
-                    // Save as Preset Button (only show if filters are selected)
-                    if (_totalFilterCount > 0) ...[
+                    // Save as Preset Button (only show if any filters are selected)
+                    if (_hasAnyFiltersSelected) ...[
                       SizedBox(
                         width: double.infinity,
                         height: 48,
@@ -538,6 +583,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                                   brandFilters: _selectedBrands,
                                   productFilters: _selectedProductNames,
                                   stateFilters: _selectedStates,
+                                  allergenFilters: _selectedAllergens,
                                 );
                               },
                             );
@@ -550,6 +596,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                                     brandFilters: result.brandFilters,
                                     productFilters: result.productFilters,
                                     stateFilters: result.stateFilters,
+                                    allergenFilters: result.allergenFilters,
                                   ),
                                 ),
                               );
@@ -602,6 +649,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                                       brandFilters: _selectedBrands,
                                       productFilters: _selectedProductNames,
                                       stateFilters: _selectedStates,
+                                      allergenFilters: _selectedAllergens,
                                     ),
                               ),
                             );
@@ -615,9 +663,10 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
                         label: Text(
                           _selectedBrands.isEmpty &&
                                   _selectedProductNames.isEmpty &&
-                                  _selectedStates.isEmpty
+                                  _selectedStates.isEmpty &&
+                                  _selectedAllergens.isEmpty
                               ? 'Show All Recalls'
-                              : 'Show Filtered Recalls (${_selectedBrands.length + _selectedProductNames.length + _selectedStates.length} filters)',
+                              : 'Show Filtered Recalls (${_selectedBrands.length + _selectedProductNames.length + _selectedStates.length + (_selectedAllergens.contains('all') ? 9 : _selectedAllergens.length)} filters)',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -642,55 +691,57 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: _currentIndex,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: _currentIndex,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -996,5 +1047,450 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> {
       'NM', 'NY', 'NC', 'ND', 'OH', 'OK', 'OR', 'PA', 'RI', 'SC',
       'SD', 'TN', 'TX', 'UT', 'VT', 'VA', 'WA', 'WV', 'WI', 'WY'
     ];
+  }
+
+  // Build Allergy Filter Section
+  Widget _buildAllergyFilterSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A4A5C),
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Section Header
+            Row(
+              children: [
+                const Icon(
+                  Icons.warning_amber,
+                  color: Colors.orange,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Filter by Allergy',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: const Text(
+                    'FDA Big 9',
+                    style: TextStyle(
+                      color: Colors.orange,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // Description
+            const Text(
+              'Get notified about recalls involving common food allergens',
+              style: TextStyle(
+                color: Colors.white70,
+                fontSize: 12,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            // Select Button and Selected Count
+            Row(
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _showAllergySelectionModal,
+                  icon: const Icon(Icons.checklist, size: 18, color: Colors.white),
+                  label: const Text(
+                    'Select',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.white,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF64B5F6),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                if (_selectedAllergens.isNotEmpty)
+                  Expanded(
+                    child: Text(
+                      _selectedAllergens.contains('all')
+                          ? 'All allergens selected'
+                          : '${_selectedAllergens.length} allergen${_selectedAllergens.length == 1 ? '' : 's'} selected',
+                      style: const TextStyle(
+                        color: Color(0xFF64B5F6),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+
+            // Selected Allergens Display
+            if (_selectedAllergens.isNotEmpty && !_selectedAllergens.contains('all')) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: _selectedAllergens.map((allergenKey) {
+                  final displayName = AllergyPreferences.getAllergenDisplayName(allergenKey);
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          _getAllergenEmoji(allergenKey),
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          displayName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedAllergens.remove(allergenKey);
+                            });
+                          },
+                          child: const Icon(
+                            Icons.close,
+                            size: 14,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Get emoji for allergen
+  String _getAllergenEmoji(String allergenKey) {
+    const emojis = {
+      'peanuts': '🥜',
+      'tree_nuts': '🌰',
+      'milk_dairy': '🥛',
+      'eggs': '🥚',
+      'wheat_gluten': '🌾',
+      'soy': '🫘',
+      'fish': '🐟',
+      'shellfish': '🦐',
+      'sesame': '🌱',
+    };
+    return emojis[allergenKey] ?? '⚠️';
+  }
+
+  // Show allergy selection modal
+  void _showAllergySelectionModal() {
+    // Create a local copy of selected allergens for the modal
+    List<String> tempSelected = List.from(_selectedAllergens);
+    bool allSelected = tempSelected.contains('all');
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1D3547),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      isScrollControlled: true,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setModalState) {
+            return DraggableScrollableSheet(
+              initialChildSize: 0.7,
+              minChildSize: 0.5,
+              maxChildSize: 0.9,
+              expand: false,
+              builder: (context, scrollController) {
+                return Column(
+                  children: [
+                    // Handle bar
+                    Container(
+                      margin: const EdgeInsets.only(top: 12),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.white38,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+
+                    // Header
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.warning_amber, color: Colors.orange, size: 24),
+                          const SizedBox(width: 12),
+                          const Expanded(
+                            child: Text(
+                              'Select Allergens',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              setModalState(() {
+                                tempSelected.clear();
+                                allSelected = false;
+                              });
+                            },
+                            child: const Text(
+                              'Clear',
+                              style: TextStyle(color: Color(0xFF64B5F6)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const Divider(color: Colors.white24, height: 1),
+
+                    // Content
+                    Expanded(
+                      child: ListView(
+                        controller: scrollController,
+                        padding: const EdgeInsets.all(16),
+                        children: [
+                          // All Allergens Toggle
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 16),
+                            decoration: BoxDecoration(
+                              color: allSelected
+                                  ? Colors.orange.withValues(alpha: 0.2)
+                                  : const Color(0xFF2A4A5C),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: allSelected ? Colors.orange : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                            child: CheckboxListTile(
+                              title: const Text(
+                                'ALL Allergens',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              subtitle: const Text(
+                                'Alert for all 9 major allergens',
+                                style: TextStyle(color: Colors.white70, fontSize: 12),
+                              ),
+                              secondary: const Text('⚠️', style: TextStyle(fontSize: 24)),
+                              value: allSelected,
+                              activeColor: Colors.orange,
+                              checkColor: Colors.white,
+                              onChanged: (bool? value) {
+                                setModalState(() {
+                                  allSelected = value ?? false;
+                                  if (allSelected) {
+                                    tempSelected.clear();
+                                    tempSelected.add('all');
+                                  } else {
+                                    tempSelected.remove('all');
+                                  }
+                                });
+                              },
+                            ),
+                          ),
+
+                          const Padding(
+                            padding: EdgeInsets.only(bottom: 12),
+                            child: Text(
+                              'Or select specific allergens:',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+
+                          // Individual Allergen Checkboxes
+                          ...AllergyPreferences.getAllergenCategories().map((category) {
+                            final isSelected = tempSelected.contains(category.key);
+                            final isDisabled = allSelected;
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected && !isDisabled
+                                    ? Colors.orange.withValues(alpha: 0.1)
+                                    : const Color(0xFF2A4A5C),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: CheckboxListTile(
+                                title: Row(
+                                  children: [
+                                    Text(
+                                      _getAllergenEmoji(category.key),
+                                      style: const TextStyle(fontSize: 18),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      category.displayName,
+                                      style: TextStyle(
+                                        color: isDisabled ? Colors.white38 : Colors.white,
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(left: 26),
+                                  child: Text(
+                                    category.description,
+                                    style: TextStyle(
+                                      color: isDisabled ? Colors.white24 : Colors.white54,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                                value: isDisabled ? true : isSelected,
+                                activeColor: Colors.orange,
+                                checkColor: Colors.white,
+                                onChanged: isDisabled
+                                    ? null
+                                    : (bool? value) {
+                                        setModalState(() {
+                                          if (value == true) {
+                                            if (!tempSelected.contains(category.key)) {
+                                              tempSelected.add(category.key);
+                                            }
+                                          } else {
+                                            tempSelected.remove(category.key);
+                                          }
+                                        });
+                                      },
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+
+                    // Bottom Buttons
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF2A4A5C),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.2),
+                            blurRadius: 8,
+                            offset: const Offset(0, -2),
+                          ),
+                        ],
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                side: const BorderSide(color: Colors.white54),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: const Text(
+                                'Cancel',
+                                style: TextStyle(color: Colors.white70, fontSize: 16),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: () {
+                                setState(() {
+                                  _selectedAllergens.clear();
+                                  _selectedAllergens.addAll(tempSelected);
+                                });
+                                Navigator.pop(context);
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF64B5F6),
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                              ),
+                              child: Text(
+                                'Apply (${tempSelected.isEmpty ? 0 : tempSelected.contains('all') ? 9 : tempSelected.length})',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              },
+            );
+          },
+        );
+      },
+    );
   }
 }

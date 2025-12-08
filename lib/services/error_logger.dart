@@ -5,7 +5,6 @@
 library;
 
 import 'package:flutter/foundation.dart';
-import '../core/exceptions.dart';
 import 'error_reporting_service.dart';
 
 /// A single error log entry
@@ -128,7 +127,7 @@ class ErrorLogger {
       ErrorReportingService.recordException(
         error,
         stackTrace,
-        context: '${service}${method != null ? '.$method' : ''}',
+        context: '$service${method != null ? '.$method' : ''}',
       );
     }
 

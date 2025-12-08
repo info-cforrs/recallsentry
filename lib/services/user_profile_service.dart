@@ -9,7 +9,11 @@ import 'security_service.dart';
 class UserProfileService {
   final AuthService _authService = AuthService();
   final String baseUrl = AppConfig.apiBaseUrl;
-  final http.Client _httpClient = SecurityService().createSecureHttpClient();
+  late final http.Client _httpClient;
+
+  UserProfileService() {
+    _httpClient = SecurityService().createSecureHttpClient();
+  }
 
   /// Get current user's profile
   /// SECURITY: Uses certificate pinning

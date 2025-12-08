@@ -6,11 +6,16 @@ import '../config/app_config.dart';
 import 'subscription_service.dart';
 import 'fcm_service.dart';
 import 'security_service.dart';
+import 'gamification_service.dart';
 
 class AuthService {
   final _storage = const FlutterSecureStorage();
   final String baseUrl = AppConfig.apiBaseUrl;
-  final http.Client _httpClient = SecurityService().createSecureHttpClient();
+  late final http.Client _httpClient;
+
+  AuthService() {
+    _httpClient = SecurityService().createSecureHttpClient();
+  }
 
   // Storage keys
   static const String _accessTokenKey = 'access_token';
@@ -102,6 +107,9 @@ class AuthService {
       if (fcmToken != null) {
         await FCMService().registerToken(fcmToken);
       }
+
+      // Record daily login for gamification (don't await - non-blocking)
+      GamificationService().recordAction(GamificationService.actionDailyLogin);
 
       return true;
     }

@@ -8,6 +8,7 @@ class SavedFilter {
   final List<String> brandFilters;
   final List<String> productFilters;
   final List<String> stateFilters;
+  final List<String> allergenFilters;
   final int filterCount;
   final bool isActive;
   final DateTime createdAt;
@@ -22,6 +23,7 @@ class SavedFilter {
     required this.brandFilters,
     required this.productFilters,
     required this.stateFilters,
+    required this.allergenFilters,
     required this.filterCount,
     required this.isActive,
     required this.createdAt,
@@ -56,6 +58,13 @@ class SavedFilter {
             ?.map((e) => e.toString())
             .toList() ??
         [];
+    final allergenFilters = (json['allergen_filters'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        (filterData['allergen_filters'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
 
     return SavedFilter(
       id: json['id'] as int,
@@ -65,6 +74,7 @@ class SavedFilter {
       brandFilters: brandFilters,
       productFilters: productFilters,
       stateFilters: stateFilters,
+      allergenFilters: allergenFilters,
       filterCount: json['filter_count'] as int? ?? 0,
       isActive: json['is_active'] as bool? ?? true,
       createdAt: json['created_at'] != null
@@ -88,6 +98,7 @@ class SavedFilter {
         'brand_filters': brandFilters,
         'product_filters': productFilters,
         'state_filters': stateFilters,
+        'allergen_filters': allergenFilters,
       },
       'is_active': isActive,
     };
@@ -102,6 +113,7 @@ class SavedFilter {
     List<String>? brandFilters,
     List<String>? productFilters,
     List<String>? stateFilters,
+    List<String>? allergenFilters,
     int? filterCount,
     bool? isActive,
     DateTime? createdAt,
@@ -116,6 +128,7 @@ class SavedFilter {
       brandFilters: brandFilters ?? this.brandFilters,
       productFilters: productFilters ?? this.productFilters,
       stateFilters: stateFilters ?? this.stateFilters,
+      allergenFilters: allergenFilters ?? this.allergenFilters,
       filterCount: filterCount ?? this.filterCount,
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,

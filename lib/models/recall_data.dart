@@ -135,6 +135,29 @@ class RecallData {
   final String usdaFoodSafetyQuestionsEmail;
   final String recallResolutionStatus;
 
+  // --- NHTSA-specific fields ---
+  final String nhtsaRecallId; // NHTSA campaign number
+  final String nhtsaCampaignNumber; // Same as recall ID
+  final String nhtsaMfrCampaignNumber; // Manufacturer's campaign number
+  final String nhtsaComponent; // Component being recalled
+  final String nhtsaRecallType; // 'Vehicle', 'Tire', 'Child Seat', 'Equipment'
+  final int? nhtsaPotentiallyAffected; // Number of potentially affected units
+  final bool nhtsaFireRisk; // Fire risk indicator
+  final bool nhtsaDoNotDrive; // Do not drive warning
+  final String nhtsaCompletionRate; // Recall completion rate
+  final String nhtsaVehicleMake; // Vehicle make (manufacturer)
+  final String nhtsaVehicleModel; // Vehicle model
+  final String nhtsaVehicleYearStart; // Start year for affected vehicles
+  final String nhtsaVehicleYearEnd; // End year for affected vehicles
+  final String nhtsaVehicleYearRange; // Combined year range (e.g., "2020-2024" or "2020")
+  final bool remedyOtaUpdate; // OTA software update remedy
+  final DateTime? nhtsaPlannedDealerNotificationDate;
+  final DateTime? nhtsaPlannedOwnerNotificationDate;
+  final DateTime? nhtsaOwnerNotificationLetterMailedDate;
+  final String nhtsaManufPhone; // Manufacturer phone
+  final String nhtsaModelNum; // Model number (for Tire/Child Seat)
+  final String nhtsaUpc; // UPC code (for Tire/Child Seat)
+
   // --- CPSC-specific fields ---
   final String cpscRemedyRecallProof; // Y or blank - requires proof for remedy
   final String cpscModel; // Product model number
@@ -252,6 +275,28 @@ class RecallData {
     this.usdaFoodSafetyQuestionsPhone = '',
     this.usdaFoodSafetyQuestionsEmail = '',
     this.recallResolutionStatus = 'Not Started',
+    // NHTSA-specific fields
+    this.nhtsaRecallId = '',
+    this.nhtsaCampaignNumber = '',
+    this.nhtsaMfrCampaignNumber = '',
+    this.nhtsaComponent = '',
+    this.nhtsaRecallType = '',
+    this.nhtsaPotentiallyAffected,
+    this.nhtsaFireRisk = false,
+    this.nhtsaDoNotDrive = false,
+    this.nhtsaCompletionRate = '',
+    this.nhtsaVehicleMake = '',
+    this.nhtsaVehicleModel = '',
+    this.nhtsaVehicleYearStart = '',
+    this.nhtsaVehicleYearEnd = '',
+    this.nhtsaVehicleYearRange = '',
+    this.remedyOtaUpdate = false,
+    this.nhtsaPlannedDealerNotificationDate,
+    this.nhtsaPlannedOwnerNotificationDate,
+    this.nhtsaOwnerNotificationLetterMailedDate,
+    this.nhtsaManufPhone = '',
+    this.nhtsaModelNum = '',
+    this.nhtsaUpc = '',
     // CPSC-specific fields
     this.cpscRemedyRecallProof = '',
     this.cpscModel = '',
@@ -463,6 +508,50 @@ class RecallData {
       usdaFoodSafetyQuestionsEmail:
           json['USDA-food-safety-questions-email'] ?? '',
       recallResolutionStatus: json['recall_resolution_status'] ?? 'Not Started',
+      // NHTSA-specific fields
+      nhtsaRecallId: json['nhtsa_recall_id'] ?? '',
+      nhtsaCampaignNumber: json['nhtsa_campaign_number'] ?? '',
+      nhtsaMfrCampaignNumber: json['nhtsa_mfr_campaign_number'] ?? '',
+      nhtsaComponent: json['nhtsa_component'] ?? '',
+      nhtsaRecallType: json['nhtsa_recall_type'] ?? '',
+      nhtsaPotentiallyAffected: json['nhtsa_potentially_affected'] is int
+          ? json['nhtsa_potentially_affected']
+          : (json['nhtsa_potentially_affected'] != null
+              ? int.tryParse(json['nhtsa_potentially_affected'].toString())
+              : null),
+      nhtsaFireRisk: json['nhtsa_fire_risk'] == true ||
+          json['nhtsa_fire_risk'] == 'true' ||
+          json['nhtsa_fire_risk'] == 'Y',
+      nhtsaDoNotDrive: json['nhtsa_do_not_drive'] == true ||
+          json['nhtsa_do_not_drive'] == 'true' ||
+          json['nhtsa_do_not_drive'] == 'Y',
+      nhtsaCompletionRate: json['nhtsa_completion_rate'] ?? '',
+      nhtsaVehicleMake: json['nhtsa_vehicle_make'] ?? '',
+      nhtsaVehicleModel: json['nhtsa_vehicle_model'] ?? '',
+      nhtsaVehicleYearStart: json['nhtsa_vehicle_year_start']?.toString() ?? '',
+      nhtsaVehicleYearEnd: json['nhtsa_vehicle_year_end']?.toString() ?? '',
+      nhtsaVehicleYearRange: json['nhtsa_vehicle_year_range']?.toString() ?? '',
+      remedyOtaUpdate: json['remedy_ota_update'] == true ||
+          json['remedy_ota_update'] == 'true' ||
+          json['remedy_ota_update'] == 'Y',
+      nhtsaPlannedDealerNotificationDate:
+          json['nhtsa_planned_dealer_notification_date'] != null &&
+              json['nhtsa_planned_dealer_notification_date'] != ''
+              ? DateTime.tryParse(json['nhtsa_planned_dealer_notification_date'])
+              : null,
+      nhtsaPlannedOwnerNotificationDate:
+          json['nhtsa_planned_owner_notification_date'] != null &&
+              json['nhtsa_planned_owner_notification_date'] != ''
+              ? DateTime.tryParse(json['nhtsa_planned_owner_notification_date'])
+              : null,
+      nhtsaOwnerNotificationLetterMailedDate:
+          json['nhtsa_owner_notification_letter_mailed_date'] != null &&
+              json['nhtsa_owner_notification_letter_mailed_date'] != ''
+              ? DateTime.tryParse(json['nhtsa_owner_notification_letter_mailed_date'])
+              : null,
+      nhtsaManufPhone: json['nhtsa_manuf_phone'] ?? '',
+      nhtsaModelNum: json['nhtsa_model_num'] ?? '',
+      nhtsaUpc: json['nhtsa_upc'] ?? '',
       // CPSC-specific fields
       cpscRemedyRecallProof: _parseBoolToYN(json['remedy_recall_proof']),
       cpscModel: json['model'] ?? '',
@@ -605,6 +694,31 @@ class RecallData {
       'USDA-food-safety-questions-phone': usdaFoodSafetyQuestionsPhone,
       'USDA-food-safety-questions-email': usdaFoodSafetyQuestionsEmail,
       'recall_resolution_status': recallResolutionStatus,
+      // NHTSA-specific fields
+      'nhtsa_recall_id': nhtsaRecallId,
+      'nhtsa_campaign_number': nhtsaCampaignNumber,
+      'nhtsa_mfr_campaign_number': nhtsaMfrCampaignNumber,
+      'nhtsa_component': nhtsaComponent,
+      'nhtsa_recall_type': nhtsaRecallType,
+      'nhtsa_potentially_affected': nhtsaPotentiallyAffected,
+      'nhtsa_fire_risk': nhtsaFireRisk,
+      'nhtsa_do_not_drive': nhtsaDoNotDrive,
+      'nhtsa_completion_rate': nhtsaCompletionRate,
+      'nhtsa_vehicle_make': nhtsaVehicleMake,
+      'nhtsa_vehicle_model': nhtsaVehicleModel,
+      'nhtsa_vehicle_year_start': nhtsaVehicleYearStart,
+      'nhtsa_vehicle_year_end': nhtsaVehicleYearEnd,
+      'nhtsa_vehicle_year_range': nhtsaVehicleYearRange,
+      'remedy_ota_update': remedyOtaUpdate,
+      'nhtsa_planned_dealer_notification_date':
+          nhtsaPlannedDealerNotificationDate?.toIso8601String() ?? '',
+      'nhtsa_planned_owner_notification_date':
+          nhtsaPlannedOwnerNotificationDate?.toIso8601String() ?? '',
+      'nhtsa_owner_notification_letter_mailed_date':
+          nhtsaOwnerNotificationLetterMailedDate?.toIso8601String() ?? '',
+      'nhtsa_manuf_phone': nhtsaManufPhone,
+      'nhtsa_model_num': nhtsaModelNum,
+      'nhtsa_upc': nhtsaUpc,
       // CPSC-specific fields
       'remedy_recall_proof': cpscRemedyRecallProof,
       'model': cpscModel,

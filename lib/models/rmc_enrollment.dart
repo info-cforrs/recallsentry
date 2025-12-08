@@ -17,7 +17,15 @@ class RmcEnrollment {
   final DateTime? purchaseDate;
   final String purchaseLocation;
   final double? estimatedValue;
-  final String? resolutionBranch; // Track which branch: Return, Repair, Replace, Dispose
+  final String? resolutionBranch; // Track which branch: Return, Repair, Replace, Dispose, Proof
+
+  // Proof branch specific fields
+  final String? proofPurchaseLocation;
+  final String? proofPurchaseDate;
+  final String? proofSerialNumber;
+  final String? proofPhoto1Url;
+  final String? proofPhoto2Url;
+  final DateTime? proofEmailSentAt;
 
   // Optional embedded recall data
   final Map<String, dynamic>? recallData;
@@ -42,6 +50,12 @@ class RmcEnrollment {
     this.purchaseLocation = '',
     this.estimatedValue,
     this.resolutionBranch,
+    this.proofPurchaseLocation,
+    this.proofPurchaseDate,
+    this.proofSerialNumber,
+    this.proofPhoto1Url,
+    this.proofPhoto2Url,
+    this.proofEmailSentAt,
     this.recallData,
   });
 
@@ -80,6 +94,14 @@ class RmcEnrollment {
           ? double.tryParse(json['estimated_value'].toString())
           : null,
       resolutionBranch: json['resolution_branch'] as String?,
+      proofPurchaseLocation: json['proof_purchase_location'] as String?,
+      proofPurchaseDate: json['proof_purchase_date'] as String?,
+      proofSerialNumber: json['proof_serial_number'] as String?,
+      proofPhoto1Url: json['proof_photo_1'] as String?,
+      proofPhoto2Url: json['proof_photo_2'] as String?,
+      proofEmailSentAt: json['proof_email_sent_at'] != null
+          ? DateTime.parse(json['proof_email_sent_at'] as String)
+          : null,
       recallData: json['recall_data'] as Map<String, dynamic>?,
     );
   }
@@ -103,6 +125,12 @@ class RmcEnrollment {
       'purchase_location': purchaseLocation,
       'estimated_value': estimatedValue?.toString(),
       'resolution_branch': resolutionBranch,
+      'proof_purchase_location': proofPurchaseLocation,
+      'proof_purchase_date': proofPurchaseDate,
+      'proof_serial_number': proofSerialNumber,
+      'proof_photo_1': proofPhoto1Url,
+      'proof_photo_2': proofPhoto2Url,
+      'proof_email_sent_at': proofEmailSentAt?.toIso8601String(),
     };
   }
 
@@ -126,6 +154,12 @@ class RmcEnrollment {
     String? purchaseLocation,
     double? estimatedValue,
     String? resolutionBranch,
+    String? proofPurchaseLocation,
+    String? proofPurchaseDate,
+    String? proofSerialNumber,
+    String? proofPhoto1Url,
+    String? proofPhoto2Url,
+    DateTime? proofEmailSentAt,
     Map<String, dynamic>? recallData,
   }) {
     return RmcEnrollment(
@@ -148,6 +182,12 @@ class RmcEnrollment {
       purchaseLocation: purchaseLocation ?? this.purchaseLocation,
       estimatedValue: estimatedValue ?? this.estimatedValue,
       resolutionBranch: resolutionBranch ?? this.resolutionBranch,
+      proofPurchaseLocation: proofPurchaseLocation ?? this.proofPurchaseLocation,
+      proofPurchaseDate: proofPurchaseDate ?? this.proofPurchaseDate,
+      proofSerialNumber: proofSerialNumber ?? this.proofSerialNumber,
+      proofPhoto1Url: proofPhoto1Url ?? this.proofPhoto1Url,
+      proofPhoto2Url: proofPhoto2Url ?? this.proofPhoto2Url,
+      proofEmailSentAt: proofEmailSentAt ?? this.proofEmailSentAt,
       recallData: recallData ?? this.recallData,
     );
   }

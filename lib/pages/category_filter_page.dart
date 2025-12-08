@@ -10,6 +10,8 @@ import '../widgets/small_usda_recall_card.dart';
 import '../widgets/small_fda_recall_card.dart';
 import '../widgets/article_card.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 import 'subscribe_page.dart';
 
 class FilteredRecallsPage extends StatefulWidget {
@@ -28,13 +30,12 @@ class FilteredRecallsPage extends StatefulWidget {
   State<FilteredRecallsPage> createState() => _FilteredRecallsPageState();
 }
 
-class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
+class _FilteredRecallsPageState extends State<FilteredRecallsPage> with HideOnScrollMixin {
   final RecallDataService _recallService = RecallDataService();
   final ArticleService _articleService = ArticleService();
   final SubscriptionService _subscriptionService = SubscriptionService();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  final ScrollController _scrollController = ScrollController();
 
   List<RecallData> _allRecalls = [];
   List<RecallData> _filteredRecalls = [];
@@ -58,6 +59,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
     if (widget.filteredRecalls != null) {
       setState(() {
         _allRecalls = widget.filteredRecalls!;
@@ -69,7 +71,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
     } else {
       _loadFilteredRecalls();
     }
-    _scrollController.addListener(_onScroll);
+    hideOnScrollController.addListener(_onScroll);
 
     // Listen to focus changes
     _searchFocusNode.addListener(() {
@@ -83,13 +85,13 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
-    _scrollController.dispose();
+    disposeHideOnScroll();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients) {
-      final isAtTop = _scrollController.offset <= 10;
+    if (hideOnScrollController.hasClients) {
+      final isAtTop = hideOnScrollController.offset <= 10;
       final shouldShow = isAtTop;
       if (shouldShow != _showSearchAndFilters) {
         setState(() {
@@ -1118,7 +1120,7 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
     );
 
     return ListView(
-      controller: _scrollController,
+      controller: hideOnScrollController,
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       children: widgets,
@@ -1497,55 +1499,57 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: _currentIndex,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.error), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: _currentIndex,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.error), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -8,6 +8,8 @@ import '../services/saved_filter_service.dart';
 import '../widgets/small_usda_recall_card.dart';
 import '../widgets/small_fda_recall_card.dart';
 import '../widgets/article_card.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 import 'main_navigation.dart';
 import '../widgets/custom_back_button.dart';
 import 'subscribe_page.dart';
@@ -19,13 +21,12 @@ class SavedRecallsPage extends StatefulWidget {
   State<SavedRecallsPage> createState() => _SavedRecallsPageState();
 }
 
-class _SavedRecallsPageState extends State<SavedRecallsPage> {
+class _SavedRecallsPageState extends State<SavedRecallsPage> with HideOnScrollMixin {
   final SavedRecallsService _savedRecallsService = SavedRecallsService();
   final ArticleService _articleService = ArticleService();
   final SubscriptionService _subscriptionService = SubscriptionService();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
-  final ScrollController _scrollController = ScrollController();
 
   List<RecallData> _allRecalls = [];
   List<RecallData> _filteredRecalls = [];
@@ -48,8 +49,9 @@ class _SavedRecallsPageState extends State<SavedRecallsPage> {
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
     _loadSavedRecalls();
-    _scrollController.addListener(_onScroll);
+    hideOnScrollController.addListener(_onScroll);
 
     // Listen to focus changes
     _searchFocusNode.addListener(() {
@@ -63,13 +65,13 @@ class _SavedRecallsPageState extends State<SavedRecallsPage> {
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
-    _scrollController.dispose();
+    disposeHideOnScroll();
     super.dispose();
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients) {
-      final isAtTop = _scrollController.offset <= 10;
+    if (hideOnScrollController.hasClients) {
+      final isAtTop = hideOnScrollController.offset <= 10;
       final shouldShow = isAtTop;
       if (shouldShow != _showSearchAndFilters) {
         setState(() {
@@ -950,7 +952,7 @@ class _SavedRecallsPageState extends State<SavedRecallsPage> {
     final totalItems = _getTotalItemCount();
 
     return ListView.builder(
-      controller: _scrollController,
+      controller: hideOnScrollController,
       padding: const EdgeInsets.all(16),
       itemCount: totalItems,
       itemBuilder: (context, index) {
@@ -1088,74 +1090,78 @@ class _SavedRecallsPageState extends State<SavedRecallsPage> {
         child: Column(
           children: [
             // Standard Header with App Icon, RecallSentry Text and Menu Button
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  const CustomBackButton(),
-                  const SizedBox(width: 8),
-                  // App Icon - Clickable to return to Home
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const MainNavigation(initialIndex: 0),
-                        ),
-                        (route) => false,
-                      );
-                    },
-                    child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: Image.asset(
-                        'assets/images/shield_logo4.png',
+            AnimatedVisibilityWrapper(
+              isVisible: isHeaderVisible,
+              direction: SlideDirection.up,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    const CustomBackButton(),
+                    const SizedBox(width: 8),
+                    // App Icon - Clickable to return to Home
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const MainNavigation(initialIndex: 0),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: SizedBox(
                         width: 40,
                         height: 40,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                        child: Image.asset(
+                          'assets/images/shield_logo4.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
                                 ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          );
-                        },
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Saved Recalls Text
-                  const Expanded(
-                    child: Text(
-                      'Saved Recalls',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Atlanta',
-                        color: Colors.white,
+                    const SizedBox(width: 16),
+                    // Saved Recalls Text
+                    const Expanded(
+                      child: Text(
+                        'Saved Recalls',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Atlanta',
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -1360,55 +1366,57 @@ class _SavedRecallsPageState extends State<SavedRecallsPage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: _currentIndex,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: _currentIndex,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

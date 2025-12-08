@@ -12,7 +12,9 @@ import '../main.dart';
 import '../pages/new_recalls_page.dart';
 import '../pages/fda_recall_details_page.dart';
 import '../pages/usda_recall_details_page.dart';
+import '../pages/recall_match_alert_page.dart';
 import 'recall_data_service.dart';
+import 'gamification_service.dart';
 
 /// Top-level function to handle background messages
 @pragma('vm:entry-point')
@@ -294,6 +296,9 @@ class FCMService {
       debugPrint('   Data: ${message.data}');
     }
 
+    // Record alert received for gamification (non-blocking)
+    GamificationService().recordAction(GamificationService.actionReceiveAlert);
+
     // Display the notification
     final notification = message.notification;
     if (notification != null) {
@@ -396,6 +401,30 @@ class FCMService {
       debugPrint('   Data: ${message.data}');
     }
 
+    // Get navigator context
+    final context = navigatorKey.currentContext;
+    if (context == null) {
+      if (kDebugMode) {
+        debugPrint('⚠️ No navigator context available');
+      }
+      return;
+    }
+
+    // Handle recall_match notifications
+    if (fcmType == 'recall_match') {
+      if (kDebugMode) {
+        debugPrint('✅ Navigating to RecallMatch Alert page');
+      }
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (ctx) => const RecallMatchAlertPage(),
+        ),
+      );
+      return;
+    }
+
+    // Handle new_recalls notifications
     if (fcmType != 'new_recalls') {
       if (kDebugMode) {
         debugPrint('⚠️ Navigation not implemented for FCM type: $fcmType');
@@ -414,15 +443,6 @@ class FCMService {
     if (count == 0) {
       if (kDebugMode) {
         debugPrint('⚠️ No recalls to navigate to');
-      }
-      return;
-    }
-
-    // Get navigator context
-    final context = navigatorKey.currentContext;
-    if (context == null) {
-      if (kDebugMode) {
-        debugPrint('⚠️ No navigator context available');
       }
       return;
     }

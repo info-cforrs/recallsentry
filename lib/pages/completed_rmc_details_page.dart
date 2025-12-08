@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/recall_data.dart';
 import '../models/rmc_enrollment.dart';
 import '../widgets/small_fda_recall_card.dart';
 import '../widgets/small_usda_recall_card.dart';
 import '../constants/rmc_status.dart';
+import '../config/app_config.dart';
 import 'main_navigation.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
 
@@ -65,6 +67,16 @@ class CompletedRmcDetailsPage extends StatelessWidget {
     return 'Return';
   }
 
+  // Helper to check if there is proof data to display
+  bool _hasProofData() {
+    return (enrollment.proofPurchaseLocation != null && enrollment.proofPurchaseLocation!.isNotEmpty) ||
+           (enrollment.proofPurchaseDate != null && enrollment.proofPurchaseDate!.isNotEmpty) ||
+           (enrollment.proofSerialNumber != null && enrollment.proofSerialNumber!.isNotEmpty) ||
+           enrollment.proofPhoto1Url != null ||
+           enrollment.proofPhoto2Url != null ||
+           enrollment.proofEmailSentAt != null;
+  }
+
   // Helper to get branch-specific steps
   List<Map<String, dynamic>> _getBranchSteps() {
     final branch = _getResolutionBranch();
@@ -92,6 +104,12 @@ class CompletedRmcDetailsPage extends StatelessWidget {
         return [
           {'title': 'Disposal Method Selected', 'icon': Icons.delete_outline},
           {'title': 'Item Disposed', 'icon': Icons.delete_forever},
+        ];
+      case 'Proof':
+        return [
+          {'title': 'Item Damaged Per Instructions', 'icon': Icons.warning_amber},
+          {'title': 'Proof Sent to Manufacturer', 'icon': Icons.email},
+          {'title': 'Refund Received', 'icon': Icons.payment},
         ];
       default:
         return [];
@@ -367,6 +385,97 @@ class CompletedRmcDetailsPage extends StatelessWidget {
                 ),
               ],
 
+              // Proof branch specific data
+              if (_getResolutionBranch() == 'Proof' && _hasProofData()) ...[
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Row(
+                          children: [
+                            Icon(
+                              Icons.camera_alt,
+                              color: Colors.purple,
+                              size: 24,
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Proof Submission Details',
+                              style: TextStyle(
+                                color: AppColors.textPrimary,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        if (enrollment.proofPurchaseLocation != null &&
+                            enrollment.proofPurchaseLocation!.isNotEmpty)
+                          _buildDetailRow('Purchased From', enrollment.proofPurchaseLocation!),
+                        if (enrollment.proofPurchaseDate != null &&
+                            enrollment.proofPurchaseDate!.isNotEmpty)
+                          _buildDetailRow('Purchase Date', enrollment.proofPurchaseDate!),
+                        if (enrollment.proofSerialNumber != null &&
+                            enrollment.proofSerialNumber!.isNotEmpty)
+                          _buildDetailRow('Serial Number', enrollment.proofSerialNumber!),
+                        if (enrollment.proofEmailSentAt != null)
+                          _buildDetailRow(
+                            'Proof Sent',
+                            '${_formatDate(enrollment.proofEmailSentAt!)} at ${_formatTime(enrollment.proofEmailSentAt!)}',
+                          ),
+
+                        // Proof photos
+                        if (enrollment.proofPhoto1Url != null ||
+                            enrollment.proofPhoto2Url != null) ...[
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Proof Photos',
+                            style: TextStyle(
+                              color: AppColors.textSecondary,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              if (enrollment.proofPhoto1Url != null)
+                                Expanded(
+                                  child: _buildProofPhotoThumbnail(
+                                    context,
+                                    enrollment.proofPhoto1Url!,
+                                    'Photo 1',
+                                  ),
+                                ),
+                              if (enrollment.proofPhoto1Url != null &&
+                                  enrollment.proofPhoto2Url != null)
+                                const SizedBox(width: 12),
+                              if (enrollment.proofPhoto2Url != null)
+                                Expanded(
+                                  child: _buildProofPhotoThumbnail(
+                                    context,
+                                    enrollment.proofPhoto2Url!,
+                                    'Photo 2',
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+
               const SizedBox(height: 32),
             ],
           ),
@@ -549,6 +658,85 @@ class CompletedRmcDetailsPage extends StatelessWidget {
                 color: AppColors.textPrimary,
                 fontSize: 14,
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProofPhotoThumbnail(BuildContext context, String photoUrl, String label) {
+    // Build full URL if it's a relative path
+    final fullUrl = photoUrl.startsWith('http')
+        ? photoUrl
+        : '${AppConfig.apiBaseUrl}$photoUrl';
+
+    return GestureDetector(
+      onTap: () {
+        // Show full-screen photo viewer
+        showDialog(
+          context: context,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.all(16),
+            child: Stack(
+              children: [
+                Center(
+                  child: InteractiveViewer(
+                    child: CachedNetworkImage(
+                      imageUrl: fullUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (context, url) => const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      ),
+                      errorWidget: (context, url, error) => const Center(
+                        child: Icon(Icons.error, color: Colors.red, size: 48),
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white, size: 32),
+                    onPressed: () => Navigator.of(context).pop(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+      child: Column(
+        children: [
+          Container(
+            height: 100,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: CachedNetworkImage(
+                imageUrl: fullUrl,
+                fit: BoxFit.cover,
+                width: double.infinity,
+                placeholder: (context, url) => const Center(
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                errorWidget: (context, url, error) => const Center(
+                  child: Icon(Icons.broken_image, color: AppColors.textTertiary),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
             ),
           ),
         ],

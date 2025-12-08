@@ -1,0 +1,155 @@
+// RecallSentry Firestore Security Rules
+// Deploy with: firebase deploy --only firestore:rules
+//
+// IMPORTANT: Review and customize these rules for your specific needs
+// before deploying to production.
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ============================================
+    // HELPER FUNCTIONS
+    // ============================================
+
+    // Check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Check if user owns the document
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Check if request is from the app (has valid Firebase App Check token)
+    function isValidApp() {
+      return request.auth.token.firebase.app_check_token == true;
+    }
+
+    // Validate string field length
+    function isValidString(field, minLen, maxLen) {
+      return field is string && field.size() >= minLen && field.size() <= maxLen;
+    }
+
+    // ============================================
+    // DEFAULT RULE - DENY ALL
+    // ============================================
+
+    // Deny all access by default - explicitly allow specific paths
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ============================================
+    // PUBLIC DATA (Read-only)
+    // ============================================
+
+    // Recall data - publicly readable, server-write only
+    match /recalls/{recallId} {
+      allow read: if true;
+      allow write: if false; // Only backend server can write via Admin SDK
+    }
+
+    // Recall categories/stats - publicly readable
+    match /recall_stats/{docId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
+    // ============================================
+    // USER DATA (Authenticated)
+    // ============================================
+
+    // User profiles
+    match /users/{userId} {
+      // Users can only read/write their own profile
+      allow read: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+
+      // User's saved recalls (subcollection)
+      match /saved_recalls/{recallId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+
+      // User's saved filters (subcollection)
+      match /saved_filters/{filterId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId)
+          && isValidString(request.resource.data.name, 1, 100);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
+      // User's RMC enrollments (subcollection)
+      match /rmc_enrollments/{enrollmentId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+    }
+
+    // ============================================
+    // FCM TOKENS (Push Notifications)
+    // ============================================
+
+    match /fcm_tokens/{tokenId} {
+      // Users can only manage their own tokens
+      allow read: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated()
+        && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+      allow delete: if isAuthenticated()
+        && resource.data.userId == request.auth.uid;
+    }
+
+    // ============================================
+    // SUBSCRIPTIONS
+    // ============================================
+
+    match /subscriptions/{userId} {
+      // Users can read their own subscription
+      allow read: if isOwner(userId);
+      // Only server can create/modify subscriptions (via Admin SDK)
+      allow write: if false;
+    }
+
+    // ============================================
+    // GAMIFICATION
+    // ============================================
+
+    // Safety scores - users can read their own, server writes
+    match /safety_scores/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false; // Server only
+    }
+
+    // Badges - users can read their own
+    match /user_badges/{userId} {
+      allow read: if isOwner(userId);
+      allow write: if false; // Server only
+    }
+
+    // Leaderboard - publicly readable (anonymized)
+    match /leaderboard/{entryId} {
+      allow read: if true;
+      allow write: if false; // Server only
+    }
+
+    // ============================================
+    // ADMIN / ANALYTICS (Server-only)
+    // ============================================
+
+    match /analytics/{docId} {
+      allow read, write: if false; // Admin SDK only
+    }
+
+    match /admin/{docId} {
+      allow read, write: if false; // Admin SDK only
+    }
+  }
+}

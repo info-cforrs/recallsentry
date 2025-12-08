@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../models/allergy_preferences.dart';
 import '../../services/saved_filter_service.dart';
 import '../../services/subscription_service.dart';
 import '../subscribe_page.dart';
@@ -10,12 +11,14 @@ class SaveFilterDialog extends StatefulWidget {
   final List<String> brandFilters;
   final List<String> productFilters;
   final List<String> stateFilters;
+  final List<String> allergenFilters;
 
   const SaveFilterDialog({
     super.key,
     required this.brandFilters,
     required this.productFilters,
     this.stateFilters = const [],
+    this.allergenFilters = const [],
   });
 
   @override
@@ -91,6 +94,7 @@ class _SaveFilterDialogState extends State<SaveFilterDialog> {
         brandFilters: widget.brandFilters,
         productFilters: widget.productFilters,
         stateFilters: widget.stateFilters,
+        allergenFilters: widget.allergenFilters,
       );
 
       // Apply the filter to update last_used_at and increment usage counter
@@ -167,7 +171,8 @@ class _SaveFilterDialogState extends State<SaveFilterDialog> {
       return _buildUpgradeRequiredDialog();
     }
 
-    final filterCount = widget.brandFilters.length + widget.productFilters.length + widget.stateFilters.length;
+    final allergenCount = widget.allergenFilters.contains('all') ? 9 : widget.allergenFilters.length;
+    final filterCount = widget.brandFilters.length + widget.productFilters.length + widget.stateFilters.length + allergenCount;
 
     return AlertDialog(
       backgroundColor: const Color(0xFF2A4A5C),
@@ -239,6 +244,15 @@ class _SaveFilterDialogState extends State<SaveFilterDialog> {
                       Text(
                         'States: ${widget.stateFilters.join(', ')}',
                         style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      ),
+                    ],
+                    if (widget.allergenFilters.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        widget.allergenFilters.contains('all')
+                            ? 'Allergens: All (FDA Big 9)'
+                            : 'Allergens: ${widget.allergenFilters.map((a) => AllergyPreferences.getAllergenDisplayName(a)).join(', ')}',
+                        style: const TextStyle(color: Colors.orange, fontSize: 13),
                       ),
                     ],
                   ],

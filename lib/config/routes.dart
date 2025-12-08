@@ -19,6 +19,10 @@ import 'package:rs_flutter/pages/saved_filters_page.dart';
 import 'package:rs_flutter/pages/email_notifications_page.dart';
 import 'package:rs_flutter/pages/push_notifications_page.dart';
 import 'package:rs_flutter/pages/rmc_page.dart';
+import 'package:rs_flutter/pages/all_vehicle_recalls_page.dart';
+import 'package:rs_flutter/pages/all_tire_recalls_page.dart';
+import 'package:rs_flutter/pages/all_child_seat_recalls_page.dart';
+import 'package:rs_flutter/pages/nhtsa_recall_details_page.dart';
 
 /// Centralized route configuration for the app.
 ///
@@ -48,10 +52,14 @@ class AppRoutes {
   static const String emailNotifications = '/notifications/email';
   static const String pushNotifications = '/notifications/push';
   static const String rmc = '/rmc';
+  static const String allVehicleRecalls = '/recalls/vehicles';
+  static const String allTireRecalls = '/recalls/tires';
+  static const String allChildSeatRecalls = '/recalls/child-seats';
 
   // Detail page routes (accept arguments)
   static const String fdaRecallDetails = '/recalls/fda/details';
   static const String usdaRecallDetails = '/recalls/usda/details';
+  static const String nhtsaRecallDetails = '/recalls/nhtsa/details';
   static const String rmcDetails = '/rmc/details';
   static const String completedRmcDetails = '/rmc/completed/details';
 
@@ -117,6 +125,22 @@ class AppRoutes {
 
       case '/rmc':
         return MaterialPageRoute(builder: (_) => const RmcPage());
+
+      case '/recalls/vehicles':
+        return MaterialPageRoute(builder: (_) => const AllVehicleRecallsPage());
+
+      case '/recalls/tires':
+        return MaterialPageRoute(builder: (_) => const AllTireRecallsPage());
+
+      case '/recalls/child-seats':
+        return MaterialPageRoute(builder: (_) => const AllChildSeatRecallsPage());
+
+      case '/recalls/nhtsa/details':
+        final args = settings.arguments as Map<String, dynamic>?;
+        if (args == null || args['recall'] == null) return null;
+        return MaterialPageRoute(
+          builder: (_) => NhtsaRecallDetailsPage(recall: args['recall']),
+        );
 
       // Detail pages with arguments would be handled here
       // Example:

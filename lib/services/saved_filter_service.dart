@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/saved_filter.dart';
 import 'auth_service.dart';
+import 'gamification_service.dart';
 
 /// Service for managing saved filter presets via API
 /// Integrates with backend /api/saved-filters/ endpoint
@@ -69,6 +70,7 @@ class SavedFilterService {
     required List<String> brandFilters,
     required List<String> productFilters,
     List<String>? stateFilters,
+    List<String>? allergenFilters,
   }) async {
     // Validate input lengths
     if (name.trim().isEmpty) {
@@ -92,6 +94,7 @@ class SavedFilterService {
           'brand_filters': brandFilters.map((f) => _sanitizeInput(f)).toList(),
           'product_filters': productFilters.map((f) => _sanitizeInput(f)).toList(),
           'state_filters': stateFilters ?? [],
+          'allergen_filters': allergenFilters ?? [],
         },
       });
 
@@ -99,6 +102,10 @@ class SavedFilterService {
 
       if (response.statusCode == 201) {
         final jsonData = json.decode(response.body);
+
+        // Record filter creation for gamification (non-blocking)
+        GamificationService().recordAction(GamificationService.actionCreateFilter);
+
         return SavedFilter.fromJson(jsonData as Map<String, dynamic>);
       } else if (response.statusCode == 403) {
         final errorData = json.decode(response.body);

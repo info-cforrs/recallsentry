@@ -55,10 +55,34 @@
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>RecallSentry uses your camera to scan product barcodes and quickly identify recalled items.</string>
+	<string>RecallSentry uses your camera to scan product barcodes, take photos of your household items, and quickly identify recalled products.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>RecallSentry needs access to your photo library to add photos of your household items to your inventory.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>RecallSentry uses your location to show recalls relevant to your area and provide state-specific recall alerts.</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLName</key>
+			<string>com.centerforrecallsafety.recallsentry</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>recallsentry</string>
+			</array>
+		</dict>
+	</array>
+	<!-- Required for url_launcher canLaunchUrl() to work on iOS -->
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>https</string>
+		<string>http</string>
+		<string>tel</string>
+		<string>mailto</string>
+		<string>sms</string>
+	</array>
 </dict>
 </plist>

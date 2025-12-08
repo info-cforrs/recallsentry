@@ -27,7 +27,8 @@ class CPSCRecallDetailsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Determine which section will be last (for border radius)
-    bool hasDetailsFields = recall.negativeOutcomes.isNotEmpty ||
+    bool hasDetailsFields = recall.category.isNotEmpty ||
+        recall.negativeOutcomes.isNotEmpty ||
         recall.recallReason.isNotEmpty ||
         recall.brandName.isNotEmpty ||
         recall.productName.isNotEmpty ||
@@ -35,8 +36,7 @@ class CPSCRecallDetailsCard extends StatelessWidget {
         recall.cpscModel.isNotEmpty ||
         recall.cpscSerialNumber.isNotEmpty ||
         recall.soldBy.isNotEmpty ||
-        recall.productQty.isNotEmpty ||
-        _hasCpscRetailers();
+        recall.productQty.isNotEmpty;
 
     // Determine which is the last section
     bool detailsFieldsIsLast = hasDetailsFields;
@@ -66,46 +66,6 @@ class CPSCRecallDetailsCard extends StatelessWidget {
         ),
       ],
     );
-  }
-
-  /// Check if any CPSC retailer fields are set
-  bool _hasCpscRetailers() {
-    return recall.cpscSoldByWalmart == 'Y' ||
-        recall.cpscSoldByAmazon == 'Y' ||
-        recall.cpscSoldByEbay == 'Y' ||
-        recall.cpscSoldByAliExpress == 'Y' ||
-        recall.cpscSoldByBestBuy == 'Y' ||
-        recall.cpscSoldByTarget == 'Y' ||
-        recall.cpscSoldByTikTok == 'Y' ||
-        recall.cpscSoldByFacebook == 'Y' ||
-        recall.cpscSoldByEtsy == 'Y' ||
-        recall.cpscSoldByCostco == 'Y' ||
-        recall.cpscSoldBySamsClub == 'Y' ||
-        recall.cpscSoldByDicksSportingGoods == 'Y' ||
-        recall.cpscSoldByOfficeDepot == 'Y' ||
-        recall.cpscSoldByKroger == 'Y' ||
-        recall.cpscSoldByPublix == 'Y';
-  }
-
-  /// Get list of retailers where product was sold
-  List<String> _getCpscRetailers() {
-    List<String> retailers = [];
-    if (recall.cpscSoldByWalmart == 'Y') retailers.add('Walmart');
-    if (recall.cpscSoldByAmazon == 'Y') retailers.add('Amazon');
-    if (recall.cpscSoldByTarget == 'Y') retailers.add('Target');
-    if (recall.cpscSoldByBestBuy == 'Y') retailers.add('Best Buy');
-    if (recall.cpscSoldByCostco == 'Y') retailers.add('Costco');
-    if (recall.cpscSoldBySamsClub == 'Y') retailers.add("Sam's Club");
-    if (recall.cpscSoldByEbay == 'Y') retailers.add('eBay');
-    if (recall.cpscSoldByEtsy == 'Y') retailers.add('Etsy');
-    if (recall.cpscSoldByAliExpress == 'Y') retailers.add('AliExpress');
-    if (recall.cpscSoldByTikTok == 'Y') retailers.add('TikTok Shop');
-    if (recall.cpscSoldByFacebook == 'Y') retailers.add('Facebook Marketplace');
-    if (recall.cpscSoldByDicksSportingGoods == 'Y') retailers.add("Dick's Sporting Goods");
-    if (recall.cpscSoldByOfficeDepot == 'Y') retailers.add('Office Depot');
-    if (recall.cpscSoldByKroger == 'Y') retailers.add('Kroger');
-    if (recall.cpscSoldByPublix == 'Y') retailers.add('Publix');
-    return retailers;
   }
 
   Widget _buildTopRow({
@@ -168,60 +128,53 @@ class CPSCRecallDetailsCard extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getRiskLevelColor(riskLevel),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      riskLevel.isNotEmpty ? riskLevel : 'RECALL',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
-                    ),
-                  ),
-                ],
+          // Risk level badge - only show if not empty and not "Not Classified"
+          if (riskLevel.trim().isNotEmpty &&
+              riskLevel.trim().toLowerCase() != 'not classified')
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 10,
+                vertical: 4,
               ),
-            ],
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              (stateCount == 0 ||
-                      stateCount == 50 ||
-                      (stateCount is String &&
-                          (stateCount.toString().toLowerCase() ==
-                                  'nationwide' ||
-                              stateCount.toString() == '0')))
-                  ? const Text(
-                      'NATIONWIDE',
-                      style: TextStyle(
-                        color: Colors.red,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    )
-                  : Text(
-                      '$stateCount States',
-                      style: const TextStyle(
-                        color: AppColors.textPrimary,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 15,
-                      ),
-                    ),
-            ],
-          ),
+              decoration: BoxDecoration(
+                color: _getRiskLevelColor(riskLevel),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                riskLevel,
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+          // Spacer to push state count to the right when risk level is empty/not classified
+          if (riskLevel.trim().isEmpty ||
+              riskLevel.trim().toLowerCase() == 'not classified')
+            const Spacer(),
+          // State count / Nationwide
+          (stateCount == 0 ||
+                  stateCount == 50 ||
+                  (stateCount is String &&
+                      (stateCount.toString().toLowerCase() == 'nationwide' ||
+                          stateCount.toString() == '0')))
+              ? const Text(
+                  'NATIONWIDE',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                )
+              : Text(
+                  '$stateCount States',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 15,
+                  ),
+                ),
         ],
       ),
     );
@@ -229,7 +182,9 @@ class CPSCRecallDetailsCard extends StatelessWidget {
 
   Color _getRiskLevelColor(String riskLevel) {
     final lower = riskLevel.toLowerCase();
-    if (lower.contains('high') || lower.contains('serious')) {
+    if (lower.contains('product safety warning')) {
+      return Colors.purple;
+    } else if (lower.contains('high') || lower.contains('serious')) {
       return AppColors.error;
     } else if (lower.contains('medium') || lower.contains('moderate')) {
       return Colors.orange;
@@ -250,6 +205,27 @@ class CPSCRecallDetailsCard extends StatelessWidget {
     required bool isLast,
   }) {
     List<Widget> children = [];
+
+    // Category - show above Negative Outcomes if not empty (full width row)
+    // Remove newlines and extra whitespace from category
+    final cleanCategory = recall.category.replaceAll(RegExp(r'[\r\n]+'), ' ').trim();
+    if (cleanCategory.isNotEmpty) {
+      children.add(Row(
+        children: [
+          Expanded(
+            child: Text(
+              cleanCategory,
+              style: const TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ));
+      children.add(const SizedBox(height: 12));
+    }
 
     // Negative Outcomes / Adverse Reactions - only show if not empty
     if (negativeOutcomes.isNotEmpty) {
@@ -465,91 +441,6 @@ class CPSCRecallDetailsCard extends StatelessWidget {
         ));
         children.add(const SizedBox(height: 12));
       }
-    }
-
-    // CPSC-Specific: Retailers where product was sold
-    final retailers = _getCpscRetailers();
-    if (retailers.isNotEmpty) {
-      children.add(const SizedBox(height: 8));
-      children.add(Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.primary,
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Row(
-              children: [
-                Icon(Icons.store, color: Colors.white, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Sold At',
-                  style: TextStyle(
-                    color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: retailers.map((retailer) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1565C0).withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF1565C0),
-                    width: 1,
-                  ),
-                ),
-                child: Text(
-                  retailer,
-                  style: const TextStyle(
-                    color: AppColors.textPrimary,
-                    fontSize: 13,
-                  ),
-                ),
-              )).toList(),
-            ),
-          ],
-        ),
-      ));
-      children.add(const SizedBox(height: 12));
-    }
-
-    // CPSC-Specific: Remedy requires proof of purchase
-    if (recall.cpscRemedyRecallProof == 'Y') {
-      children.add(Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.orange.withValues(alpha: 0.2),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: Colors.orange, width: 1),
-        ),
-        child: const Row(
-          children: [
-            Icon(Icons.receipt_long, color: Colors.orange, size: 20),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Proof of purchase required for remedy',
-                style: TextStyle(
-                  color: Colors.orange,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ));
-      children.add(const SizedBox(height: 12));
     }
 
     // "About this Item" section - show if any of the three fields have data

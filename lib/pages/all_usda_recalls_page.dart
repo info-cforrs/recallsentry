@@ -9,6 +9,8 @@ import '../models/article.dart';
 import '../widgets/small_usda_recall_card.dart';
 import '../widgets/article_card.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 import 'subscribe_page.dart';
 
 class AllUSDARecallsPage extends StatefulWidget {
@@ -18,12 +20,11 @@ class AllUSDARecallsPage extends StatefulWidget {
   State<AllUSDARecallsPage> createState() => _AllUSDARecallsPageState();
 }
 
-class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
+class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> with HideOnScrollMixin {
   final RecallDataService _recallService = RecallDataService();
   final ArticleService _articleService = ArticleService();
   final SubscriptionService _subscriptionService = SubscriptionService();
   final TextEditingController _searchController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
   List<RecallData> _usdaRecalls = [];
   List<RecallData> _filteredRecalls = [];
@@ -58,8 +59,9 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
     _loadUSDARecalls();
-    _scrollController.addListener(_onScroll);
+    hideOnScrollController.addListener(_onScroll);
 
     // Listen to focus changes
     _searchFocusNode.addListener(() {
@@ -70,8 +72,8 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients) {
-      final isAtTop = _scrollController.offset <= 10;
+    if (hideOnScrollController.hasClients) {
+      final isAtTop = hideOnScrollController.offset <= 10;
       final shouldShow = isAtTop;
 
       if (shouldShow != _showSearchAndFilters) {
@@ -81,8 +83,8 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
       }
 
       // PAGINATION: Load more recalls when near bottom
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      final currentScroll = _scrollController.position.pixels;
+      final maxScroll = hideOnScrollController.position.maxScrollExtent;
+      final currentScroll = hideOnScrollController.position.pixels;
       final delta = 200.0; // Trigger 200px before reaching bottom
 
       if (maxScroll - currentScroll <= delta &&
@@ -1308,7 +1310,7 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
       color: const Color(0xFF64B5F6), // Match app theme
       backgroundColor: const Color(0xFF2C3E50),
       child: SingleChildScrollView(
-        controller: _scrollController,
+        controller: hideOnScrollController,
         padding: const EdgeInsets.all(16),
         physics: const AlwaysScrollableScrollPhysics(), // Enable pull-to-refresh even when content fits screen
         child: Column(
@@ -1368,8 +1370,8 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
   @override
   void dispose() {
     _searchController.dispose();
-    _scrollController.dispose();
     _searchFocusNode.dispose();
+    disposeHideOnScroll();
     super.dispose();
   }
 
@@ -1381,70 +1383,74 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
         child: Column(
           children: [
             // Custom Header with Back Button and Centered App Icon + Title
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Stack(
-                children: [
-                  // Back button on the left
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: CustomBackButton(),
-                  ),
-                  // Centered App Icon and Title
-                  Center(
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 40,
-                          height: 40,
-                          child: Image.asset(
-                            'assets/images/shield_logo4.png',
+            AnimatedVisibilityWrapper(
+              isVisible: isHeaderVisible,
+              direction: SlideDirection.up,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Stack(
+                  children: [
+                    // Back button on the left
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: CustomBackButton(),
+                    ),
+                    // Centered App Icon and Title
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(
                             width: 40,
                             height: 40,
-                            fit: BoxFit.contain,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                width: 40,
-                                height: 40,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.1),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
+                            child: Image.asset(
+                              'assets/images/shield_logo4.png',
+                              width: 40,
+                              height: 40,
+                              fit: BoxFit.contain,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Container(
+                                  width: 40,
+                                  height: 40,
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
                                     ),
-                                  ],
-                                ),
-                                child: const Icon(
-                                  Icons.check,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              );
-                            },
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(alpha: 0.1),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: const Icon(
+                                    Icons.check,
+                                    color: Colors.white,
+                                    size: 24,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'All USDA Recalls',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: 'Atlanta',
-                            color: Colors.white,
+                          const SizedBox(width: 12),
+                          const Text(
+                            'All USDA Recalls',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              fontFamily: 'Atlanta',
+                              color: Colors.white,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -1619,55 +1625,57 @@ class _AllUSDARecallsPageState extends State<AllUSDARecallsPage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: _currentIndex,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: _currentIndex,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -3,6 +3,7 @@
 /// This file defines singleton providers for all service classes.
 /// By using providers, we ensure single instances are shared across the app,
 /// improving performance and enabling shared caching.
+library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/recall_data_service.dart';

@@ -11,17 +11,20 @@ class FilterStateService {
     required List<String> brandFilters,
     required List<String> productFilters,
     List<String>? stateFilters,
+    List<String>? allergenFilters,
   }) async {
     try {
       // Mark as having active filters if any filters exist
       bool hasFilters = brandFilters.isNotEmpty ||
                         productFilters.isNotEmpty ||
-                        (stateFilters?.isNotEmpty ?? false);
+                        (stateFilters?.isNotEmpty ?? false) ||
+                        (allergenFilters?.isNotEmpty ?? false);
 
       final filterData = jsonEncode({
         'brandFilters': brandFilters,
         'productFilters': productFilters,
         'stateFilters': stateFilters ?? [],
+        'allergenFilters': allergenFilters ?? [],
         'hasActiveFilters': hasFilters,
       });
 
@@ -47,6 +50,7 @@ class FilterStateService {
         brandFilters: List<String>.from(data['brandFilters'] ?? []),
         productFilters: List<String>.from(data['productFilters'] ?? []),
         stateFilters: List<String>.from(data['stateFilters'] ?? []),
+        allergenFilters: List<String>.from(data['allergenFilters'] ?? []),
         hasActiveFilters: data['hasActiveFilters'] ?? false,
       );
     } catch (e) {
@@ -124,12 +128,14 @@ class FilterState {
   final List<String> brandFilters;
   final List<String> productFilters;
   final List<String> stateFilters;
+  final List<String> allergenFilters;
   final bool hasActiveFilters;
 
   FilterState({
     required this.brandFilters,
     required this.productFilters,
     required this.stateFilters,
+    required this.allergenFilters,
     required this.hasActiveFilters,
   });
 
@@ -137,13 +143,14 @@ class FilterState {
     : brandFilters = [],
       productFilters = [],
       stateFilters = [],
+      allergenFilters = [],
       hasActiveFilters = false;
 
   // Total filter count
-  int get totalCount => brandFilters.length + productFilters.length + stateFilters.length;
+  int get totalCount => brandFilters.length + productFilters.length + stateFilters.length + allergenFilters.length;
 
   // Check if filters are empty
-  bool get isEmpty => brandFilters.isEmpty && productFilters.isEmpty && stateFilters.isEmpty;
+  bool get isEmpty => brandFilters.isEmpty && productFilters.isEmpty && stateFilters.isEmpty && allergenFilters.isEmpty;
 
   // Check if filters are not empty
   bool get isNotEmpty => !isEmpty;

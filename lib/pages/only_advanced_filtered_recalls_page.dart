@@ -8,17 +8,21 @@ import '../models/recall_data.dart';
 import '../widgets/small_usda_recall_card.dart';
 import '../widgets/small_fda_recall_card.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 
 class OnlyAdvancedFilteredRecallsPage extends StatefulWidget {
   final List<String> brandFilters;
   final List<String> productFilters;
   final List<String> stateFilters;
+  final List<String> allergenFilters;
 
   const OnlyAdvancedFilteredRecallsPage({
     super.key,
     this.brandFilters = const [],
     this.productFilters = const [],
     this.stateFilters = const [],
+    this.allergenFilters = const [],
   });
 
   @override
@@ -27,7 +31,7 @@ class OnlyAdvancedFilteredRecallsPage extends StatefulWidget {
 }
 
 class _OnlyAdvancedFilteredRecallsPageState
-    extends State<OnlyAdvancedFilteredRecallsPage> {
+    extends State<OnlyAdvancedFilteredRecallsPage> with HideOnScrollMixin {
   final int _currentIndex = 1; // Recalls tab
   final RecallDataService _recallService = RecallDataService();
   final FilterStateService _filterStateService = FilterStateService();
@@ -39,26 +43,36 @@ class _OnlyAdvancedFilteredRecallsPageState
   List<String> _activeBrandFilters = [];
   List<String> _activeProductFilters = [];
   List<String> _activeStateFilters = [];
+  List<String> _activeAllergenFilters = [];
 
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
     _initializeFilters();
+  }
+
+  @override
+  void dispose() {
+    disposeHideOnScroll();
+    super.dispose();
   }
 
   // Initialize filters - use passed parameters or load saved filters
   Future<void> _initializeFilters() async {
     // If filters were passed in constructor, use those
-    if (widget.brandFilters.isNotEmpty || widget.productFilters.isNotEmpty || widget.stateFilters.isNotEmpty) {
+    if (widget.brandFilters.isNotEmpty || widget.productFilters.isNotEmpty || widget.stateFilters.isNotEmpty || widget.allergenFilters.isNotEmpty) {
       _activeBrandFilters = List.from(widget.brandFilters);
       _activeProductFilters = List.from(widget.productFilters);
       _activeStateFilters = List.from(widget.stateFilters);
+      _activeAllergenFilters = List.from(widget.allergenFilters);
     } else {
       // Otherwise, load saved filters
       final filterState = await _filterStateService.loadFilterState();
       _activeBrandFilters = filterState.brandFilters;
       _activeProductFilters = filterState.productFilters;
       _activeStateFilters = filterState.stateFilters;
+      _activeAllergenFilters = filterState.allergenFilters;
     }
 
     _loadFilteredRecalls();
@@ -101,10 +115,10 @@ class _OnlyAdvancedFilteredRecallsPageState
       // Sort by date (most recent first)
       recentRecalls.sort((a, b) => b.dateIssued.compareTo(a.dateIssued));
 
-      // Then apply brand/product/state filters to the 30-day filtered results
+      // Then apply brand/product/state/allergen filters to the 30-day filtered results
       List<RecallData> filtered = recentRecalls;
 
-      if (_activeBrandFilters.isNotEmpty || _activeProductFilters.isNotEmpty || _activeStateFilters.isNotEmpty) {
+      if (_activeBrandFilters.isNotEmpty || _activeProductFilters.isNotEmpty || _activeStateFilters.isNotEmpty || _activeAllergenFilters.isNotEmpty) {
         filtered = recentRecalls.where((recall) {
           bool hasMatch = false;
 
@@ -145,7 +159,12 @@ class _OnlyAdvancedFilteredRecallsPageState
             }
           }
 
-          // Brand OR Product OR State - match if ANY filter type matches
+          // Check allergen filters (OR logic - match if ANY allergen filter matches)
+          if (!hasMatch && _activeAllergenFilters.isNotEmpty) {
+            hasMatch = _matchesAllergenFilter(recall);
+          }
+
+          // Brand OR Product OR State OR Allergen - match if ANY filter type matches
           return hasMatch;
         }).toList();
       }
@@ -166,6 +185,41 @@ class _OnlyAdvancedFilteredRecallsPageState
     }
   }
 
+  /// Check if recall matches any of the active allergen filters
+  bool _matchesAllergenFilter(RecallData recall) {
+    // FDA Big 9 allergen keywords
+    const allergenKeywords = {
+      'peanuts': ['peanut', 'peanuts', 'groundnut', 'groundnuts', 'arachis', 'peanut butter', 'peanut oil'],
+      'tree_nuts': ['almond', 'almonds', 'cashew', 'cashews', 'walnut', 'walnuts', 'pecan', 'pecans', 'pistachio', 'pistachios', 'hazelnut', 'hazelnuts', 'macadamia', 'brazil nut', 'brazil nuts', 'chestnut', 'chestnuts', 'pine nut', 'pine nuts', 'praline', 'pralines', 'marzipan', 'tree nut', 'tree nuts'],
+      'milk_dairy': ['milk', 'dairy', 'cheese', 'butter', 'cream', 'lactose', 'whey', 'casein', 'yogurt', 'yoghurt', 'ghee', 'ice cream', 'buttermilk', 'condensed milk', 'evaporated milk', 'powdered milk', 'milk protein', 'lactalbumin', 'lactoglobulin'],
+      'eggs': ['egg', 'eggs', 'albumin', 'mayonnaise', 'meringue', 'ovalbumin', 'ovomucin', 'ovomucoid', 'ovovitellin', 'lysozyme', 'globulin', 'egg white', 'egg yolk', 'dried egg', 'egg powder'],
+      'wheat_gluten': ['wheat', 'gluten', 'flour', 'bread', 'pasta', 'cereal', 'semolina', 'durum', 'spelt', 'farina', 'bulgur', 'couscous', 'seitan', 'wheat starch', 'wheat germ', 'wheat bran', 'whole wheat', 'enriched flour', 'bread crumbs', 'breadcrumbs'],
+      'soy': ['soy', 'soybean', 'soybeans', 'soya', 'tofu', 'edamame', 'miso', 'tempeh', 'soy sauce', 'soy milk', 'soy protein', 'soy lecithin', 'textured vegetable protein', 'tvp'],
+      'fish': ['fish', 'salmon', 'tuna', 'cod', 'tilapia', 'anchovy', 'anchovies', 'bass', 'halibut', 'trout', 'sardine', 'sardines', 'mackerel', 'herring', 'catfish', 'pollock', 'haddock', 'flounder', 'sole', 'snapper', 'grouper', 'swordfish', 'mahi', 'perch', 'pike', 'fish sauce', 'fish oil', 'omega-3'],
+      'shellfish': ['shrimp', 'crab', 'lobster', 'shellfish', 'crawfish', 'crayfish', 'scallop', 'scallops', 'clam', 'clams', 'mussel', 'mussels', 'oyster', 'oysters', 'prawn', 'prawns', 'langoustine', 'abalone', 'snail', 'escargot', 'calamari', 'squid', 'octopus'],
+      'sesame': ['sesame', 'tahini', 'halvah', 'halva', 'hummus', 'sesame oil', 'sesame seed', 'sesame seeds', 'benne', 'gingelly'],
+    };
+
+    // Build searchable text from recall (include all relevant fields)
+    final searchText = '${recall.productName} ${recall.brandName} ${recall.description} ${recall.recallReason} ${recall.recallPhaReason} ${recall.adverseReactions} ${recall.category}'.toLowerCase();
+
+    // Check if 'all' is selected (matches all allergens)
+    final allergensToCheck = _activeAllergenFilters.contains('all')
+        ? allergenKeywords.keys.toList()
+        : _activeAllergenFilters;
+
+    for (final allergen in allergensToCheck) {
+      final keywords = allergenKeywords[allergen] ?? [];
+      for (final keyword in keywords) {
+        if (searchText.contains(keyword.toLowerCase())) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -173,75 +227,79 @@ class _OnlyAdvancedFilteredRecallsPageState
       body: SafeArea(
         child: Column(
           children: [
-            // Standard Header with App Icon, RecallSentry Text and Menu Button
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  const CustomBackButton(),
-                  const SizedBox(width: 8),
-                  // App Icon - Clickable to return to Home
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const MainNavigation(initialIndex: 0),
-                        ),
-                        (route) => false,
-                      );
-                    },
-                    child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: Image.asset(
-                        'assets/images/shield_logo4.png',
+            // Standard Header with App Icon, RecallSentry Text and Menu Button - with hide-on-scroll
+            AnimatedVisibilityWrapper(
+              isVisible: isHeaderVisible,
+              direction: SlideDirection.up,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    const CustomBackButton(),
+                    const SizedBox(width: 8),
+                    // App Icon - Clickable to return to Home
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const MainNavigation(initialIndex: 0),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: SizedBox(
                         width: 40,
                         height: 40,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                        child: Image.asset(
+                          'assets/images/shield_logo4.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
                                 ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          );
-                        },
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Filtered Recalls Text
-                  const Expanded(
-                    child: Text(
-                      'Filtered Recalls',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Atlanta',
-                        color: Colors.white,
+                    const SizedBox(width: 16),
+                    // Filtered Recalls Text
+                    const Expanded(
+                      child: Text(
+                        'Filtered Recalls',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Atlanta',
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -249,6 +307,7 @@ class _OnlyAdvancedFilteredRecallsPageState
             // Main Content Area
             Expanded(
               child: SingleChildScrollView(
+                controller: hideOnScrollController,
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
@@ -616,55 +675,57 @@ class _OnlyAdvancedFilteredRecallsPageState
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: _currentIndex,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: _currentIndex,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }

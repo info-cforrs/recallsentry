@@ -135,35 +135,38 @@ class _SmallMainPageRecallCardState extends ConsumerState<SmallMainPageRecallCar
                           topRight: Radius.circular(16),
                         ),
                       ),
-                      child: widget.recall.imageUrl.isNotEmpty
-                          ? ClipRRect(
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(16),
-                                topRight: Radius.circular(16),
-                              ),
-                              child: Image.network(
-                                widget.recall.imageUrl.startsWith('http')
-                                    ? widget.recall.imageUrl
-                                    : 'https://api.centerforrecallsafety.com${widget.recall.imageUrl}',
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Center(
+                      child: Builder(
+                          builder: (context) {
+                            final imageUrl = widget.recall.getPrimaryImageUrl();
+                            return imageUrl.isNotEmpty
+                                ? ClipRRect(
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(16),
+                                      topRight: Radius.circular(16),
+                                    ),
+                                    child: Image.network(
+                                      imageUrl,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return const Center(
+                                          child: Icon(
+                                            Icons.image_not_supported,
+                                            size: 40,
+                                            color: Colors.grey,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  )
+                                : const Center(
                                     child: Icon(
                                       Icons.image_not_supported,
                                       size: 40,
                                       color: Colors.grey,
                                     ),
                                   );
-                                },
-                              ),
-                            )
-                          : const Center(
-                              child: Icon(
-                                Icons.image_not_supported,
-                                size: 40,
-                                color: Colors.grey,
-                              ),
-                            ),
+                          },
+                        ),
                     ),
                     // Heart/Save overlay (top right corner with dark background)
                     Positioned(

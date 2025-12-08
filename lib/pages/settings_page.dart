@@ -510,7 +510,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       const url =
                           'https://centerforrecallsafety.com/privacy-policy/';
                       if (await canLaunchUrl(Uri.parse(url))) {
-                        await launchUrl(Uri.parse(url));
+                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                       }
                     },
                   ),
@@ -532,7 +532,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: () async {
                       const url = 'https://centerforrecallsafety.com/terms/';
                       if (await canLaunchUrl(Uri.parse(url))) {
-                        await launchUrl(Uri.parse(url));
+                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                       }
                     },
                   ),
@@ -605,7 +605,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: () async {
                       const url = 'https://centerforrecallsafety.com/contact/';
                       if (await canLaunchUrl(Uri.parse(url))) {
-                        await launchUrl(Uri.parse(url));
+                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                       }
                     },
                   ),
@@ -624,7 +624,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: () async {
                       const url = 'https://centerforrecallsafety.com/faqs/';
                       if (await canLaunchUrl(Uri.parse(url))) {
-                        await launchUrl(Uri.parse(url));
+                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                       }
                     },
                   ),
@@ -646,7 +646,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: () async {
                       const url = 'https://centerforrecallsafety.com/about/';
                       if (await canLaunchUrl(Uri.parse(url))) {
-                        await launchUrl(Uri.parse(url));
+                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                       }
                     },
                   ),
@@ -761,7 +761,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     onTap: () async {
                       const url = 'https://www.centerforrecallsafety.com';
                       if (await canLaunchUrl(Uri.parse(url))) {
-                        await launchUrl(Uri.parse(url));
+                        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
                       }
                     },
                   ),

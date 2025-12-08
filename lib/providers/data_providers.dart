@@ -3,6 +3,7 @@
 /// This file defines providers for commonly accessed data like subscription info,
 /// user profile, recalls, etc. These providers use the service providers and
 /// handle async data fetching with proper caching.
+library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'service_providers.dart';
@@ -110,6 +111,24 @@ final usdaRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
 final cpscRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
   final recallService = ref.watch(recallDataServiceProvider);
   return recallService.getCpscRecalls();
+});
+
+/// NHTSA Vehicle Recalls Provider - Fetches all NHTSA vehicle recalls
+final nhtsaVehicleRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
+  final recallService = ref.watch(recallDataServiceProvider);
+  return recallService.getNhtsaVehicleRecalls();
+});
+
+/// NHTSA Tire Recalls Provider - Fetches all NHTSA tire recalls
+final nhtsaTireRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
+  final recallService = ref.watch(recallDataServiceProvider);
+  return recallService.getNhtsaTireRecalls();
+});
+
+/// NHTSA Child Seat Recalls Provider - Fetches all NHTSA child seat recalls
+final nhtsaChildSeatRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
+  final recallService = ref.watch(recallDataServiceProvider);
+  return recallService.getNhtsaChildSeatRecalls();
 });
 
 /// All Recalls Provider - Combines FDA, USDA, and CPSC recalls
@@ -365,20 +384,40 @@ final rmcRecallsWithEnrollmentsProvider = FutureProvider<List<Map<String, dynami
 
 /// Category Counts Provider - Calculates recall counts by category
 /// Returns a map of category key to count
+/// NOTE: vehicles, tires, and childSeats counts come from NHTSA data
 final categoryCountsProvider = FutureProvider<Map<String, int>>((ref) async {
   final filteredRecalls = await ref.watch(filteredRecallsProvider.future);
 
+  // Get subscription info for tier-based filtering of NHTSA recalls
+  final subscriptionInfo = await ref.watch(subscriptionInfoProvider.future);
+  final tier = subscriptionInfo.tier;
+  final now = DateTime.now();
+  final DateTime cutoff;
+  if (tier == SubscriptionTier.free) {
+    cutoff = now.subtract(const Duration(days: 30));
+  } else {
+    cutoff = DateTime(now.year, 1, 1);
+  }
+
+  // Fetch NHTSA recalls for vehicles, tires, and child seats
+  final nhtsaVehicles = await ref.watch(nhtsaVehicleRecallsProvider.future);
+  final nhtsaTires = await ref.watch(nhtsaTireRecallsProvider.future);
+  final nhtsaChildSeats = await ref.watch(nhtsaChildSeatRecallsProvider.future);
+
+  // Apply tier-based date filtering to NHTSA recalls
+  final filteredVehicles = nhtsaVehicles.where((r) => r.dateIssued.isAfter(cutoff)).length;
+  final filteredTires = nhtsaTires.where((r) => r.dateIssued.isAfter(cutoff)).length;
+  final filteredChildSeats = nhtsaChildSeats.where((r) => r.dateIssued.isAfter(cutoff)).length;
+
+  // Categories that use FDA/USDA/CPSC text matching
   final categories = {
     'food': ['food'],
     'cosmetics': ['cosmetics', 'personal care'],
     'drugs': ['otc drugs', 'supplements'],
     'home': ['home', 'furniture'],
     'clothing': ['clothing', 'kids items'],
-    'childSeats': ['child seats', 'other accessories'],
     'powerTools': ['power tools', 'lawn care'],
     'electronics': ['electronics', 'appliances'],
-    'vehicles': ['car', 'truck', 'suv'],
-    'tires': ['tires'],
     'toys': ['toys'],
     'pets': ['pet', 'veterinary', 'animal'],
   };
@@ -393,6 +432,11 @@ final categoryCountsProvider = FutureProvider<Map<String, int>>((ref) async {
 
     counts[key] = count;
   });
+
+  // Add NHTSA-based counts for vehicles, tires, and child seats
+  counts['vehicles'] = filteredVehicles;
+  counts['tires'] = filteredTires;
+  counts['childSeats'] = filteredChildSeats;
 
   return counts;
 });

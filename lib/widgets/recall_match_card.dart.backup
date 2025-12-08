@@ -1,0 +1,448 @@
+import 'package:flutter/material.dart';
+import '../models/recall_match.dart';
+import '../models/user_item.dart';
+import '../constants/app_colors.dart';
+import '../pages/user_item_details_page.dart';
+import 'user_item_card.dart';
+
+/// RecallMatch Card Widget
+///
+/// Uses existing UserItemCard widget and replicates SmallFdaRecallCard styling
+/// Layout: Confidence → User Item → Helper Text → Recall → Buttons → Divider
+class RecallMatchCard extends StatelessWidget {
+  final RecallMatchSummary match;
+  final VoidCallback onConfirm;
+  final VoidCallback onDismiss;
+  final bool showDivider;
+
+  const RecallMatchCard({
+    super.key,
+    required this.match,
+    required this.onConfirm,
+    required this.onDismiss,
+    this.showDivider = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // CONFIDENCE BADGE + EXPLANATION TEXT (Top)
+        _buildConfidenceHeader(),
+
+        const SizedBox(height: 16),
+
+        // USER ITEM CARD (using existing widget)
+        UserItemCard(
+          item: _buildUserItemFromMatch(),
+          onTap: () {
+            // Navigate to user item details page
+            final userItem = _buildUserItemFromMatch();
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => UserItemDetailsPage(item: userItem),
+              ),
+            );
+          },
+        ),
+
+        const SizedBox(height: 16),
+
+        // QUESTION ICON + HELPER TEXT (Between cards)
+        _buildHelperText(),
+
+        const SizedBox(height: 16),
+
+        // RECALL CARD (Same style as SmallFdaRecallCard but without save button)
+        _buildRecallCard(),
+
+        // Expiry Warning (if applicable)
+        if (match.daysUntilExpiry <= 7) ...[
+          const SizedBox(height: 16),
+          _buildExpiryWarning(),
+        ],
+
+        const SizedBox(height: 16),
+
+        // ACTION BUTTONS (Below recall card)
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onDismiss,
+                icon: const Icon(Icons.close, size: 18),
+                label: const Text('Not My Item'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: BorderSide(color: AppColors.error),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: onConfirm,
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Confirm Match'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.success,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        // DIVIDER (if more matches below)
+        if (showDivider) ...[
+          const SizedBox(height: 24),
+          const Divider(
+            color: AppColors.textSecondary,
+            thickness: 1,
+            height: 1,
+          ),
+          const SizedBox(height: 24),
+        ] else ...[
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
+  }
+
+  /// Confidence badge and explanation text at the top
+  Widget _buildConfidenceHeader() {
+    final scoreColor = _getScoreColor();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Match confidence badge
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: scoreColor.withValues(alpha: 0.15),
+            border: Border.all(color: scoreColor, width: 2),
+            borderRadius: BorderRadius.circular(24),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.bolt,
+                color: scoreColor,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                '${match.matchScore.toStringAsFixed(0)}% Match Confidence',
+                style: TextStyle(
+                  color: scoreColor,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 12),
+
+        // Explanation text
+        Text(
+          match.getConfidenceText() == 'HIGH'
+              ? 'Strong match detected based on ${match.matchReason}'
+              : match.getConfidenceText() == 'MEDIUM'
+                  ? 'Moderate match based on ${match.matchReason}'
+                  : 'Possible match based on ${match.matchReason}',
+          style: const TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  /// Helper text with question icon between cards
+  Widget _buildHelperText() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.accentBlue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: AppColors.accentBlue.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.help_outline,
+            size: 24,
+            color: AppColors.accentBlue,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Your item above may be affected by the recall shown below. Please review and take action.',
+              style: const TextStyle(
+                fontSize: 13,
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
+                height: 1.4,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Convert RecallMatchSummary to UserItem for UserItemCard
+  UserItem _buildUserItemFromMatch() {
+    return UserItem(
+      id: match.userItemId,
+      manufacturer: match.userItemManufacturer,
+      brandName: match.userItemBrandName,
+      productName: match.userItemProductName,
+      modelNumber: match.userItemModelNumber,
+      upc: '',
+      sku: '',
+      batchLotCode: '',
+      serialNumber: '',
+      homeId: 0,
+      homeName: match.userItemLocation.split(' → ').first,
+      roomId: 0,
+      roomName: match.userItemLocation.contains(' → ')
+          ? match.userItemLocation.split(' → ').last
+          : match.userItemLocation,
+      photoUrls: match.userItemPhotoUrls,
+      createdAt: match.userItemCreatedAt,
+      updatedAt: match.userItemCreatedAt,
+    );
+  }
+
+
+  /// RECALL CARD - Same style as SmallUsdaRecallCard/SmallFdaRecallCard
+  Widget _buildRecallCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.secondary,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Row 1: Brand Name, Agency, Date
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(
+                child: Text(
+                  match.recallBrandName.isNotEmpty ? match.recallBrandName : 'N/A',
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  match.recallAgency,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _formatDate(match.recallDateIssued),
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.right,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          // Row 2: Product Info and Image
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Left: Product details (2/3 width)
+              Expanded(
+                flex: 2,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      match.recallProductName.isNotEmpty ? match.recallProductName : 'N/A',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Risk: ${match.recallRiskLevel.isNotEmpty ? match.recallRiskLevel : 'N/A'}',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Reason: ${match.matchReason}',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'ID: ${match.recallId}',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 12,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Right: Recall Image (1/3 width)
+              Expanded(
+                flex: 1,
+                child: Container(
+                  width: double.infinity,
+                  height: 100,
+                  decoration: BoxDecoration(
+                    color: AppColors.textPrimary,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Builder(
+                    builder: (context) {
+                      final imageUrl = match.recallImageUrl;
+                      return imageUrl.isNotEmpty
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                imageUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Center(
+                                    child: Icon(
+                                      Icons.image_not_supported,
+                                      size: 30,
+                                      color: Colors.grey,
+                                    ),
+                                  );
+                                },
+                              ),
+                            )
+                          : const Center(
+                              child: Icon(
+                                Icons.image_not_supported,
+                                size: 30,
+                                color: Colors.grey,
+                              ),
+                            );
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpiryWarning() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange, width: 1.5),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.warning,
+            size: 20,
+            color: Colors.orange,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              'Match expires in ${match.daysUntilExpiry} day${match.daysUntilExpiry == 1 ? "" : "s"}. Take action soon!',
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.orange,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getScoreColor() {
+    if (match.matchScore >= 90) {
+      return AppColors.success;
+    } else if (match.matchScore >= 75) {
+      return Colors.orange;
+    } else {
+      return AppColors.error;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}, ${date.year}';
+  }
+}

@@ -87,7 +87,7 @@ class IntroPage2 extends StatelessWidget {
               const Padding(
                 padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
-                  'Powerful technology to find Recalls for your household products automatically',
+                  'Powerful technology to find Recalls for your household items automatically',
                   style: TextStyle(
                     fontSize: 18,
                     color: Colors.white70,

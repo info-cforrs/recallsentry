@@ -79,7 +79,11 @@ class UsageData {
 
 class UsageService {
   final String _baseUrl = AppConfig.apiBaseUrl;
-  final http.Client _httpClient = SecurityService().createSecureHttpClient();
+  late final http.Client _httpClient;
+
+  UsageService() {
+    _httpClient = SecurityService().createSecureHttpClient();
+  }
 
   // Cache for usage data
   UsageData? _cachedUsageData;

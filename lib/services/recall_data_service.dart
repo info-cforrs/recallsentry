@@ -16,10 +16,16 @@ class RecallDataService {
   List<RecallData> _cachedFdaRecalls = [];
   List<RecallData> _cachedUsdaRecalls = [];
   List<RecallData> _cachedCpscRecalls = [];
+  List<RecallData> _cachedNhtsaVehicleRecalls = [];
+  List<RecallData> _cachedNhtsaTireRecalls = [];
+  List<RecallData> _cachedNhtsaChildSeatRecalls = [];
   DateTime? _lastFetch;
   DateTime? _lastFdaFetch;
   DateTime? _lastUsdaFetch;
   DateTime? _lastCpscFetch;
+  DateTime? _lastNhtsaVehicleFetch;
+  DateTime? _lastNhtsaTireFetch;
+  DateTime? _lastNhtsaChildSeatFetch;
   String? _currentSpreadsheetId;
 
   // Default spreadsheet ID - users can override this
@@ -378,6 +384,198 @@ class RecallDataService {
     }
 
     // No Google Sheets fallback for CPSC
+    return [];
+  }
+
+  // Get NHTSA Vehicle recalls
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> getNhtsaVehicleRecalls({
+    bool forceRefresh = false,
+    int? limit,
+    int? offset,
+  }) async {
+
+    // Use REST API if configured
+    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
+
+      try {
+        print('🔵 Starting NHTSA Vehicle recalls fetch from REST API...');
+
+        // If pagination is requested, skip cache and fetch from API
+        if (limit != null || offset != null) {
+          print('📄 Pagination requested: limit=$limit, offset=$offset');
+          final recalls = await _apiService.fetchNhtsaVehicleRecalls(
+            limit: limit,
+            offset: offset,
+          );
+          print('✅ NHTSA Vehicle recalls fetched successfully (paginated): ${recalls.length} items');
+          return recalls;
+        }
+
+        // Cache for 30 minutes (only for non-paginated requests)
+        if (!forceRefresh &&
+            _lastNhtsaVehicleFetch != null &&
+            DateTime.now().difference(_lastNhtsaVehicleFetch!).inMinutes < 30) {
+          print('📦 Returning cached NHTSA Vehicle recalls: ${_cachedNhtsaVehicleRecalls.length} items');
+          return _cachedNhtsaVehicleRecalls;
+        }
+
+        print('🌐 Fetching NHTSA Vehicle recalls from API...');
+        final recalls = await _apiService.fetchNhtsaVehicleRecalls();
+        print('✅ NHTSA Vehicle recalls fetched successfully: ${recalls.length} items');
+
+        _cachedNhtsaVehicleRecalls = recalls;
+        _lastNhtsaVehicleFetch = DateTime.now();
+        // Save to persistent cache
+        await _saveToPersistentCache('nhtsa_vehicle_recalls', recalls);
+        return _cachedNhtsaVehicleRecalls;
+      } catch (e, stackTrace) {
+        print('❌ ERROR fetching NHTSA Vehicle recalls from API: $e');
+        print('Stack trace: $stackTrace');
+
+        // Try persistent cache as fallback
+        final cachedData = await _loadFromPersistentCache('nhtsa_vehicle_recalls');
+        if (cachedData != null && cachedData.isNotEmpty) {
+          print('✅ Returning ${cachedData.length} cached NHTSA Vehicle recalls');
+          _cachedNhtsaVehicleRecalls = cachedData;
+          _lastNhtsaVehicleFetch = DateTime.now();
+          return cachedData;
+        }
+
+        print('⚠️ No cached NHTSA Vehicle data available, returning empty list');
+        return [];
+      }
+    }
+
+    // No Google Sheets fallback for NHTSA
+    return [];
+  }
+
+  // Get NHTSA Tire recalls
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> getNhtsaTireRecalls({
+    bool forceRefresh = false,
+    int? limit,
+    int? offset,
+  }) async {
+
+    // Use REST API if configured
+    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
+
+      try {
+        print('🔵 Starting NHTSA Tire recalls fetch from REST API...');
+
+        // If pagination is requested, skip cache and fetch from API
+        if (limit != null || offset != null) {
+          print('📄 Pagination requested: limit=$limit, offset=$offset');
+          final recalls = await _apiService.fetchNhtsaTireRecalls(
+            limit: limit,
+            offset: offset,
+          );
+          print('✅ NHTSA Tire recalls fetched successfully (paginated): ${recalls.length} items');
+          return recalls;
+        }
+
+        // Cache for 30 minutes (only for non-paginated requests)
+        if (!forceRefresh &&
+            _lastNhtsaTireFetch != null &&
+            DateTime.now().difference(_lastNhtsaTireFetch!).inMinutes < 30) {
+          print('📦 Returning cached NHTSA Tire recalls: ${_cachedNhtsaTireRecalls.length} items');
+          return _cachedNhtsaTireRecalls;
+        }
+
+        print('🌐 Fetching NHTSA Tire recalls from API...');
+        final recalls = await _apiService.fetchNhtsaTireRecalls();
+        print('✅ NHTSA Tire recalls fetched successfully: ${recalls.length} items');
+
+        _cachedNhtsaTireRecalls = recalls;
+        _lastNhtsaTireFetch = DateTime.now();
+        // Save to persistent cache
+        await _saveToPersistentCache('nhtsa_tire_recalls', recalls);
+        return _cachedNhtsaTireRecalls;
+      } catch (e, stackTrace) {
+        print('❌ ERROR fetching NHTSA Tire recalls from API: $e');
+        print('Stack trace: $stackTrace');
+
+        // Try persistent cache as fallback
+        final cachedData = await _loadFromPersistentCache('nhtsa_tire_recalls');
+        if (cachedData != null && cachedData.isNotEmpty) {
+          print('✅ Returning ${cachedData.length} cached NHTSA Tire recalls');
+          _cachedNhtsaTireRecalls = cachedData;
+          _lastNhtsaTireFetch = DateTime.now();
+          return cachedData;
+        }
+
+        print('⚠️ No cached NHTSA Tire data available, returning empty list');
+        return [];
+      }
+    }
+
+    // No Google Sheets fallback for NHTSA
+    return [];
+  }
+
+  // Get NHTSA Child Seat recalls
+  /// PAGINATION: Supports limit and offset for infinite scroll
+  Future<List<RecallData>> getNhtsaChildSeatRecalls({
+    bool forceRefresh = false,
+    int? limit,
+    int? offset,
+  }) async {
+
+    // Use REST API if configured
+    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
+
+      try {
+        print('🔵 Starting NHTSA Child Seat recalls fetch from REST API...');
+
+        // If pagination is requested, skip cache and fetch from API
+        if (limit != null || offset != null) {
+          print('📄 Pagination requested: limit=$limit, offset=$offset');
+          final recalls = await _apiService.fetchNhtsaChildSeatRecalls(
+            limit: limit,
+            offset: offset,
+          );
+          print('✅ NHTSA Child Seat recalls fetched successfully (paginated): ${recalls.length} items');
+          return recalls;
+        }
+
+        // Cache for 30 minutes (only for non-paginated requests)
+        if (!forceRefresh &&
+            _lastNhtsaChildSeatFetch != null &&
+            DateTime.now().difference(_lastNhtsaChildSeatFetch!).inMinutes < 30) {
+          print('📦 Returning cached NHTSA Child Seat recalls: ${_cachedNhtsaChildSeatRecalls.length} items');
+          return _cachedNhtsaChildSeatRecalls;
+        }
+
+        print('🌐 Fetching NHTSA Child Seat recalls from API...');
+        final recalls = await _apiService.fetchNhtsaChildSeatRecalls();
+        print('✅ NHTSA Child Seat recalls fetched successfully: ${recalls.length} items');
+
+        _cachedNhtsaChildSeatRecalls = recalls;
+        _lastNhtsaChildSeatFetch = DateTime.now();
+        // Save to persistent cache
+        await _saveToPersistentCache('nhtsa_child_seat_recalls', recalls);
+        return _cachedNhtsaChildSeatRecalls;
+      } catch (e, stackTrace) {
+        print('❌ ERROR fetching NHTSA Child Seat recalls from API: $e');
+        print('Stack trace: $stackTrace');
+
+        // Try persistent cache as fallback
+        final cachedData = await _loadFromPersistentCache('nhtsa_child_seat_recalls');
+        if (cachedData != null && cachedData.isNotEmpty) {
+          print('✅ Returning ${cachedData.length} cached NHTSA Child Seat recalls');
+          _cachedNhtsaChildSeatRecalls = cachedData;
+          _lastNhtsaChildSeatFetch = DateTime.now();
+          return cachedData;
+        }
+
+        print('⚠️ No cached NHTSA Child Seat data available, returning empty list');
+        return [];
+      }
+    }
+
+    // No Google Sheets fallback for NHTSA
     return [];
   }
 

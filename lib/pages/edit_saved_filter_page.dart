@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'main_navigation.dart';
 import '../services/saved_filter_service.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 
 /// Edit Saved Filter Page with full API integration
 /// Allows users to edit existing saved filters with real-time sync
@@ -26,7 +28,7 @@ class EditSavedFilterPage extends StatefulWidget {
   State<EditSavedFilterPage> createState() => _EditSavedFilterPageState();
 }
 
-class _EditSavedFilterPageState extends State<EditSavedFilterPage> {
+class _EditSavedFilterPageState extends State<EditSavedFilterPage> with HideOnScrollMixin {
   final int _currentIndex = 1; // Recalls tab
   final _formKey = GlobalKey<FormState>();
   final SavedFilterService _filterService = SavedFilterService();
@@ -45,6 +47,7 @@ class _EditSavedFilterPageState extends State<EditSavedFilterPage> {
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
     _nameController = TextEditingController(text: widget.filterName);
     _descriptionController = TextEditingController(text: widget.filterDescription);
     _selectedBrands = List.from(widget.brandFilters);
@@ -61,6 +64,7 @@ class _EditSavedFilterPageState extends State<EditSavedFilterPage> {
     _descriptionController.dispose();
     _brandController.dispose();
     _productController.dispose();
+    disposeHideOnScroll();
     super.dispose();
   }
 
@@ -286,6 +290,7 @@ class _EditSavedFilterPageState extends State<EditSavedFilterPage> {
               // Main Content
               Expanded(
                 child: SingleChildScrollView(
+                  controller: hideOnScrollController,
                   padding: const EdgeInsets.all(16.0),
                   child: Form(
                     key: _formKey,
@@ -511,53 +516,55 @@ class _EditSavedFilterPageState extends State<EditSavedFilterPage> {
             ],
           ),
         ),
-        bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: _currentIndex,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-            BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
-          
-        ],
-      ),
+        bottomNavigationBar: AnimatedVisibilityWrapper(
+          isVisible: isBottomNavVisible,
+          direction: SlideDirection.down,
+          child: BottomNavigationBar(
+            backgroundColor: const Color(0xFF2C3E50),
+            selectedItemColor: const Color(0xFF64B5F6),
+            unselectedItemColor: Colors.white54,
+            currentIndex: _currentIndex,
+            elevation: 8,
+            selectedFontSize: 14,
+            unselectedFontSize: 12,
+            onTap: (index) {
+              switch (index) {
+                case 0:
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MainNavigation(initialIndex: 0),
+                    ),
+                    (route) => false,
+                  );
+                  break;
+                case 1:
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MainNavigation(initialIndex: 1),
+                    ),
+                    (route) => false,
+                  );
+                  break;
+                case 2:
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const MainNavigation(initialIndex: 2),
+                    ),
+                    (route) => false,
+                  );
+                  break;
+              }
+            },
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+              BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+              BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+            ],
+          ),
+        ),
       ),
     );
   }

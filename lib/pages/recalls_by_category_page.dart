@@ -1,94 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'main_navigation.dart';
 import '../services/recall_data_service.dart';
 import '../services/subscription_service.dart';
+import '../providers/data_providers.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 import 'category_filter_page.dart' as category;
+import 'all_vehicle_recalls_page.dart';
+import 'all_tire_recalls_page.dart';
+import 'all_child_seat_recalls_page.dart';
 
-class RecallsByCategoryPage extends StatefulWidget {
+class RecallsByCategoryPage extends ConsumerStatefulWidget {
   const RecallsByCategoryPage({super.key});
 
   @override
-  State<RecallsByCategoryPage> createState() => _RecallsByCategoryPageState();
+  ConsumerState<RecallsByCategoryPage> createState() => _RecallsByCategoryPageState();
 }
 
-class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
-  // Category counts
-  final Map<String, int> _categoryCounts = {};
-
+class _RecallsByCategoryPageState extends ConsumerState<RecallsByCategoryPage> with HideOnScrollMixin {
   @override
   void initState() {
     super.initState();
-    _loadCategoryCounts();
+    initHideOnScroll();
   }
 
-  Future<void> _loadCategoryCounts() async {
-    try {
-      final subscriptionService = SubscriptionService();
-      final subscriptionInfo = await subscriptionService.getSubscriptionInfo();
-      final tier = subscriptionInfo.tier;
-
-      final recallService = RecallDataService();
-      final fdaRecalls = await recallService.getFdaRecalls();
-      final usdaRecalls = await recallService.getUsdaRecalls();
-
-      // Determine cutoff date based on tier
-      final now = DateTime.now();
-      final DateTime cutoff;
-      if (tier == SubscriptionTier.free) {
-        // Last 30 days for Free users
-        cutoff = now.subtract(const Duration(days: 30));
-      } else {
-        // Since Jan 1 of current year for SmartFiltering/RecallMatch users
-        cutoff = DateTime(now.year, 1, 1);
-      }
-
-      // Define categories with their filter keywords
-      final categories = {
-        'food': ['food'],
-        'cosmetics': ['cosmetics', 'personal care'],
-        'drugs': ['otc drugs', 'supplements'],
-        'home': ['home', 'furniture'],
-        'clothing': ['clothing', 'kids items'],
-        'childSeats': ['child seats', 'other accessories'],
-        'powerTools': ['power tools', 'lawn care'],
-        'electronics': ['electronics', 'appliances'],
-        'vehicles': ['car', 'truck', 'suv'],
-        'tires': ['tires'],
-        'toys': ['toys'],
-        'pets': ['pet', 'veterinary', 'animal'],
-      };
-
-      // Calculate counts for each category
-      final counts = <String, int>{};
-      categories.forEach((key, keywords) {
-        final fdaCount = fdaRecalls.where((recall) {
-          if (!recall.dateIssued.isAfter(cutoff)) return false;
-          final cat = recall.category.toLowerCase();
-          return keywords.any((k) => cat.contains(k.toLowerCase()));
-        }).length;
-
-        final usdaCount = usdaRecalls.where((recall) {
-          if (!recall.dateIssued.isAfter(cutoff)) return false;
-          final cat = recall.category.toLowerCase();
-          return keywords.any((k) => cat.contains(k.toLowerCase()));
-        }).length;
-
-        counts[key] = fdaCount + usdaCount;
-      });
-
-      if (mounted) {
-        setState(() {
-          _categoryCounts.addAll(counts);
-        });
-      }
-    } catch (e) {
-      // Error loading category counts
-    }
+  @override
+  void dispose() {
+    disposeHideOnScroll();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Use the same provider as the Home Page for consistent counts
+    final categoryCountsAsync = ref.watch(categoryCountsProvider);
+    final categoryCounts = categoryCountsAsync.when(
+      data: (counts) => counts,
+      loading: () => <String, int>{},
+      error: (_, __) => <String, int>{},
+    );
     return Scaffold(
       backgroundColor: const Color(0xFF1D3547),
       body: SafeArea(
@@ -167,6 +119,7 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
             // Main Content
             Expanded(
               child: SingleChildScrollView(
+                controller: hideOnScrollController,
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
@@ -177,9 +130,9 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildCategoryWithFilter('Food &\nBeverages', 'food_beverage_category_button.png', Icons.restaurant, ['food'], 'food'),
-                        _buildCategoryWithFilter('Cosmetics &\nPersonal Care', 'cosmetics_category_button.png', Icons.brush, ['cosmetics', 'personal care'], 'cosmetics'),
-                        _buildCategoryWithFilter('OTC Drugs &\nSupplements', 'otc_category_button.png', Icons.medication, ['otc drugs', 'supplements'], 'drugs'),
+                        _buildCategoryWithFilter('Food &\nBeverages', 'food_beverage_category_button.png', Icons.restaurant, ['food'], 'food', categoryCounts),
+                        _buildCategoryWithFilter('Cosmetics &\nPersonal Care', 'cosmetics_category_button.png', Icons.brush, ['cosmetics', 'personal care'], 'cosmetics', categoryCounts),
+                        _buildCategoryWithFilter('OTC Drugs &\nSupplements', 'otc_category_button.png', Icons.medication, ['otc drugs', 'supplements'], 'drugs', categoryCounts),
                       ],
                     ),
 
@@ -190,9 +143,9 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildCategoryWithFilter('Home &\nFurniture', 'home_furniture_category_button.png', Icons.home, ['home', 'furniture'], 'home'),
-                        _buildCategoryWithFilter('Clothing', 'clothing_category_button.png', Icons.checkroom, ['clothing', 'kids items'], 'clothing'),
-                        _buildCategoryWithFilter('Child Seats &\nAccessories', 'child_seats_category_button.png', Icons.child_care, ['child seats', 'other accessories'], 'childSeats'),
+                        _buildCategoryWithFilter('Home &\nFurniture', 'home_furniture_category_button.png', Icons.home, ['home', 'furniture'], 'home', categoryCounts),
+                        _buildCategoryWithFilter('Clothing', 'clothing_category_button.png', Icons.checkroom, ['clothing', 'kids items'], 'clothing', categoryCounts),
+                        _buildNhtsaCategoryItem('Child Seats &\nAccessories', 'child_seats_category_button.png', Icons.child_care, 'childSeats', categoryCounts, const AllChildSeatRecallsPage()),
                       ],
                     ),
 
@@ -203,9 +156,9 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildCategoryWithFilter('Power Tools &\nLawn Care', 'power_tools_category_button.png', Icons.build, ['power tools', 'lawn care'], 'powerTools'),
-                        _buildCategoryWithFilter('Electronics &\nAppliances', 'electronics_category_button.png', Icons.devices, ['electronics', 'appliances'], 'electronics'),
-                        _buildCategoryWithFilter('Vehicles', 'vehicles_category_button.png', Icons.directions_car, ['car', 'truck', 'suv'], 'vehicles'),
+                        _buildCategoryWithFilter('Power Tools &\nLawn Care', 'power_tools_category_button.png', Icons.build, ['power tools', 'lawn care'], 'powerTools', categoryCounts),
+                        _buildCategoryWithFilter('Electronics &\nAppliances', 'electronics_category_button.png', Icons.devices, ['electronics', 'appliances'], 'electronics', categoryCounts),
+                        _buildNhtsaCategoryItem('Vehicles', 'vehicles_category_button.png', Icons.directions_car, 'vehicles', categoryCounts, const AllVehicleRecallsPage()),
                       ],
                     ),
 
@@ -216,9 +169,9 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _buildCategoryWithFilter('Tires', 'tires_category_button.png', Icons.trip_origin, ['tires'], 'tires'),
-                        _buildCategoryWithFilter('Toys', 'toys_category_button.png', Icons.toys, ['toys'], 'toys'),
-                        _buildCategoryWithFilter('Pets &\nVeterinary', 'pets_veterinary_category_button.png', Icons.pets, ['pet', 'veterinary', 'animal'], 'pets'),
+                        _buildNhtsaCategoryItem('Tires', 'tires_category_button.png', Icons.trip_origin, 'tires', categoryCounts, const AllTireRecallsPage()),
+                        _buildCategoryWithFilter('Toys', 'toys_category_button.png', Icons.toys, ['toys'], 'toys', categoryCounts),
+                        _buildCategoryWithFilter('Pets &\nVeterinary', 'pets_veterinary_category_button.png', Icons.pets, ['pet', 'veterinary', 'animal'], 'pets', categoryCounts),
                       ],
                     ),
 
@@ -230,55 +183,57 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: 1,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: 1,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -384,6 +339,28 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
     );
   }
 
+  /// Helper method to build category item that navigates to NHTSA page
+  Widget _buildNhtsaCategoryItem(
+    String title,
+    String imageName,
+    IconData fallbackIcon,
+    String categoryKey,
+    Map<String, int> categoryCounts,
+    Widget destinationPage,
+  ) {
+    return _buildCategoryItem(
+      title: title,
+      imagePath: 'assets/images/$imageName',
+      icon: fallbackIcon,
+      count: categoryCounts[categoryKey] ?? 0,
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (context) => destinationPage),
+        );
+      },
+    );
+  }
+
   /// Helper method to build category item with category filter
   Widget _buildCategoryWithFilter(
     String title,
@@ -391,12 +368,13 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
     IconData fallbackIcon,
     List<String> categories,
     String categoryKey,
+    Map<String, int> categoryCounts,
   ) {
     return _buildCategoryItem(
       title: title,
       imagePath: 'assets/images/$imageName',
       icon: fallbackIcon,
-      count: _categoryCounts[categoryKey] ?? 0,
+      count: categoryCounts[categoryKey] ?? 0,
       onTap: () async {
         // Get subscription tier to determine cutoff date
         final navigator = Navigator.of(context);
@@ -417,9 +395,10 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
 
         final recallService = RecallDataService();
 
-        // Use working FDA and USDA endpoints
+        // Use working FDA, USDA, and CPSC endpoints
         final fdaRecalls = await recallService.getFdaRecalls();
         final usdaRecalls = await recallService.getUsdaRecalls();
+        final cpscRecalls = await recallService.getCpscRecalls();
 
         // Filter by cutoff date and matching categories
         final recentFda = fdaRecalls.where((recall) {
@@ -434,7 +413,13 @@ class _RecallsByCategoryPageState extends State<RecallsByCategoryPage> {
           return categories.any((c) => cat.contains(c.toLowerCase()));
         }).toList();
 
-        final filtered = [...recentFda, ...recentUsda];
+        final recentCpsc = cpscRecalls.where((recall) {
+          if (!recall.dateIssued.isAfter(cutoff)) return false;
+          final cat = recall.category.toLowerCase();
+          return categories.any((c) => cat.contains(c.toLowerCase()));
+        }).toList();
+
+        final filtered = [...recentFda, ...recentUsda, ...recentCpsc];
 
         if (mounted) {
           navigator.push(

@@ -42,12 +42,58 @@ class _SharedImageCarouselState extends State<SharedImageCarousel> {
   Widget build(BuildContext context) {
     final imageUrls = widget.imageUrls;
     if (imageUrls.isEmpty) {
-      return Center(
-        child: Icon(
-          Icons.image_not_supported,
-          size: 80,
-          color: Colors.grey[400],
-        ),
+      // Show default IPNA (Image Placeholder Not Available) image
+      return Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(widget.borderRadius),
+            child: Image.asset(
+              'assets/images/IPNA.jpg',
+              height: widget.height,
+              width: widget.width,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Center(
+                child: Icon(
+                  Icons.image_not_supported,
+                  size: 80,
+                  color: Colors.grey[400],
+                ),
+              ),
+            ),
+          ),
+          // Share button overlay in upper right corner
+          if (widget.onShareTap != null)
+            Positioned(
+              top: 12,
+              right: 12,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: widget.onShareTap,
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF2C3E50).withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.3),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.share,
+                      color: Colors.white,
+                      size: 22,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       );
     }
     return Column(
@@ -88,11 +134,15 @@ class _SharedImageCarouselState extends State<SharedImageCarousel> {
                             color: Colors.white54,
                           ),
                         ),
-                        errorWidget: (context, url, error) => Center(
-                          child: Icon(
-                            Icons.broken_image,
-                            size: 80,
-                            color: Colors.grey[400],
+                        errorWidget: (context, url, error) => Image.asset(
+                          'assets/images/IPNA.jpg',
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) => Center(
+                            child: Icon(
+                              Icons.broken_image,
+                              size: 80,
+                              color: Colors.grey[400],
+                            ),
                           ),
                         ),
                       ),
@@ -180,11 +230,15 @@ class _SharedImageCarouselState extends State<SharedImageCarousel> {
                               ),
                             ),
                           ),
-                          errorWidget: (context, url, error) => Center(
-                            child: Icon(
-                              Icons.broken_image,
-                              size: 24,
-                              color: Colors.grey[400],
+                          errorWidget: (context, url, error) => Image.asset(
+                            'assets/images/IPNA.jpg',
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => Center(
+                              child: Icon(
+                                Icons.broken_image,
+                                size: 24,
+                                color: Colors.grey[400],
+                              ),
                             ),
                           ),
                         ),
@@ -248,11 +302,15 @@ class _FullScreenImageView extends StatelessWidget {
                 color: Colors.white,
               ),
             ),
-            errorWidget: (context, url, error) => Center(
-              child: Icon(
-                Icons.broken_image,
-                size: 80,
-                color: Colors.grey[400],
+            errorWidget: (context, url, error) => Image.asset(
+              'assets/images/IPNA.jpg',
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) => Center(
+                child: Icon(
+                  Icons.broken_image,
+                  size: 80,
+                  color: Colors.grey[400],
+                ),
               ),
             ),
           ),

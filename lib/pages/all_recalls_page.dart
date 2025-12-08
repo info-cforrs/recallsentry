@@ -8,8 +8,11 @@ import '../models/recall_data.dart';
 import '../models/article.dart';
 import '../widgets/small_usda_recall_card.dart';
 import '../widgets/small_fda_recall_card.dart';
+import '../widgets/small_nhtsa_recall_card.dart';
 import '../widgets/article_card.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 import 'subscribe_page.dart';
 
 class AllRecallsPage extends StatefulWidget {
@@ -22,12 +25,11 @@ class AllRecallsPage extends StatefulWidget {
   State<AllRecallsPage> createState() => _AllRecallsPageState();
 }
 
-class _AllRecallsPageState extends State<AllRecallsPage> {
+class _AllRecallsPageState extends State<AllRecallsPage> with HideOnScrollMixin {
   final RecallDataService _recallService = RecallDataService();
   final ArticleService _articleService = ArticleService();
   final SubscriptionService _subscriptionService = SubscriptionService();
   final TextEditingController _searchController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
   final FocusNode _searchFocusNode = FocusNode();
   List<RecallData> _allRecalls = [];
   List<RecallData> _filteredRecalls = [];
@@ -50,6 +52,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
   @override
   void initState() {
     super.initState();
+    initHideOnScroll();
 
     // Initialize search query if provided
     if (widget.initialSearchQuery != null && widget.initialSearchQuery!.isNotEmpty) {
@@ -58,7 +61,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
     }
 
     _loadAllRecalls();
-    _scrollController.addListener(_onScroll);
+    hideOnScrollController.addListener(_onScroll);
 
     // Listen to focus changes
     _searchFocusNode.addListener(() {
@@ -69,8 +72,8 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
   }
 
   void _onScroll() {
-    if (_scrollController.hasClients) {
-      final isAtTop = _scrollController.offset <= 10;
+    if (hideOnScrollController.hasClients) {
+      final isAtTop = hideOnScrollController.offset <= 10;
       final shouldShow = isAtTop;
 
       if (shouldShow != _showSearchAndFilters) {
@@ -84,8 +87,8 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
   @override
   void dispose() {
     _searchController.dispose();
-    _scrollController.dispose();
     _searchFocusNode.dispose();
+    disposeHideOnScroll();
     super.dispose();
   }
 
@@ -98,11 +101,31 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
     });
 
     try {
-      // Fetch FDA recalls from FDA spreadsheet
-      final fdaRecalls = await _recallService.getFdaRecalls();
-      // Fetch USDA recalls from USDA spreadsheet
-      final usdaRecalls = await _recallService.getUsdaRecalls();
-      final allRecalls = [...fdaRecalls, ...usdaRecalls];
+      // Fetch recalls from all agencies in parallel
+      final results = await Future.wait([
+        _recallService.getFdaRecalls(),
+        _recallService.getUsdaRecalls(),
+        _recallService.getCpscRecalls(),
+        _recallService.getNhtsaVehicleRecalls(),
+        _recallService.getNhtsaTireRecalls(),
+        _recallService.getNhtsaChildSeatRecalls(),
+      ]);
+
+      final fdaRecalls = results[0];
+      final usdaRecalls = results[1];
+      final cpscRecalls = results[2];
+      final vehicleRecalls = results[3];
+      final tireRecalls = results[4];
+      final childSeatRecalls = results[5];
+
+      final allRecalls = [
+        ...fdaRecalls,
+        ...usdaRecalls,
+        ...cpscRecalls,
+        ...vehicleRecalls,
+        ...tireRecalls,
+        ...childSeatRecalls,
+      ];
 
       // Filter recalls to last 30 days
       final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
@@ -370,7 +393,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
     }
 
     final filterDescription = filterParts.isEmpty
-        ? 'All Recalls (FDA & USDA)'
+        ? 'All Recalls (FDA, USDA, CPSC & NHTSA)'
         : filterParts.join(' | ');
 
     // For now, we'll save search query as both brand and product filter
@@ -1027,7 +1050,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
     final totalItems = _getTotalItemCount();
 
     return ListView.builder(
-      controller: _scrollController,
+      controller: hideOnScrollController,
       padding: const EdgeInsets.all(16),
       itemCount: totalItems,
       itemBuilder: (context, index) {
@@ -1143,11 +1166,25 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
         if (recallIndex < _filteredRecalls.length) {
           final recall = _filteredRecalls[recallIndex];
 
+          // Select appropriate card widget based on agency
+          Widget recallCard;
+          switch (recall.agency.toUpperCase()) {
+            case 'USDA':
+              recallCard = SmallUsdaRecallCard(recall: recall);
+              break;
+            case 'NHTSA':
+              recallCard = SmallNhtsaRecallCard(recall: recall);
+              break;
+            case 'FDA':
+            case 'CPSC':
+            default:
+              recallCard = SmallFdaRecallCard(recall: recall);
+              break;
+          }
+
           return Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: recall.agency == 'USDA'
-              ? SmallUsdaRecallCard(recall: recall)
-              : SmallFdaRecallCard(recall: recall),
+            child: recallCard,
           );
         }
 
@@ -1165,75 +1202,79 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
         child: Column(
           children: [
             // Custom Header with App Icon and Title
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  const CustomBackButton(),
-                  const SizedBox(width: 8),
-                  // App Icon - Clickable to return to Home
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushAndRemoveUntil(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const MainNavigation(initialIndex: 0),
-                        ),
-                        (route) => false,
-                      );
-                    },
-                    child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: Image.asset(
-                        'assets/images/shield_logo4.png',
+            AnimatedVisibilityWrapper(
+              isVisible: isHeaderVisible,
+              direction: SlideDirection.up,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    const CustomBackButton(),
+                    const SizedBox(width: 8),
+                    // App Icon - Clickable to return to Home
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const MainNavigation(initialIndex: 0),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: SizedBox(
                         width: 40,
                         height: 40,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                        child: Image.asset(
+                          'assets/images/shield_logo4.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
                                 ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          );
-                        },
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  // Title Text
-                  const Expanded(
-                    child: Text(
-                      'All Recalls',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Atlanta',
-                        color: Colors.white,
+                    const SizedBox(width: 16),
+                    // Title Text
+                    const Expanded(
+                      child: Text(
+                        'All Recalls',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Atlanta',
+                          color: Colors.white,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
 
@@ -1410,56 +1451,60 @@ class _AllRecallsPageState extends State<AllRecallsPage> {
         ),
       ),
       bottomNavigationBar: widget.showBottomNavigation
-          ? BottomNavigationBar(
-              backgroundColor: const Color(0xFF2C3E50),
-              selectedItemColor: const Color(0xFF64B5F6),
-              unselectedItemColor: Colors.white54,
-              currentIndex: 1, // Recalls tab
-              elevation: 8,
-              selectedFontSize: 14,
-              unselectedFontSize: 12,
-              onTap: (index) {
-                switch (index) {
-                  case 0:
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const MainNavigation(initialIndex: 0),
-                      ),
-                      (route) => false,
-                    );
-                    break;
-                  case 1:
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const MainNavigation(initialIndex: 1),
-                      ),
-                      (route) => false,
-                    );
-                    break;
-                  case 2:
-                    Navigator.pushAndRemoveUntil(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const MainNavigation(initialIndex: 2),
-                      ),
-                      (route) => false,
-                    );
-                    break;
-                }
-              },
-              items: const [
-                BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-                BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-                BottomNavigationBarItem(
-                  icon: Icon(Icons.settings),
-                  label: 'Settings',
-                ),
-              ],
+          ? AnimatedVisibilityWrapper(
+              isVisible: isBottomNavVisible,
+              direction: SlideDirection.down,
+              child: BottomNavigationBar(
+                backgroundColor: const Color(0xFF2C3E50),
+                selectedItemColor: const Color(0xFF64B5F6),
+                unselectedItemColor: Colors.white54,
+                currentIndex: 1, // Recalls tab
+                elevation: 8,
+                selectedFontSize: 14,
+                unselectedFontSize: 12,
+                onTap: (index) {
+                  switch (index) {
+                    case 0:
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const MainNavigation(initialIndex: 0),
+                        ),
+                        (route) => false,
+                      );
+                      break;
+                    case 1:
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const MainNavigation(initialIndex: 1),
+                        ),
+                        (route) => false,
+                      );
+                      break;
+                    case 2:
+                      Navigator.pushAndRemoveUntil(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const MainNavigation(initialIndex: 2),
+                        ),
+                        (route) => false,
+                      );
+                      break;
+                  }
+                },
+                items: const [
+                  BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+                  BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+                  BottomNavigationBarItem(
+                    icon: Icon(Icons.settings),
+                    label: 'Settings',
+                  ),
+                ],
+              ),
             )
           : null,
     );

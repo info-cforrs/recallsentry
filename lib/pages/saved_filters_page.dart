@@ -8,6 +8,8 @@ import 'edit_saved_filter_page.dart';
 import '../models/saved_filter.dart';
 import '../services/subscription_service.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/animated_visibility_wrapper.dart';
+import '../mixins/hide_on_scroll_mixin.dart';
 import '../providers/data_providers.dart';
 import '../providers/service_providers.dart';
 
@@ -20,10 +22,22 @@ class SavedFiltersPage extends ConsumerStatefulWidget {
   ConsumerState<SavedFiltersPage> createState() => _SavedFiltersPageState();
 }
 
-class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> {
+class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> with HideOnScrollMixin {
   final int _currentIndex = 1; // Recalls tab
   // No more service instantiations - using providers!
   // No more manual state management - providers handle this!
+
+  @override
+  void initState() {
+    super.initState();
+    initHideOnScroll();
+  }
+
+  @override
+  void dispose() {
+    disposeHideOnScroll();
+    super.dispose();
+  }
 
   int get _maxFiltersForTier {
     final subscriptionInfo = ref.watch(subscriptionInfoProvider).valueOrNull;
@@ -52,6 +66,8 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> {
             builder: (context) => OnlyAdvancedFilteredRecallsPage(
               brandFilters: updatedFilter.brandFilters,
               productFilters: updatedFilter.productFilters,
+              stateFilters: updatedFilter.stateFilters,
+              allergenFilters: updatedFilter.allergenFilters,
             ),
           ),
         );
@@ -223,98 +239,102 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> {
       body: SafeArea(
         child: Column(
           children: [
-            // Custom Header
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Row(
-                children: [
-                  const CustomBackButton(),
-                  const SizedBox(width: 8),
-                  // App Icon - Clickable to return to Home
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              const MainNavigation(initialIndex: 0),
-                        ),
-                        (route) => false,
-                      );
-                    },
-                    child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: Image.asset(
-                        'assets/images/shield_logo4.png',
+            // Custom Header - with hide-on-scroll
+            AnimatedVisibilityWrapper(
+              isVisible: isHeaderVisible,
+              direction: SlideDirection.up,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Row(
+                  children: [
+                    const CustomBackButton(),
+                    const SizedBox(width: 8),
+                    // App Icon - Clickable to return to Home
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const MainNavigation(initialIndex: 0),
+                          ),
+                          (route) => false,
+                        );
+                      },
+                      child: SizedBox(
                         width: 40,
                         height: 40,
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                        child: Image.asset(
+                          'assets/images/shield_logo4.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF4CAF50), Color(0xFF2E7D32)],
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
                                 ),
-                              ],
-                            ),
-                            child: const Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 24,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Expanded(
-                    child: Text(
-                      'Saved SmartFilters',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Atlanta',
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
-                      ),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.workspace_premium, color: Colors.white, size: 14),
-                        SizedBox(width: 4),
-                        Text(
-                          'Premium',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
+                                borderRadius: BorderRadius.circular(8),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 2),
+                                  ),
+                                ],
+                              ),
+                              child: const Icon(
+                                Icons.check,
+                                color: Colors.white,
+                                size: 24,
+                              ),
+                            );
+                          },
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 16),
+                    const Expanded(
+                      child: Text(
+                        'Saved SmartFilters',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          fontFamily: 'Atlanta',
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFFFFD700), Color(0xFFFFA500)],
+                        ),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.workspace_premium, color: Colors.white, size: 14),
+                          SizedBox(width: 4),
+                          Text(
+                            'Premium',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
@@ -360,6 +380,7 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> {
                     return _buildEmptyState();
                   }
                   return ListView.builder(
+                    controller: hideOnScrollController,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemCount: filters.length,
                     itemBuilder: (context, index) {
@@ -390,53 +411,57 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> {
         loading: () => null,
         error: (_, __) => null,
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: const Color(0xFF2C3E50),
-        selectedItemColor: const Color(0xFF64B5F6),
-        unselectedItemColor: Colors.white54,
-        currentIndex: _currentIndex,
-        elevation: 8,
-        selectedFontSize: 14,
-        unselectedFontSize: 12,
-        onTap: (index) {
-          switch (index) {
-            case 0:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-              break;
-            case 1:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 1),
-                ),
-                (route) => false,
-              );
-              break;
-            case 2:
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainNavigation(initialIndex: 2),
-                ),
-                (route) => false,
-              );
-              break;
-          }
-        },
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
+      bottomNavigationBar: AnimatedVisibilityWrapper(
+        isVisible: isBottomNavVisible,
+        direction: SlideDirection.down,
+        child: BottomNavigationBar(
+          backgroundColor: const Color(0xFF2C3E50),
+          selectedItemColor: const Color(0xFF64B5F6),
+          unselectedItemColor: Colors.white54,
+          currentIndex: _currentIndex,
+          elevation: 8,
+          selectedFontSize: 14,
+          unselectedFontSize: 12,
+          onTap: (index) {
+            switch (index) {
+              case 0:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 0),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 1:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 1),
+                  ),
+                  (route) => false,
+                );
+                break;
+              case 2:
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MainNavigation(initialIndex: 2),
+                  ),
+                  (route) => false,
+                );
+                break;
+            }
+          },
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.info), label: 'Info'),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.settings),
+              label: 'Settings',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -664,9 +689,11 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    ...filter.brandFilters.take(3).map((brand) => _buildFilterChip(brand, Icons.business)),
-                    ...filter.productFilters.take(3).map((product) => _buildFilterChip(product, Icons.inventory)),
-                    if (filter.filterCount > 6)
+                    ...filter.brandFilters.take(2).map((brand) => _buildFilterChip(brand, Icons.business, const Color(0xFF64B5F6))),
+                    ...filter.productFilters.take(2).map((product) => _buildFilterChip(product, Icons.inventory, const Color(0xFF64B5F6))),
+                    ...filter.stateFilters.take(2).map((state) => _buildFilterChip(state, Icons.location_on, const Color(0xFF4CAF50))),
+                    ...filter.allergenFilters.take(2).map((allergen) => _buildAllergenChip(allergen)),
+                    if (_getTotalChipsCount(filter) > 8)
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
@@ -674,7 +701,7 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> {
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          '+${filter.filterCount - 6} more',
+                          '+${filter.filterCount - 8} more',
                           style: const TextStyle(color: Colors.white54, fontSize: 12),
                         ),
                       ),
@@ -705,18 +732,18 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> {
     );
   }
 
-  Widget _buildFilterChip(String label, IconData icon) {
+  Widget _buildFilterChip(String label, IconData icon, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: const Color(0xFF1D3547),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF64B5F6).withValues(alpha: 0.3)),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: const Color(0xFF64B5F6)),
+          Icon(icon, size: 14, color: color),
           const SizedBox(width: 4),
           Text(
             label,
@@ -725,5 +752,72 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildAllergenChip(String allergenKey) {
+    // Handle 'all' case
+    final displayName = allergenKey == 'all'
+        ? 'All Allergens'
+        : _getAllergenDisplayName(allergenKey);
+    final emoji = _getAllergenEmoji(allergenKey);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 12)),
+          const SizedBox(width: 4),
+          Text(
+            displayName,
+            style: const TextStyle(color: Colors.white, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getAllergenDisplayName(String allergenKey) {
+    const displayNames = {
+      'peanuts': 'Peanuts',
+      'tree_nuts': 'Tree Nuts',
+      'milk_dairy': 'Milk/Dairy',
+      'eggs': 'Eggs',
+      'wheat_gluten': 'Wheat/Gluten',
+      'soy': 'Soy',
+      'fish': 'Fish',
+      'shellfish': 'Shellfish',
+      'sesame': 'Sesame',
+      'all': 'All Allergens',
+    };
+    return displayNames[allergenKey] ?? allergenKey;
+  }
+
+  String _getAllergenEmoji(String allergenKey) {
+    const emojis = {
+      'peanuts': '🥜',
+      'tree_nuts': '🌰',
+      'milk_dairy': '🥛',
+      'eggs': '🥚',
+      'wheat_gluten': '🌾',
+      'soy': '🫘',
+      'fish': '🐟',
+      'shellfish': '🦐',
+      'sesame': '🌱',
+      'all': '⚠️',
+    };
+    return emojis[allergenKey] ?? '⚠️';
+  }
+
+  int _getTotalChipsCount(SavedFilter filter) {
+    return filter.brandFilters.length +
+        filter.productFilters.length +
+        filter.stateFilters.length +
+        filter.allergenFilters.length;
   }
 }

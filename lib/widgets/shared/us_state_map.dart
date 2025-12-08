@@ -50,9 +50,10 @@ class USStateMap extends StatelessWidget {
       }
     }
 
-    // Check for "nationwide" or "all states"
+    // Check for "nationwide", "all states", or "sold online"
     if (text.contains('NATIONWIDE') || text.contains('ALL STATES') ||
-        text.contains('ALL 50 STATES') || text.contains('NATIONALLY')) {
+        text.contains('ALL 50 STATES') || text.contains('NATIONALLY') ||
+        text.contains('SOLD ONLINE')) {
       states.addAll(stateMap.values);
     }
 
