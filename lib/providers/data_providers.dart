@@ -26,20 +26,14 @@ import '../models/saved_filter.dart';
 /// HANDLES GUEST USERS: Returns free tier if user is not authenticated
 final subscriptionInfoProvider = FutureProvider<SubscriptionInfo>((ref) async {
   try {
-    print('🔵 subscriptionInfoProvider: Starting...');
-
     // Watch and await - this both tracks changes AND waits for completion
-    final userProfile = await ref.watch(userProfileProvider.future);
-    print('👤 subscriptionInfoProvider: User profile = ${userProfile?.username ?? "not logged in"}');
+    await ref.watch(userProfileProvider.future);
 
     final subscriptionService = ref.watch(subscriptionServiceProvider);
     final subscriptionInfo = await subscriptionService.getSubscriptionInfo();
-    print('✅ subscriptionInfoProvider: Tier = ${subscriptionInfo.tier}');
     return subscriptionInfo;
   } catch (e) {
     // If user is not authenticated, return free tier
-    print('⚠️ subscriptionInfoProvider: User not authenticated, returning FREE tier');
-    print('   Error was: $e');
     return SubscriptionInfo.free();
   }
 });
@@ -164,43 +158,28 @@ final allRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
 /// Free users: Last 30 days
 /// Premium users: Since Jan 1 of current year
 final filteredRecallsProvider = FutureProvider<List<RecallData>>((ref) async {
-  try {
-    print('🔵 filteredRecallsProvider: Starting...');
+  final allRecalls = await ref.watch(allRecallsProvider.future);
+  final subscriptionInfo = await ref.watch(subscriptionInfoProvider.future);
 
-    final allRecalls = await ref.watch(allRecallsProvider.future);
-    print('📦 filteredRecallsProvider: Got ${allRecalls.length} total recalls');
+  final tier = subscriptionInfo.tier;
+  final allowedAgencies = subscriptionInfo.getAllowedAgencies();
 
-    final subscriptionInfo = await ref.watch(subscriptionInfoProvider.future);
-    print('👤 filteredRecallsProvider: Subscription tier = ${subscriptionInfo.tier}');
+  final now = DateTime.now();
+  final DateTime cutoff;
 
-    final tier = subscriptionInfo.tier;
-    final allowedAgencies = subscriptionInfo.getAllowedAgencies();
-    print('🏢 filteredRecallsProvider: Allowed agencies = $allowedAgencies');
-
-    final now = DateTime.now();
-    final DateTime cutoff;
-
-    if (tier == SubscriptionTier.free) {
-      cutoff = now.subtract(const Duration(days: 30));
-      print('📅 filteredRecallsProvider: Free tier - cutoff = ${cutoff.toIso8601String()}');
-    } else {
-      cutoff = DateTime(now.year, 1, 1);
-      print('📅 filteredRecallsProvider: Premium tier - cutoff = ${cutoff.toIso8601String()}');
-    }
-
-    final filtered = allRecalls.where((recall) {
-      return recall.dateIssued.isAfter(cutoff) &&
-             allowedAgencies.contains(recall.agency.toUpperCase());
-    }).toList()
-      ..sort((a, b) => b.dateIssued.compareTo(a.dateIssued));
-
-    print('✅ filteredRecallsProvider: Returning ${filtered.length} filtered recalls');
-    return filtered;
-  } catch (e, stackTrace) {
-    print('❌ filteredRecallsProvider ERROR: $e');
-    print('Stack trace: $stackTrace');
-    rethrow;
+  if (tier == SubscriptionTier.free) {
+    cutoff = now.subtract(const Duration(days: 30));
+  } else {
+    cutoff = DateTime(now.year, 1, 1);
   }
+
+  final filtered = allRecalls.where((recall) {
+    return recall.dateIssued.isAfter(cutoff) &&
+           allowedAgencies.contains(recall.agency.toUpperCase());
+  }).toList()
+    ..sort((a, b) => b.dateIssued.compareTo(a.dateIssued));
+
+  return filtered;
 });
 
 /// Saved Recalls Provider - User's locally saved recalls

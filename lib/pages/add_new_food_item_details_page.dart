@@ -849,270 +849,285 @@ class _AddNewFoodItemDetailsPageState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const SizedBox(
-              width: 140,
-              child: Text(
-                'ITEM DATE\nTYPE:',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<String>(
-                    value: _selectedDateType,
-                    hint: const Text(
-                      'Choose Date Type',
-                      style: TextStyle(fontSize: 12, color: Colors.black54),
-                    ),
-                    isExpanded: true,
-                    dropdownColor: const Color(0xFF2C3E50),
-                    iconEnabledColor: Colors.black,
-                    selectedItemBuilder: (BuildContext context) {
-                      return _dateTypes.map<Widget>((String type) {
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            type,
-                            style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.normal),
-                          ),
-                        );
-                      }).toList();
-                    },
-                    items: _dateTypes.map((String type) {
-                      return DropdownMenuItem<String>(
-                        value: type,
-                        child: Text(type, style: const TextStyle(fontSize: 12, color: Colors.white)),
-                      );
-                    }).toList(),
-                    onChanged: (String? newValue) {
-                      setState(() {
-                        _selectedDateType = newValue;
-                      });
-                    },
-                  ),
-                ),
-              ),
-            ),
-          ],
+        // Date Type Dropdown
+        const Text(
+          'ITEM DATE TYPE:',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         const SizedBox(height: 8),
-        Row(
-          children: [
-            const SizedBox(width: 140),
-            const Expanded(
-              child: Text(
-                'The date you purchased the item should be entered in the Sold By Date field.',
-                style: TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 11,
-                  fontStyle: FontStyle.italic,
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.tertiary,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.secondary),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedDateType,
+              hint: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'Choose Date Type',
+                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                 ),
               ),
+              isExpanded: true,
+              dropdownColor: AppColors.tertiary,
+              icon: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              borderRadius: BorderRadius.circular(8),
+              selectedItemBuilder: (BuildContext context) {
+                return _dateTypes.map<Widget>((String type) {
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      type,
+                      style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                    ),
+                  );
+                }).toList();
+              },
+              items: _dateTypes.map((String type) {
+                return DropdownMenuItem<String>(
+                  value: type,
+                  child: Text(type, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedDateType = newValue;
+                });
+              },
             ),
-          ],
+          ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
+        Text(
+          'The date you purchased the item should be entered in the Sold By Date field.',
+          style: TextStyle(
+            color: AppColors.textSecondary,
+            fontSize: 12,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+        const SizedBox(height: 16),
+        // Date Components Row
         Row(
           children: [
-            const SizedBox(width: 140),
+            // Month
             Expanded(
-              child: Row(
+              flex: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    flex: 7,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'MONTH',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String>(
-                              value: _selectedMonth,
-                              hint: const Text(
-                                'Month',
-                                style: TextStyle(fontSize: 11, color: Colors.black54),
-                              ),
-                              isExpanded: true,
-                              dropdownColor: const Color(0xFF2C3E50),
-                              iconEnabledColor: Colors.black,
-                              selectedItemBuilder: (BuildContext context) {
-                                return _months.map<Widget>((String month) {
-                                  return Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      month,
-                                      style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.normal),
-                                    ),
-                                  );
-                                }).toList();
-                              },
-                              items: _months.map((String month) {
-                                return DropdownMenuItem<String>(
-                                  value: month,
-                                  child: Text(month, style: const TextStyle(fontSize: 11, color: Colors.white)),
-                                );
-                              }).toList(),
-                              onChanged: (String? newValue) {
-                                setState(() {
-                                  _selectedMonth = newValue;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
+                  const Text(
+                    'MONTH',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 5,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'DAY',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.tertiary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.secondary),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedMonth,
+                        hint: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'Month',
+                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<int>(
-                              value: _selectedDay,
-                              hint: const Text(
-                                'Day',
-                                style: TextStyle(fontSize: 11, color: Colors.black54),
+                        isExpanded: true,
+                        dropdownColor: AppColors.tertiary,
+                        icon: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 20),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        borderRadius: BorderRadius.circular(8),
+                        selectedItemBuilder: (BuildContext context) {
+                          return _months.map<Widget>((String month) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                month,
+                                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
                               ),
-                              isExpanded: true,
-                              dropdownColor: const Color(0xFF2C3E50),
-                              iconEnabledColor: Colors.black,
-                              selectedItemBuilder: (BuildContext context) {
-                                return List.generate(31, (index) => index + 1).map<Widget>((int day) {
-                                  return Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      day.toString().padLeft(2, '0'),
-                                      style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.normal),
-                                    ),
-                                  );
-                                }).toList();
-                              },
-                              items: List.generate(31, (index) => index + 1)
-                                  .map((int day) {
-                                return DropdownMenuItem<int>(
-                                  value: day,
-                                  child: Text(
-                                    day.toString().padLeft(2, '0'),
-                                    style: const TextStyle(fontSize: 11, color: Colors.white),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (int? newValue) {
-                                setState(() {
-                                  _selectedDay = newValue;
-                                });
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
+                            );
+                          }).toList();
+                        },
+                        items: _months.map((String month) {
+                          return DropdownMenuItem<String>(
+                            value: month,
+                            child: Text(month, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedMonth = newValue;
+                          });
+                        },
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    flex: 6,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'YEAR',
-                          style: TextStyle(
-                            color: AppColors.textPrimary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w500,
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Day
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'DAY',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.tertiary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.secondary),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: _selectedDay,
+                        hint: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'Day',
+                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<int>(
-                              value: _selectedYear,
-                              hint: const Text(
-                                'Year',
-                                style: TextStyle(fontSize: 11, color: Colors.black54),
+                        isExpanded: true,
+                        dropdownColor: AppColors.tertiary,
+                        icon: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 20),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        borderRadius: BorderRadius.circular(8),
+                        selectedItemBuilder: (BuildContext context) {
+                          return List.generate(31, (index) => index + 1).map<Widget>((int day) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                day.toString().padLeft(2, '0'),
+                                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
                               ),
-                              isExpanded: true,
-                              dropdownColor: const Color(0xFF2C3E50),
-                              iconEnabledColor: Colors.black,
-                              selectedItemBuilder: (BuildContext context) {
-                                return List.generate(10, (index) {
-                                  final year = DateTime.now().year - 5 + index;
-                                  return Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      year.toString(),
-                                      style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.normal),
-                                    ),
-                                  );
-                                }).toList();
-                              },
-                              items: List.generate(10, (index) {
-                                final year = DateTime.now().year - 5 + index;
-                                return DropdownMenuItem<int>(
-                                  value: year,
-                                  child: Text(
-                                    year.toString(),
-                                    style: const TextStyle(fontSize: 11, color: Colors.white),
-                                  ),
-                                );
-                              }).toList(),
-                              onChanged: (int? newValue) {
-                                setState(() {
-                                  _selectedYear = newValue;
-                                });
-                              },
+                            );
+                          }).toList();
+                        },
+                        items: List.generate(31, (index) => index + 1)
+                            .map((int day) {
+                          return DropdownMenuItem<int>(
+                            value: day,
+                            child: Text(
+                              day.toString().padLeft(2, '0'),
+                              style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
                             ),
+                          );
+                        }).toList(),
+                        onChanged: (int? newValue) {
+                          setState(() {
+                            _selectedDay = newValue;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            // Year
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'YEAR',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.tertiary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.secondary),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: _selectedYear,
+                        hint: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text(
+                            'Year',
+                            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
                           ),
                         ),
-                      ],
+                        isExpanded: true,
+                        dropdownColor: AppColors.tertiary,
+                        icon: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 20),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        borderRadius: BorderRadius.circular(8),
+                        selectedItemBuilder: (BuildContext context) {
+                          return List.generate(10, (index) {
+                            final year = DateTime.now().year - 5 + index;
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                year.toString(),
+                                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                              ),
+                            );
+                          }).toList();
+                        },
+                        items: List.generate(10, (index) {
+                          final year = DateTime.now().year - 5 + index;
+                          return DropdownMenuItem<int>(
+                            value: year,
+                            child: Text(
+                              year.toString(),
+                              style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (int? newValue) {
+                          setState(() {
+                            _selectedYear = newValue;
+                          });
+                        },
+                      ),
                     ),
                   ),
                 ],
@@ -1125,59 +1140,64 @@ class _AddNewFoodItemDetailsPageState
   }
 
   Widget _buildRetailerDropdown() {
-    return Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(
-          width: 140,
-          child: Text(
-            'WHERE\nPURCHASED:',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+        const Text(
+          'WHERE PURCHASED:',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        Expanded(
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: _selectedRetailer,
-                hint: const Text(
+        const SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.tertiary,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.secondary),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: _selectedRetailer,
+              hint: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
                   'Choose Retailer',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
                 ),
-                isExpanded: true,
-                dropdownColor: const Color(0xFF2C3E50),
-                iconEnabledColor: Colors.black,
-                selectedItemBuilder: (BuildContext context) {
-                  return _retailers.map<Widget>((String retailer) {
-                    return Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        retailer,
-                        style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.normal),
-                      ),
-                    );
-                  }).toList();
-                },
-                items: _retailers.map((String retailer) {
-                  return DropdownMenuItem<String>(
-                    value: retailer,
-                    child: Text(retailer, style: const TextStyle(fontSize: 12, color: Colors.white)),
-                  );
-                }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    _selectedRetailer = newValue;
-                  });
-                },
               ),
+              isExpanded: true,
+              dropdownColor: AppColors.tertiary,
+              icon: Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              borderRadius: BorderRadius.circular(8),
+              selectedItemBuilder: (BuildContext context) {
+                return _retailers.map<Widget>((String retailer) {
+                  return Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      retailer,
+                      style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                    ),
+                  );
+                }).toList();
+              },
+              items: _retailers.map((String retailer) {
+                return DropdownMenuItem<String>(
+                  value: retailer,
+                  child: Text(retailer, style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                );
+              }).toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedRetailer = newValue;
+                });
+              },
             ),
           ),
         ),

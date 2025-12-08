@@ -193,8 +193,9 @@ class _QuickCheckResultsPageState extends State<QuickCheckResultsPage> {
         tireSize: tireSize,
         // Child seat fields
         childSeatModelNumber: childSeatModelNumber,
-        // Item category
-        itemCategory: widget.itemType,
+        // Item category - map to valid API values
+        // Valid values: 'general', 'vehicle', 'tires', 'child_seat'
+        itemCategory: _mapItemTypeToCategory(widget.itemType),
       );
 
       if (!mounted) return;
@@ -222,6 +223,24 @@ class _QuickCheckResultsPageState extends State<QuickCheckResultsPage> {
           _isSaving = false;
         });
       }
+    }
+  }
+
+  /// Map item type to valid API item_category values
+  /// Valid values: 'general', 'vehicle', 'tires', 'child_seat'
+  String? _mapItemTypeToCategory(String itemType) {
+    switch (itemType) {
+      case 'vehicle':
+        return 'vehicle';
+      case 'tires':
+        return 'tires';
+      case 'child_seat':
+        return 'child_seat';
+      case 'household':
+      case 'food':
+      default:
+        // household and food items use 'general' category
+        return 'general';
     }
   }
 

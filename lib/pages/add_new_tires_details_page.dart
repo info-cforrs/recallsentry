@@ -816,57 +816,59 @@ class _AddNewTiresDetailsPageState extends State<AddNewTiresDetailsPage> {
         const SizedBox(height: 12),
 
         // Quantity dropdown
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(
-              width: 140,
-              child: Text(
-                'QTY:',
-                style: TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                ),
+            const Text(
+              'QTY:',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
             ),
-            Expanded(
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int>(
-                    value: _selectedQty,
-                    isExpanded: true,
-                    dropdownColor: const Color(0xFF2C3E50),
-                    iconEnabledColor: Colors.black,
-                    selectedItemBuilder: (BuildContext context) {
-                      return _qtyOptions.map<Widget>((int qty) {
-                        return Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            qty.toString(),
-                            style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.normal),
-                          ),
-                        );
-                      }).toList();
-                    },
-                    items: _qtyOptions.map((int qty) {
-                      return DropdownMenuItem<int>(
-                        value: qty,
-                        child: Text(qty.toString(), style: const TextStyle(fontSize: 12, color: Colors.white)),
-                      );
-                    }).toList(),
-                    onChanged: (int? newValue) {
-                      if (newValue != null) {
-                        setState(() {
-                          _selectedQty = newValue;
-                        });
-                      }
-                    },
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.tertiary,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.secondary),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int>(
+                  value: _selectedQty,
+                  isExpanded: true,
+                  dropdownColor: AppColors.tertiary,
+                  icon: Padding(
+                    padding: const EdgeInsets.only(right: 12),
+                    child: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  borderRadius: BorderRadius.circular(8),
+                  selectedItemBuilder: (BuildContext context) {
+                    return _qtyOptions.map<Widget>((int qty) {
+                      return Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          qty.toString(),
+                          style: const TextStyle(fontSize: 14, color: AppColors.textPrimary),
+                        ),
+                      );
+                    }).toList();
+                  },
+                  items: _qtyOptions.map((int qty) {
+                    return DropdownMenuItem<int>(
+                      value: qty,
+                      child: Text(qty.toString(), style: const TextStyle(fontSize: 14, color: AppColors.textPrimary)),
+                    );
+                  }).toList(),
+                  onChanged: (int? newValue) {
+                    if (newValue != null) {
+                      setState(() {
+                        _selectedQty = newValue;
+                      });
+                    }
+                  },
                 ),
               ),
             ),
@@ -917,120 +919,160 @@ class _AddNewTiresDetailsPageState extends State<AddNewTiresDetailsPage> {
     // Generate year options (2000-2030)
     final yearOptions = List.generate(31, (i) => (2000 + i).toString());
 
-    return Row(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SizedBox(
-          width: 140,
-          child: Text(
-            'PRODUCTION\nDATE:',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
+        const Text(
+          'PRODUCTION DATE:',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
           ),
         ),
-        Expanded(
-          child: Row(
-            children: [
-              // Week dropdown
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedProductionWeek,
-                      hint: const Text('Week', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                      isExpanded: true,
-                      dropdownColor: const Color(0xFF2C3E50),
-                      iconEnabledColor: Colors.black,
-                      selectedItemBuilder: (BuildContext context) {
-                        return [null, ...weekOptions].map<Widget>((String? week) {
-                          return Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              week != null ? 'Wk $week' : '',
-                              style: const TextStyle(fontSize: 12, color: Colors.black),
-                            ),
-                          );
-                        }).toList();
-                      },
-                      items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text('Week', style: TextStyle(fontSize: 12, color: Colors.white54)),
-                        ),
-                        ...weekOptions.map((String week) {
-                          return DropdownMenuItem<String>(
-                            value: week,
-                            child: Text('Week $week', style: const TextStyle(fontSize: 12, color: Colors.white)),
-                          );
-                        }),
-                      ],
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedProductionWeek = newValue;
-                        });
-                      },
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            // Week dropdown
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'WEEK',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Year dropdown
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: DropdownButtonHideUnderline(
-                    child: DropdownButton<String>(
-                      value: _selectedProductionYear,
-                      hint: const Text('Year', style: TextStyle(fontSize: 12, color: Colors.black54)),
-                      isExpanded: true,
-                      dropdownColor: const Color(0xFF2C3E50),
-                      iconEnabledColor: Colors.black,
-                      selectedItemBuilder: (BuildContext context) {
-                        return [null, ...yearOptions].map<Widget>((String? year) {
-                          return Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text(
-                              year ?? '',
-                              style: const TextStyle(fontSize: 12, color: Colors.black),
-                            ),
-                          );
-                        }).toList();
-                      },
-                      items: [
-                        const DropdownMenuItem<String>(
-                          value: null,
-                          child: Text('Year', style: TextStyle(fontSize: 12, color: Colors.white54)),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.tertiary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.secondary),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedProductionWeek,
+                        hint: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('Week', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                         ),
-                        ...yearOptions.map((String year) {
-                          return DropdownMenuItem<String>(
-                            value: year,
-                            child: Text(year, style: const TextStyle(fontSize: 12, color: Colors.white)),
-                          );
-                        }),
-                      ],
-                      onChanged: (String? newValue) {
-                        setState(() {
-                          _selectedProductionYear = newValue;
-                        });
-                      },
+                        isExpanded: true,
+                        dropdownColor: AppColors.tertiary,
+                        icon: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 20),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        borderRadius: BorderRadius.circular(8),
+                        selectedItemBuilder: (BuildContext context) {
+                          return [null, ...weekOptions].map<Widget>((String? week) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                week != null ? 'Wk $week' : '',
+                                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                              ),
+                            );
+                          }).toList();
+                        },
+                        items: [
+                          DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('Week', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                          ),
+                          ...weekOptions.map((String week) {
+                            return DropdownMenuItem<String>(
+                              value: week,
+                              child: Text('Week $week', style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                            );
+                          }),
+                        ],
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedProductionWeek = newValue;
+                          });
+                        },
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 12),
+            // Year dropdown
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'YEAR',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppColors.tertiary,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.secondary),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedProductionYear,
+                        hint: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: Text('Year', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                        ),
+                        isExpanded: true,
+                        dropdownColor: AppColors.tertiary,
+                        icon: Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: Icon(Icons.arrow_drop_down, color: AppColors.textSecondary, size: 20),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        borderRadius: BorderRadius.circular(8),
+                        selectedItemBuilder: (BuildContext context) {
+                          return [null, ...yearOptions].map<Widget>((String? year) {
+                            return Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                year ?? '',
+                                style: const TextStyle(fontSize: 13, color: AppColors.textPrimary),
+                              ),
+                            );
+                          }).toList();
+                        },
+                        items: [
+                          DropdownMenuItem<String>(
+                            value: null,
+                            child: Text('Year', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                          ),
+                          ...yearOptions.map((String year) {
+                            return DropdownMenuItem<String>(
+                              value: year,
+                              child: Text(year, style: const TextStyle(fontSize: 13, color: AppColors.textPrimary)),
+                            );
+                          }),
+                        ],
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedProductionYear = newValue;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ],
     );

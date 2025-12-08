@@ -422,9 +422,6 @@ class _FdaRecallCardState extends ConsumerState<FdaRecallCard> {
 
   @override
   Widget build(BuildContext context) {
-    // Debug print for FDARecallID
-    // ignore: avoid_print
-    print('FDARecallID for card: \'${widget.recall.fdaRecallId}\'');
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(

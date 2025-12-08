@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -230,7 +231,9 @@ class AuthService {
         throw Exception(message);
       }
     } catch (e) {
-      print('❌ Account deletion failed: $e');
+      if (kDebugMode) {
+        print('❌ Account deletion failed: $e');
+      }
       rethrow;
     }
   }
