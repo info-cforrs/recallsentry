@@ -11,6 +11,8 @@ import 'services/fcm_service.dart';
 import 'services/saved_recalls_service.dart';
 import 'services/error_reporting_service.dart';
 import 'services/deep_link_service.dart';
+import 'services/consent_service.dart';
+import 'services/gamification_service.dart';
 import 'pages/intro_page1.dart';
 import 'widgets/iphone_simulator.dart';
 import 'widgets/notification_banner.dart';
@@ -52,6 +54,23 @@ void main() async {
     debugPrint('📊 Starting Error Reporting initialization...');
     await ErrorReportingService.initialize();
     debugPrint('✅ Error Reporting Service initialized');
+
+    // Apply user consent preferences to services
+    debugPrint('🔒 Loading and applying consent preferences...');
+    try {
+      final consentPrefs = await ConsentService().getPreferences();
+      // Apply crash reporting consent
+      await ErrorReportingService.setCrashlyticsCollectionEnabled(
+        consentPrefs.crashReportingEnabled,
+      );
+      // Apply gamification consent
+      GamificationService().setEnabled(consentPrefs.gamificationEnabled);
+      debugPrint('✅ Consent preferences applied: '
+          'crash=${consentPrefs.crashReportingEnabled}, '
+          'gamification=${consentPrefs.gamificationEnabled}');
+    } catch (e) {
+      debugPrint('⚠️ Error applying consent preferences: $e');
+    }
 
     // Initialize FCM (Firebase Cloud Messaging)
     debugPrint('🔔 Starting FCM initialization...');

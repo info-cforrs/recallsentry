@@ -5,6 +5,7 @@ import '../widgets/animated_visibility_wrapper.dart';
 import '../mixins/hide_on_scroll_mixin.dart';
 import '../services/auth_service.dart';
 import '../services/allergy_preferences_service.dart';
+import '../services/consent_service.dart';
 import '../models/allergy_preferences.dart';
 import 'auth_required_page.dart';
 
@@ -18,11 +19,13 @@ class AllergyPreferencesPage extends StatefulWidget {
 class _AllergyPreferencesPageState extends State<AllergyPreferencesPage> with HideOnScrollMixin {
   bool _isLoading = true;
   bool _isSaving = false;
+  bool _hasHealthConsent = false;
 
   // Current preferences
   AllergyPreferences? _preferences;
 
   final AllergyPreferencesService _allergyService = AllergyPreferencesService();
+  final ConsentService _consentService = ConsentService();
 
   @override
   void initState() {
@@ -54,9 +57,13 @@ class _AllergyPreferencesPageState extends State<AllergyPreferencesPage> with Hi
         return;
       }
 
+      // Check health data consent (GDPR Article 9)
+      final hasConsent = await _consentService.isHealthDataConsented();
+
       final prefs = await _allergyService.getPreferences();
       if (mounted) {
         setState(() {
+          _hasHealthConsent = hasConsent;
           _preferences = prefs ?? AllergyPreferences.defaults();
           _isLoading = false;
         });
@@ -68,6 +75,49 @@ class _AllergyPreferencesPageState extends State<AllergyPreferencesPage> with Hi
           SnackBar(content: Text('Error loading preferences: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _requestHealthConsent() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Health Data Consent Required'),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Allergy preferences are considered health-related data under GDPR Article 9 (Special Category Data).',
+              style: TextStyle(fontWeight: FontWeight.w500),
+            ),
+            SizedBox(height: 12),
+            Text(
+              'By enabling this feature, you consent to RecallSentry collecting and processing your allergy information to provide personalized allergen recall alerts.',
+            ),
+            SizedBox(height: 12),
+            Text(
+              'You can withdraw this consent at any time in Settings > Privacy & Data.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('I Consent'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await _consentService.updatePreference(healthDataConsentGiven: true);
+      setState(() => _hasHealthConsent = true);
     }
   }
 
@@ -262,14 +312,70 @@ class _AllergyPreferencesPageState extends State<AllergyPreferencesPage> with Hi
 
             const SizedBox(height: 16),
 
+            // Health Data Consent Banner (GDPR Article 9)
+            if (!_hasHealthConsent)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.shade900,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.amber.shade700),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.health_and_safety, color: Colors.amber, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'Health Data Consent Required',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Allergy data is health-related information protected under GDPR. You must consent before using this feature.',
+                        style: TextStyle(color: Colors.white70, fontSize: 12),
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _requestHealthConsent,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.amber,
+                            foregroundColor: Colors.black,
+                          ),
+                          child: const Text('Give Consent'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+            if (!_hasHealthConsent) const SizedBox(height: 16),
+
             // Scrollable Content
             Expanded(
-              child: ListView(
-                controller: hideOnScrollController,
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                children: [
-                  // Master Toggle Section
-                  _buildSectionHeader('Quick Settings'),
+              child: IgnorePointer(
+                ignoring: !_hasHealthConsent,
+                child: Opacity(
+                  opacity: _hasHealthConsent ? 1.0 : 0.4,
+                  child: ListView(
+                    controller: hideOnScrollController,
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    children: [
+                      // Master Toggle Section
+                      _buildSectionHeader('Quick Settings'),
                   Card(
                     elevation: 2,
                     color: const Color(0xFF2A4A5C),
@@ -472,8 +578,10 @@ class _AllergyPreferencesPageState extends State<AllergyPreferencesPage> with Hi
                     ),
                   ),
 
-                  const SizedBox(height: 20),
-                ],
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
               ),
             ),
           ],

@@ -7,6 +7,7 @@ import '../models/user_item.dart';
 import '../providers/data_providers.dart';
 import '../providers/service_providers.dart';
 import '../utils/room_icon_helper.dart';
+import '../widgets/custom_loading_indicator.dart';
 import 'room_selection_page.dart';
 import 'user_item_list_page.dart';
 import 'user_item_details_page.dart';
@@ -1888,10 +1889,8 @@ class _HomeViewPageState extends ConsumerState<HomeViewPage> with WidgetsBinding
       ),
       body: SafeArea(
         child: homeDataAsync.when(
-          loading: () => const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
-            ),
+          loading: () => const CustomLoadingIndicator(
+            size: LoadingIndicatorSize.medium,
           ),
           error: (error, _) => Center(
             child: Padding(

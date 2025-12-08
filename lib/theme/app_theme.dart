@@ -393,7 +393,7 @@ class AppTheme {
         color: AppColors.textPrimary,
       ),
       labelSmall: TextStyle(
-        fontSize: 11,
+        fontSize: 12, // WCAG minimum accessible font size
         fontWeight: FontWeight.w600,
         color: AppColors.textSecondary,
       ),

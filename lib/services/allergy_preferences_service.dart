@@ -1,17 +1,28 @@
 import 'dart:convert';
 import '../models/allergy_preferences.dart';
 import '../services/auth_service.dart';
+import '../services/consent_service.dart';
 
-// Service for managing user allergy preferences
-// Available to both SmartFilter and RecallMatch plan users
+/// Service for managing user allergy preferences
+/// Available to both SmartFilter and RecallMatch plan users
+///
+/// PRIVACY: Allergy data is health-related data protected under GDPR Article 9
+/// Users must explicitly consent to health data collection before using this feature
 class AllergyPreferencesService {
   static final AllergyPreferencesService _instance = AllergyPreferencesService._internal();
   factory AllergyPreferencesService() => _instance;
   AllergyPreferencesService._internal();
 
   final AuthService _authService = AuthService();
+  final ConsentService _consentService = ConsentService();
 
   static const String _endpoint = '/recall-management/allergy-preferences/';
+
+  /// Check if user has consented to health data collection
+  /// Required before using allergy preferences (GDPR Article 9)
+  Future<bool> hasHealthDataConsent() async {
+    return await _consentService.isHealthDataConsented();
+  }
 
   /// Get user's allergy preferences
   /// Creates default preferences if none exist

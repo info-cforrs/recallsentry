@@ -2,13 +2,27 @@
 ///
 /// Reusable widget for displaying error states with retry capabilities.
 /// Provides consistent error UX across the application.
+///
+/// For empty states, use [EmptyState] from 'package:rs_flutter/widgets/empty_state.dart'
+/// For loading states, use [CustomLoadingIndicator] from 'package:rs_flutter/widgets/custom_loading_indicator.dart'
 library;
 
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
+import '../constants/design_tokens.dart';
 import '../core/exceptions.dart';
 import '../utils/error_display.dart';
+import 'buttons/buttons.dart';
 
-/// Widget for displaying error states with retry option
+/// Widget for displaying error states with retry option.
+///
+/// Example:
+/// ```dart
+/// ErrorStateWidget(
+///   message: 'Failed to load data',
+///   onRetry: () => loadData(),
+/// )
+/// ```
 class ErrorStateWidget extends StatelessWidget {
   /// Main error message to display
   final String? message;
@@ -58,62 +72,61 @@ class ErrorStateWidget extends StatelessWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(DesignTokens.spacingXl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              errorIcon,
-              size: 64,
-              color: errorColor.withOpacity(0.7),
+            Semantics(
+              label: 'Error icon',
+              child: Icon(
+                errorIcon,
+                size: DesignTokens.iconSizeXxl,
+                color: errorColor.withValues(alpha: 0.7),
+              ),
             ),
-            const SizedBox(height: 16),
-            Text(
-              errorMessage,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge,
+            const SizedBox(height: DesignTokens.spacingLg),
+            Semantics(
+              label: 'Error message',
+              child: Text(
+                errorMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: DesignTokens.fontSizeLg,
+                  fontWeight: DesignTokens.fontWeightSemiBold,
+                  color: AppColors.textPrimary,
+                ),
+              ),
             ),
             if (details != null && details!.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: DesignTokens.spacingSm),
               Text(
                 details!,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                style: const TextStyle(
+                  fontSize: DesignTokens.fontSizeMd,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
-            const SizedBox(height: 24),
+            const SizedBox(height: DesignTokens.spacingXl),
             Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: DesignTokens.spacingMd,
+              runSpacing: DesignTokens.spacingMd,
               alignment: WrapAlignment.center,
               children: [
                 if (showRetry && onRetry != null)
-                  ElevatedButton.icon(
+                  PrimaryButton(
+                    label: retryButtonText ?? 'Retry',
                     onPressed: onRetry,
-                    icon: const Icon(Icons.refresh),
-                    label: Text(retryButtonText ?? 'Retry'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).primaryColor,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
+                    icon: Icons.refresh,
+                    fullWidth: false,
                   ),
                 if (showContactSupport && onContactSupport != null)
-                  OutlinedButton.icon(
+                  SecondaryButton(
+                    label: 'Contact Support',
                     onPressed: onContactSupport,
-                    icon: const Icon(Icons.help_outline),
-                    label: const Text('Contact Support'),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
+                    icon: Icons.help_outline,
+                    fullWidth: false,
                   ),
               ],
             ),
@@ -141,11 +154,19 @@ class ErrorStateWidget extends StatelessWidget {
     if (error != null) {
       return ErrorDisplay.getErrorColor(error);
     }
-    return Colors.red;
+    return AppColors.error;
   }
 }
 
-/// Compact error widget for smaller spaces
+/// Compact error widget for smaller spaces like list items.
+///
+/// Example:
+/// ```dart
+/// CompactErrorWidget(
+///   message: 'Failed to load item',
+///   onRetry: () => retry(),
+/// )
+/// ```
 class CompactErrorWidget extends StatelessWidget {
   final String message;
   final VoidCallback? onRetry;
@@ -165,25 +186,28 @@ class CompactErrorWidget extends StatelessWidget {
         : Icons.error_outline;
     final errorColor = error != null
         ? ErrorDisplay.getErrorColor(error)
-        : Colors.red;
+        : AppColors.error;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(DesignTokens.spacingLg),
       child: Row(
         children: [
-          Icon(errorIcon, color: errorColor, size: 24),
-          const SizedBox(width: 12),
+          Icon(errorIcon, color: errorColor, size: DesignTokens.iconSizeMd),
+          const SizedBox(width: DesignTokens.spacingMd),
           Expanded(
             child: Text(
               message,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: const TextStyle(
+                fontSize: DesignTokens.fontSizeSm,
+                color: AppColors.textPrimary,
+              ),
             ),
           ),
           if (onRetry != null) ...[
-            const SizedBox(width: 12),
-            IconButton(
+            const SizedBox(width: DesignTokens.spacingMd),
+            IconButtonWithTooltip(
+              icon: Icons.refresh,
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
               tooltip: 'Retry',
             ),
           ],
@@ -193,7 +217,21 @@ class CompactErrorWidget extends StatelessWidget {
   }
 }
 
-/// Empty state widget (no data, no error)
+/// @Deprecated('Use EmptyState from empty_state.dart instead')
+/// Legacy empty state widget - use [EmptyState] for new code.
+///
+/// This widget is kept for backwards compatibility.
+/// For new code, use:
+/// ```dart
+/// import 'package:rs_flutter/widgets/empty_state.dart';
+/// EmptyState(
+///   title: 'No items',
+///   subtitle: 'Add some items to get started',
+///   icon: Icons.inbox_outlined,
+/// )
+/// ```
+@Deprecated('Use EmptyState from empty_state.dart instead. '
+    'Import: package:rs_flutter/widgets/empty_state.dart')
 class EmptyStateWidget extends StatelessWidget {
   final String message;
   final String? details;
@@ -214,45 +252,43 @@ class EmptyStateWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(DesignTokens.spacingXl),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
               icon,
-              size: 64,
-              color: Colors.grey[400],
+              size: DesignTokens.iconSizeXxl,
+              color: AppColors.textTertiary,
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: DesignTokens.spacingLg),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: Colors.grey[700],
-                  ),
+              style: const TextStyle(
+                fontSize: DesignTokens.fontSizeLg,
+                fontWeight: DesignTokens.fontWeightSemiBold,
+                color: AppColors.textPrimary,
+              ),
             ),
             if (details != null && details!.isNotEmpty) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: DesignTokens.spacingSm),
               Text(
                 details!,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey[600],
-                    ),
+                style: const TextStyle(
+                  fontSize: DesignTokens.fontSizeMd,
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
             if (onAction != null && actionButtonText != null) ...[
-              const SizedBox(height: 24),
-              ElevatedButton.icon(
+              const SizedBox(height: DesignTokens.spacingXl),
+              PrimaryButton(
+                label: actionButtonText!,
                 onPressed: onAction,
-                icon: const Icon(Icons.add),
-                label: Text(actionButtonText!),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 12,
-                  ),
-                ),
+                icon: Icons.add,
+                fullWidth: false,
               ),
             ],
           ],
@@ -262,7 +298,20 @@ class EmptyStateWidget extends StatelessWidget {
   }
 }
 
-/// Loading state widget with optional message
+/// @Deprecated('Use CustomLoadingIndicator from custom_loading_indicator.dart instead')
+/// Legacy loading state widget - use [CustomLoadingIndicator] for new code.
+///
+/// This widget is kept for backwards compatibility.
+/// For new code, use:
+/// ```dart
+/// import 'package:rs_flutter/widgets/custom_loading_indicator.dart';
+/// CustomLoadingIndicator(
+///   message: 'Loading...',
+///   size: LoadingIndicatorSize.medium,
+/// )
+/// ```
+@Deprecated('Use CustomLoadingIndicator from custom_loading_indicator.dart instead. '
+    'Import: package:rs_flutter/widgets/custom_loading_indicator.dart')
 class LoadingStateWidget extends StatelessWidget {
   final String? message;
 
@@ -277,15 +326,18 @@ class LoadingStateWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
+          const CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
+          ),
           if (message != null && message!.isNotEmpty) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: DesignTokens.spacingLg),
             Text(
               message!,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+              style: const TextStyle(
+                fontSize: DesignTokens.fontSizeMd,
+                color: AppColors.textSecondary,
+              ),
             ),
           ],
         ],

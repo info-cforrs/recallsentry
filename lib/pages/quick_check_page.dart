@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../constants/app_colors.dart';
+import '../widgets/custom_loading_indicator.dart';
 import '../services/subscription_service.dart';
 import '../providers/service_providers.dart';
 import 'subscribe_page.dart';
@@ -227,10 +228,8 @@ class _QuickCheckPageState extends ConsumerState<QuickCheckPage> {
           ),
           centerTitle: true,
         ),
-        body: const Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
-          ),
+        body: const CustomLoadingIndicator(
+          size: LoadingIndicatorSize.medium,
         ),
       );
     }

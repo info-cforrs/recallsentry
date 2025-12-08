@@ -8,6 +8,7 @@ import '../models/recall_data.dart';
 import '../widgets/small_usda_recall_card.dart';
 import '../widgets/small_fda_recall_card.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/custom_loading_indicator.dart';
 import '../widgets/animated_visibility_wrapper.dart';
 import '../mixins/hide_on_scroll_mixin.dart';
 
@@ -525,24 +526,9 @@ class _OnlyAdvancedFilteredRecallsPageState
 
                     // Filtered Recalls List
                     if (_isLoading)
-                      const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(
-                              color: Color(0xFF64B5F6),
-                              strokeWidth: 3,
-                            ),
-                            SizedBox(height: 16),
-                            Text(
-                              'Loading recall data...',
-                              style: TextStyle(
-                                color: Colors.white70,
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
+                      const CustomLoadingIndicator(
+                        size: LoadingIndicatorSize.medium,
+                        message: 'Loading recall data...',
                       )
                     else if (_errorMessage.isNotEmpty)
                       Center(

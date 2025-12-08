@@ -20,6 +20,21 @@ class GamificationService {
     _httpClient = SecurityService().createSecureHttpClient();
   }
 
+  // Privacy consent - controls whether gamification tracking is enabled
+  bool _isEnabled = true;
+
+  /// Enable or disable gamification tracking (for privacy consent)
+  void setEnabled(bool enabled) {
+    _isEnabled = enabled;
+    if (!enabled) {
+      // Clear cached data when disabled
+      clearCache();
+    }
+  }
+
+  /// Check if gamification is enabled
+  bool get isEnabled => _isEnabled;
+
   // Cache for safety score
   SafetyScore? _cachedScore;
   DateTime? _scoreCacheTime;
@@ -164,7 +179,16 @@ class GamificationService {
   /// Record a gamification action (e.g., save recall, create filter, etc.)
   /// This updates the user's SafetyScore and checks for badge unlocks
   /// SECURITY: Uses certificate pinning
+  /// PRIVACY: Respects user consent - no tracking if disabled
   Future<Map<String, dynamic>> recordAction(String actionType) async {
+    // Check if gamification is enabled (privacy consent)
+    if (!_isEnabled) {
+      return {
+        'success': false,
+        'error': 'Gamification tracking is disabled',
+      };
+    }
+
     final token = await _authService.getAccessToken();
 
     if (token == null || token.isEmpty) {

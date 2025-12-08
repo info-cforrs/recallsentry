@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'main_navigation.dart';
 import '../services/user_profile_service.dart';
 import '../widgets/animated_visibility_wrapper.dart';
+import '../widgets/custom_loading_indicator.dart';
 import '../mixins/hide_on_scroll_mixin.dart';
 
 class UserProfilePage extends StatefulWidget {
@@ -178,12 +179,10 @@ class _UserProfilePageState extends State<UserProfilePage> with HideOnScrollMixi
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _userProfile == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF1D3547),
-        body: const Center(
-          child: CircularProgressIndicator(
-            color: Colors.white,
-          ),
+      return const Scaffold(
+        backgroundColor: Color(0xFF1D3547),
+        body: CustomLoadingIndicator(
+          size: LoadingIndicatorSize.medium,
         ),
       );
     }

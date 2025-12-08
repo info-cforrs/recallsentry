@@ -1,5 +1,9 @@
+import 'dart:io';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../config/app_config.dart';
 import '../services/iap_service.dart';
 import '../services/subscription_service.dart';
 
@@ -291,18 +295,96 @@ class _SubscriptionPaywallState extends State<SubscriptionPaywall> {
             onPressed: _isPurchasing ? null : _restorePurchases,
             child: const Text('Restore Purchases'),
           ),
+          const SizedBox(height: 8),
+
+          // Manage Subscription button
+          TextButton(
+            onPressed: _openSubscriptionManagement,
+            child: const Text('Manage Subscription'),
+          ),
           const SizedBox(height: 16),
 
-          // Legal text
+          // Legal text with auto-renewal disclosure
           Text(
             'Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. '
-            'Manage subscriptions in your device settings.',
+            'Your account will be charged for renewal within 24 hours prior to the end of the current period. '
+            'You can manage and cancel your subscriptions by going to your account settings on the App Store after purchase.',
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey[500],
             ),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 16),
+
+          // Legal links (Required for App Store compliance)
+          _buildLegalLinks(),
+        ],
+      ),
+    );
+  }
+
+  /// Open subscription management in device settings
+  Future<void> _openSubscriptionManagement() async {
+    final String url = Platform.isIOS
+        ? AppConfig.iosSubscriptionManagementUrl
+        : AppConfig.androidSubscriptionManagementUrl;
+
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// Open a URL in external browser
+  Future<void> _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// Build legal links section (Privacy Policy, Terms, EULA)
+  Widget _buildLegalLinks() {
+    return RichText(
+      textAlign: TextAlign.center,
+      text: TextSpan(
+        style: TextStyle(
+          fontSize: 12,
+          color: Colors.grey[500],
+        ),
+        children: [
+          const TextSpan(text: 'By subscribing, you agree to our '),
+          TextSpan(
+            text: 'Terms of Service',
+            style: const TextStyle(
+              color: Color(0xFF1D3547),
+              decoration: TextDecoration.underline,
+            ),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => _openUrl(AppConfig.termsOfServiceUrl),
+          ),
+          const TextSpan(text: ', '),
+          TextSpan(
+            text: 'Privacy Policy',
+            style: const TextStyle(
+              color: Color(0xFF1D3547),
+              decoration: TextDecoration.underline,
+            ),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => _openUrl(AppConfig.privacyPolicyUrl),
+          ),
+          const TextSpan(text: ', and '),
+          TextSpan(
+            text: 'EULA',
+            style: const TextStyle(
+              color: Color(0xFF1D3547),
+              decoration: TextDecoration.underline,
+            ),
+            recognizer: TapGestureRecognizer()
+              ..onTap = () => _openUrl(AppConfig.eulaUrl),
+          ),
+          const TextSpan(text: '.'),
         ],
       ),
     );
@@ -359,9 +441,10 @@ class _SubscriptionPaywallState extends State<SubscriptionPaywall> {
   Widget _buildProductOption(ProductDetails product) {
     final isSelected = _selectedProduct?.id == product.id;
 
-    // Check if yearly for savings badge
+    // Check if yearly for savings badge and billing period
     final isYearly = product.id.contains('yearly');
-    String savings = isYearly ? 'Save 17%' : '';
+    final billingPeriod = isYearly ? '/year' : '/month';
+    final savings = isYearly ? 'Save 17%' : '';
 
     return GestureDetector(
       onTap: () => setState(() => _selectedProduct = product),
@@ -411,11 +494,14 @@ class _SubscriptionPaywallState extends State<SubscriptionPaywall> {
                 children: [
                   Row(
                     children: [
-                      Text(
-                        product.title,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 16,
+                      Flexible(
+                        child: Text(
+                          product.title,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (savings.isNotEmpty) ...[
@@ -452,13 +538,25 @@ class _SubscriptionPaywallState extends State<SubscriptionPaywall> {
               ),
             ),
 
-            // Price
-            Text(
-              product.price,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
+            // Price with explicit billing period
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  product.price,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                  ),
+                ),
+                Text(
+                  billingPeriod,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
             ),
           ],
         ),

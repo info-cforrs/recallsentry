@@ -10,6 +10,7 @@ import 'usda_recall_details_page.dart';
 import 'cpsc_recall_details_page.dart';
 import 'nhtsa_recall_details_page.dart';
 import 'subscribe_page.dart';
+import '../widgets/custom_loading_indicator.dart';
 
 /// Quick Check Results Page
 ///
@@ -666,7 +667,7 @@ class _QuickCheckResultsPageState extends State<QuickCheckResultsPage> {
             const SizedBox(height: 8),
 
             if (_isLoadingHomes)
-              const Center(child: CircularProgressIndicator())
+              const CustomLoadingIndicator(size: LoadingIndicatorSize.small)
             else if (_userHomes.isEmpty)
               const Text(
                 'No homes available. Create a home in Home View first.',
@@ -724,7 +725,7 @@ class _QuickCheckResultsPageState extends State<QuickCheckResultsPage> {
               const SizedBox(height: 8),
 
               if (_isLoadingRooms)
-                const Center(child: CircularProgressIndicator())
+                const CustomLoadingIndicator(size: LoadingIndicatorSize.small)
               else if (_userRooms.isEmpty)
                 const Text(
                   'No rooms available. Create a room first.',

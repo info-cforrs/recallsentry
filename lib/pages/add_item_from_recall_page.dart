@@ -15,6 +15,7 @@ import '../services/product_scan_service.dart';
 import '../services/vin_decode_service.dart';
 import '../services/barcode_scan_service.dart';
 import '../models/product_scan_result.dart';
+import '../widgets/custom_loading_indicator.dart';
 import 'rmc_details_page.dart';
 
 /// Add Item From Recall Page
@@ -1025,12 +1026,8 @@ class _AddItemFromRecallPageState extends State<AddItemFromRecallPage>
                     borderRadius: BorderRadius.circular(12),
                     child: _isCameraInitialized
                         ? CameraPreview(_cameraController!)
-                        : const Center(
-                            child: CircularProgressIndicator(
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                AppColors.accentBlue,
-                              ),
-                            ),
+                        : const CustomLoadingIndicator(
+                            size: LoadingIndicatorSize.small,
                           ),
                   ),
                 ),
@@ -1261,7 +1258,7 @@ class _AddItemFromRecallPageState extends State<AddItemFromRecallPage>
               const SizedBox(height: 12),
 
               if (_isLoadingHomes)
-                const Center(child: CircularProgressIndicator())
+                const CustomLoadingIndicator(size: LoadingIndicatorSize.small)
               else if (_userHomes.isEmpty)
                 const Text(
                   'No homes available. Please add a home first.',
@@ -1330,7 +1327,7 @@ class _AddItemFromRecallPageState extends State<AddItemFromRecallPage>
                   style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
                 )
               else if (_isLoadingRooms)
-                const Center(child: CircularProgressIndicator())
+                const CustomLoadingIndicator(size: LoadingIndicatorSize.small)
               else if (_userRooms.isEmpty)
                 const Text(
                   'No rooms available for this home. Please add a room first.',

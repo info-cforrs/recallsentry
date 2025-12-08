@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
+import 'package:rs_flutter/constants/design_tokens.dart';
+import 'package:rs_flutter/widgets/buttons/buttons.dart';
 import 'main_navigation.dart';
 import 'sign_up_page.dart';
 import '../services/auth_service.dart';
@@ -246,24 +248,22 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: DesignTokens.borderRadiusSm,
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: AppColors.borderFocus),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: DesignTokens.borderRadiusSm,
                           ),
                           errorBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: AppColors.error),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: DesignTokens.borderRadiusSm,
                           ),
                           focusedErrorBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: AppColors.error),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: DesignTokens.borderRadiusSm,
                           ),
                           filled: true,
-                          fillColor: const Color(
-                            0xFF2A4A5C,
-                          ).withValues(alpha: 0.3),
+                          fillColor: AppColors.formFieldFillLight,
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -314,24 +314,22 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: AppColors.border),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: DesignTokens.borderRadiusSm,
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: AppColors.borderFocus),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: DesignTokens.borderRadiusSm,
                           ),
                           errorBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: AppColors.error),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: DesignTokens.borderRadiusSm,
                           ),
                           focusedErrorBorder: OutlineInputBorder(
                             borderSide: const BorderSide(color: AppColors.error),
-                            borderRadius: BorderRadius.circular(8),
+                            borderRadius: DesignTokens.borderRadiusSm,
                           ),
                           filled: true,
-                          fillColor: const Color(
-                            0xFF2A4A5C,
-                          ).withValues(alpha: 0.3),
+                          fillColor: AppColors.formFieldFillLight,
                         ),
                         validator: (value) {
                           if (value == null || value.isEmpty) {
@@ -392,39 +390,13 @@ class _LoginPageState extends State<LoginPage> {
                         ],
                       ),
 
-                      const SizedBox(height: 32),
+                      const SizedBox(height: DesignTokens.spacingXxl),
 
                       // Login Button
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _handleLogin,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.accentBlue,
-                            foregroundColor: AppColors.textPrimary,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 2,
-                          ),
-                          child: _isLoading
-                              ? const SizedBox(
-                                  height: 20,
-                                  width: 20,
-                                  child: CircularProgressIndicator(
-                                    color: AppColors.textPrimary,
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Text(
-                                  'Login',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                        ),
+                      PrimaryButton(
+                        label: 'Login',
+                        onPressed: _handleLogin,
+                        isLoading: _isLoading,
                       ),
 
                       const SizedBox(height: 24),

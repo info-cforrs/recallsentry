@@ -9,6 +9,7 @@ import '../widgets/small_nhtsa_recall_card.dart';
 import '../widgets/article_card.dart';
 import '../widgets/custom_back_button.dart';
 import '../widgets/animated_visibility_wrapper.dart';
+import '../widgets/custom_loading_indicator.dart';
 import '../mixins/hide_on_scroll_mixin.dart';
 import 'subscribe_page.dart';
 
@@ -973,10 +974,8 @@ class _AllVehicleRecallsPageState extends State<AllVehicleRecallsPage> with Hide
             // Main Content Area
             Expanded(
               child: _isLoading
-                  ? const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF64B5F6),
-                      ),
+                  ? const CustomLoadingIndicator(
+                      size: LoadingIndicatorSize.medium,
                     )
                   : _filteredRecalls.isEmpty
                   ? _buildEmptyState()

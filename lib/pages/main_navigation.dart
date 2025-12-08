@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
 import 'package:rs_flutter/widgets/animated_visibility_wrapper.dart';
+import 'package:rs_flutter/widgets/custom_loading_indicator.dart';
 import 'home_page.dart';
 import 'add_new_page.dart';
 import 'info_page.dart';
@@ -204,10 +205,8 @@ class _MainNavigationState extends State<MainNavigation> {
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: AppColors.primary,
-        body: Center(
-          child: CircularProgressIndicator(
-            valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
-          ),
+        body: CustomLoadingIndicator(
+          size: LoadingIndicatorSize.medium,
         ),
       );
     }

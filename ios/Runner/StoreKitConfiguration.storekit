@@ -1,0 +1,188 @@
+{
+  "identifier" : "RecallSentry_StoreKit",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "RecallSentry",
+    "_developerTeamID" : "",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : null,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "smart_filtering_group",
+      "localizations" : [
+
+      ],
+      "name" : "SmartFiltering",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "1.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "smart_filtering_monthly_id",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Access CPSC recalls, save up to 10 filters, multi-state alerts",
+              "displayName" : "SmartFiltering Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "smart_filtering_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "SmartFiltering Monthly",
+          "subscriptionGroupID" : "smart_filtering_group",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "19.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "smart_filtering_yearly_id",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Access CPSC recalls, save up to 10 filters, multi-state alerts - Annual",
+              "displayName" : "SmartFiltering Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "smart_filtering_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "SmartFiltering Yearly",
+          "subscriptionGroupID" : "smart_filtering_group",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    },
+    {
+      "id" : "recall_match_group",
+      "localizations" : [
+
+      ],
+      "name" : "RecallMatch",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "4.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "recall_match_monthly_id",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Full access: SmartScan, Household Inventory, RecallMatch Engine, RMC",
+              "displayName" : "RecallMatch Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "recall_match_monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "RecallMatch Monthly",
+          "subscriptionGroupID" : "recall_match_group",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "49.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "recall_match_yearly_id",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Full access: SmartScan, Household Inventory, RecallMatch Engine, RMC - Annual",
+              "displayName" : "RecallMatch Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "recall_match_yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "RecallMatch Yearly",
+          "subscriptionGroupID" : "recall_match_group",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

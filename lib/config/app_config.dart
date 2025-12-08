@@ -1,4 +1,20 @@
 class AppConfig {
+  // App Version
+  static const String appVersion = '1.0.0';
+  static const String appBuildNumber = '1';
+
+  // Legal URLs (Required for App Store compliance)
+  static const String privacyPolicyUrl = 'https://recallsentry.com/privacy';
+  static const String termsOfServiceUrl = 'https://recallsentry.com/terms';
+  static const String eulaUrl = 'https://recallsentry.com/eula';
+  static const String supportUrl = 'https://recallsentry.com/support';
+
+  // App Store Subscription Management URLs
+  static const String iosSubscriptionManagementUrl =
+      'https://apps.apple.com/account/subscriptions';
+  static const String androidSubscriptionManagementUrl =
+      'https://play.google.com/store/account/subscriptions';
+
   // Data Source Configuration
   // Choose between REST API (recommended) or Google Sheets
   static const DataSource dataSource = DataSource.restApi;

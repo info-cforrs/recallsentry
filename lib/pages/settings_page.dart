@@ -11,6 +11,7 @@ import 'login_page.dart';
 import 'sign_up_page.dart';
 import 'push_notifications_page.dart';
 import 'email_notifications_page.dart';
+import 'privacy_data_settings_page.dart';
 import '../services/auth_service.dart';
 import '../services/subscription_service.dart';
 import '../services/data_saver_service.dart';
@@ -501,6 +502,33 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                           await DataSaverService().setLowDataMode(value);
                           setState(() {}); // Rebuild to reflect change
                         },
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, color: Colors.white24),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.shield_outlined,
+                      color: Colors.white70,
+                    ),
+                    title: const Text(
+                      'Privacy & Data',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    subtitle: const Text(
+                      'Manage consent and data rights',
+                      style: TextStyle(color: Colors.white54, fontSize: 12),
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Colors.white70,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const PrivacyDataSettingsPage(),
+                        ),
                       );
                     },
                   ),

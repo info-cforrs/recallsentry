@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'intro_page2.dart';
+import 'consent_page.dart';
 import '../widgets/iphone_simulator.dart';
 
 class IntroPage1 extends StatelessWidget {
@@ -167,7 +167,7 @@ class IntroPage1 extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Get Started Button
+              // Get Started Button - navigates to consent page
               SizedBox(
                 width: double.infinity,
                 height: 56,
@@ -176,7 +176,7 @@ class IntroPage1 extends StatelessWidget {
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(
                         builder: (context) =>
-                            const IPhoneSimulator(child: IntroPage2()),
+                            const IPhoneSimulator(child: ConsentPage()),
                       ),
                     );
                   },

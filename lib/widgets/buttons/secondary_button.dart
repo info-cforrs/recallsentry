@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
+import 'package:rs_flutter/constants/design_tokens.dart';
 
 /// A standardized secondary button widget for the app.
 ///
 /// This button follows the app's design system with outlined styling.
 /// Use this for secondary actions or when you need less visual weight.
+///
+/// Example:
+/// ```dart
+/// SecondaryButton(
+///   label: 'Cancel',
+///   onPressed: () => Navigator.pop(context),
+/// )
+/// ```
 class SecondaryButton extends StatelessWidget {
   /// The text label for the button
   final String label;
@@ -53,7 +62,7 @@ class SecondaryButton extends StatelessWidget {
       button: true,
       enabled: onPressed != null && !isLoading,
       child: SizedBox(
-        height: height ?? 48,
+        height: height ?? DesignTokens.minTouchTarget,
         width: fullWidth ? double.infinity : null,
         child: OutlinedButton(
           onPressed: isLoading ? null : onPressed,
@@ -64,9 +73,12 @@ class SecondaryButton extends StatelessWidget {
               width: 1.5,
             ),
             padding: padding ??
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                const EdgeInsets.symmetric(
+                  horizontal: DesignTokens.spacingXl,
+                  vertical: DesignTokens.spacingMd,
+                ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: DesignTokens.borderRadiusMd,
             ),
             disabledForegroundColor: AppColors.textDisabled,
           ).copyWith(
@@ -101,19 +113,51 @@ class SecondaryButton extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (icon != null) ...[
-                      Icon(icon, size: 20),
-                      const SizedBox(width: 8),
+                      Icon(icon, size: DesignTokens.iconSizeSm),
+                      const SizedBox(width: DesignTokens.spacingSm),
                     ],
                     Text(
                       label,
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: DesignTokens.fontSizeMd,
+                        fontWeight: DesignTokens.fontWeightSemiBold,
                       ),
                     ),
                   ],
                 ),
         ),
+      ),
+    );
+  }
+}
+
+/// A small secondary button for compact spaces.
+class SmallSecondaryButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool isLoading;
+
+  const SmallSecondaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SecondaryButton(
+      label: label,
+      onPressed: onPressed,
+      icon: icon,
+      fullWidth: false,
+      height: DesignTokens.smallTouchTarget,
+      isLoading: isLoading,
+      padding: const EdgeInsets.symmetric(
+        horizontal: DesignTokens.spacingLg,
+        vertical: DesignTokens.spacingSm,
       ),
     );
   }
@@ -146,9 +190,12 @@ class TertiaryButton extends StatelessWidget {
         onPressed: isLoading ? null : onPressed,
         style: TextButton.styleFrom(
           foregroundColor: textColor ?? AppColors.accentBlue,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: DesignTokens.spacingLg,
+            vertical: DesignTokens.spacingSm,
+          ),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: DesignTokens.borderRadiusMd,
           ),
         ),
         child: isLoading
@@ -166,14 +213,14 @@ class TertiaryButton extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   if (icon != null) ...[
-                    Icon(icon, size: 20),
-                    const SizedBox(width: 8),
+                    Icon(icon, size: DesignTokens.iconSizeSm),
+                    const SizedBox(width: DesignTokens.spacingSm),
                   ],
                   Text(
                     label,
                     style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+                      fontSize: DesignTokens.fontSizeMd,
+                      fontWeight: DesignTokens.fontWeightSemiBold,
                     ),
                   ),
                 ],
@@ -197,7 +244,7 @@ class IconButtonWithTooltip extends StatelessWidget {
     required this.onPressed,
     required this.tooltip,
     this.color,
-    this.size = 24,
+    this.size = DesignTokens.iconSizeMd,
   });
 
   @override
@@ -211,6 +258,51 @@ class IconButtonWithTooltip extends StatelessWidget {
         onPressed: onPressed,
         color: color ?? AppColors.textPrimary,
         tooltip: tooltip,
+      ),
+    );
+  }
+}
+
+/// A link-style button that looks like a text link.
+class LinkButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final Color? color;
+  final bool underline;
+
+  const LinkButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.color,
+    this.underline = true,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Link: $label',
+      button: true,
+      enabled: onPressed != null,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: DesignTokens.borderRadiusXs,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: DesignTokens.spacingXs,
+            vertical: DesignTokens.spacingXs,
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              color: color ?? AppColors.accentBlue,
+              fontSize: DesignTokens.fontSizeSm,
+              fontWeight: DesignTokens.fontWeightMedium,
+              decoration: underline ? TextDecoration.underline : null,
+              decorationColor: color ?? AppColors.accentBlue,
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
+import '../widgets/custom_loading_indicator.dart';
 import '../widgets/user_item_card.dart';
 import '../models/user_item.dart';
 import '../models/user_home.dart';
@@ -478,10 +479,8 @@ class _UserItemListPageState extends State<UserItemListPage> {
           // Main content
           Expanded(
             child: _isLoading
-          ? const Center(
-              child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
-              ),
+          ? const CustomLoadingIndicator(
+              size: LoadingIndicatorSize.medium,
             )
           : _filteredItems.isEmpty
               ? Center(
@@ -964,10 +963,8 @@ class _MoveItemDialogState extends State<_MoveItemDialog> {
             const SizedBox(height: 12),
 
             if (_isLoadingHomes)
-              const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
-                ),
+              const CustomLoadingIndicator(
+                size: LoadingIndicatorSize.small,
               )
             else
               Wrap(
@@ -1016,10 +1013,8 @@ class _MoveItemDialogState extends State<_MoveItemDialog> {
             const SizedBox(height: 12),
 
             if (_isLoadingRooms)
-              const Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
-                ),
+              const CustomLoadingIndicator(
+                size: LoadingIndicatorSize.small,
               )
             else if (_userRooms.isEmpty)
               const Text(

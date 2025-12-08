@@ -8,6 +8,7 @@ import 'edit_saved_filter_page.dart';
 import '../models/saved_filter.dart';
 import '../services/subscription_service.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/custom_loading_indicator.dart';
 import '../widgets/animated_visibility_wrapper.dart';
 import '../mixins/hide_on_scroll_mixin.dart';
 import '../providers/data_providers.dart';
@@ -389,8 +390,8 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> with HideOn
                     },
                   );
                 },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: Color(0xFF64B5F6)),
+                loading: () => const CustomLoadingIndicator(
+                  size: LoadingIndicatorSize.medium,
                 ),
                 error: (error, _) => _buildErrorState(error.toString()),
               ),

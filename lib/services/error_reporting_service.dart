@@ -5,9 +5,14 @@
 library;
 
 import 'dart:async';
+import 'dart:io' show Platform;
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import '../core/exceptions.dart';
+
+/// Check if Crashlytics is supported on the current platform
+bool get _isCrashlyticsSupported =>
+    !kIsWeb && (Platform.isAndroid || Platform.isIOS);
 
 /// Service for reporting errors to Firebase Crashlytics
 class ErrorReportingService {
@@ -20,8 +25,8 @@ class ErrorReportingService {
     if (_initialized) return;
 
     try {
-      // Set up Crashlytics error handling
-      if (!kIsWeb) {
+      // Set up Crashlytics error handling (only supported on iOS/Android)
+      if (_isCrashlyticsSupported) {
         // Pass all uncaught Flutter errors to Crashlytics
         FlutterError.onError = (errorDetails) {
           FirebaseCrashlytics.instance.recordFlutterFatalError(errorDetails);
@@ -48,7 +53,7 @@ class ErrorReportingService {
         _initialized = true;
         debugPrint('✅ Error Reporting Service initialized');
       } else {
-        debugPrint('⚠️ Crashlytics not available on web platform');
+        debugPrint('⚠️ Crashlytics not available on this platform (requires iOS/Android)');
       }
     } catch (e, stackTrace) {
       debugPrint('⚠️ Failed to initialize Error Reporting Service: $e');
@@ -76,7 +81,7 @@ class ErrorReportingService {
     Map<String, dynamic>? additionalInfo,
     bool fatal = false,
   }) async {
-    if (!_initialized || kIsWeb) {
+    if (!_initialized || !_isCrashlyticsSupported) {
       // Just log in debug mode if not initialized or on web
       if (kDebugMode) {
         debugPrint('🔴 Exception in $context: $exception');
@@ -132,7 +137,7 @@ class ErrorReportingService {
   ///
   /// Useful for tracking application flow leading up to crashes
   static Future<void> log(String message) async {
-    if (!_initialized || kIsWeb) {
+    if (!_initialized || !_isCrashlyticsSupported) {
       if (kDebugMode) {
         debugPrint('📝 Log: $message');
       }
@@ -150,7 +155,7 @@ class ErrorReportingService {
   ///
   /// Call this after user login to associate crashes with users
   static Future<void> setUserIdentifier(String userId) async {
-    if (!_initialized || kIsWeb) return;
+    if (!_initialized || !_isCrashlyticsSupported) return;
 
     try {
       await FirebaseCrashlytics.instance.setUserIdentifier(userId);
@@ -164,7 +169,7 @@ class ErrorReportingService {
   ///
   /// Call this after user logout
   static Future<void> clearUserIdentifier() async {
-    if (!_initialized || kIsWeb) return;
+    if (!_initialized || !_isCrashlyticsSupported) return;
 
     try {
       await FirebaseCrashlytics.instance.setUserIdentifier('');
@@ -176,7 +181,7 @@ class ErrorReportingService {
 
   /// Set custom key-value pair for crash context
   static Future<void> setCustomKey(String key, dynamic value) async {
-    if (!_initialized || kIsWeb) return;
+    if (!_initialized || !_isCrashlyticsSupported) return;
 
     try {
       await FirebaseCrashlytics.instance.setCustomKey(key, value.toString());
@@ -189,7 +194,7 @@ class ErrorReportingService {
   ///
   /// Useful for respecting user privacy preferences
   static Future<void> setCrashlyticsCollectionEnabled(bool enabled) async {
-    if (!_initialized || kIsWeb) return;
+    if (!_initialized || !_isCrashlyticsSupported) return;
 
     try {
       await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(enabled);

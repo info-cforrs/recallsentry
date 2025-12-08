@@ -7,6 +7,7 @@ import '../widgets/small_fda_recall_card.dart';
 import '../widgets/small_usda_recall_card.dart';
 import '../widgets/custom_back_button.dart';
 import '../widgets/animated_visibility_wrapper.dart';
+import '../widgets/custom_loading_indicator.dart';
 import '../mixins/hide_on_scroll_mixin.dart';
 
 class FilteredRecallsPage extends StatefulWidget {
@@ -377,10 +378,8 @@ class _FilteredRecallsPageState extends State<FilteredRecallsPage> with HideOnSc
                     // Filtered Recalls List
                     Expanded(
                       child: _isLoading
-                          ? const Center(
-                              child: CircularProgressIndicator(
-                                color: Color(0xFF4A90E2),
-                              ),
+                          ? const CustomLoadingIndicator(
+                              size: LoadingIndicatorSize.medium,
                             )
                           : _errorMessage.isNotEmpty
                           ? Center(

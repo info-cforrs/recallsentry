@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
 import 'package:rs_flutter/widgets/empty_state.dart';
 import 'package:rs_flutter/widgets/animated_visibility_wrapper.dart';
+import 'package:rs_flutter/widgets/custom_loading_indicator.dart';
 import 'package:rs_flutter/mixins/hide_on_scroll_mixin.dart';
 import 'all_fda_recalls_page.dart';
 import 'all_usda_recalls_page.dart';
@@ -470,23 +471,9 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
       backgroundColor: AppColors.primary,
       body: SafeArea(
           child: isLoadingCriticalData
-              ? const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentBlue),
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        'Loading recalls...',
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ],
-                  ),
+              ? const CustomLoadingIndicator(
+                  message: 'Loading recalls...',
+                  size: LoadingIndicatorSize.medium,
                 )
               : hasCriticalError
                   ? Center(

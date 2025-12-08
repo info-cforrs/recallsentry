@@ -4,6 +4,7 @@ import '../models/recall_data.dart';
 import '../widgets/small_fda_recall_card.dart';
 import '../widgets/small_usda_recall_card.dart';
 import '../widgets/custom_back_button.dart';
+import '../widgets/custom_loading_indicator.dart';
 import '../providers/data_providers.dart';
 
 /// New Recalls Page - Shows recalls from today and yesterday
@@ -249,10 +250,8 @@ class NewRecallsPage extends ConsumerWidget {
                     child: _buildRecallsList(newRecalls),
                   );
                 },
-                loading: () => const Center(
-                  child: CircularProgressIndicator(
-                    color: Color(0xFF64B5F6),
-                  ),
+                loading: () => const CustomLoadingIndicator(
+                  size: LoadingIndicatorSize.medium,
                 ),
                 error: (error, stackTrace) {
                   final errorMessage = 'Error loading new recalls: $error';

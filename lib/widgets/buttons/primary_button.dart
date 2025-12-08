@@ -1,10 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
+import 'package:rs_flutter/constants/design_tokens.dart';
 
 /// A standardized primary button widget for the app.
 ///
 /// This button follows the app's design system with consistent styling,
 /// sizing, and accessibility features. Use this for primary actions.
+///
+/// Example:
+/// ```dart
+/// PrimaryButton(
+///   label: 'Save Changes',
+///   onPressed: () => handleSave(),
+///   icon: Icons.save,
+/// )
+/// ```
 class PrimaryButton extends StatelessWidget {
   /// The text label for the button
   final String label;
@@ -53,18 +63,21 @@ class PrimaryButton extends StatelessWidget {
       button: true,
       enabled: onPressed != null && !isLoading,
       child: SizedBox(
-        height: height ?? 48,
+        height: height ?? DesignTokens.minTouchTarget,
         width: fullWidth ? double.infinity : null,
         child: ElevatedButton(
           onPressed: isLoading ? null : onPressed,
           style: ElevatedButton.styleFrom(
             backgroundColor: backgroundColor ?? AppColors.accentBlue,
             foregroundColor: textColor ?? AppColors.textPrimary,
-            elevation: 0,
+            elevation: DesignTokens.elevationNone,
             padding: padding ??
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                const EdgeInsets.symmetric(
+                  horizontal: DesignTokens.spacingXl,
+                  vertical: DesignTokens.spacingMd,
+                ),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: DesignTokens.borderRadiusMd,
             ),
             disabledBackgroundColor: AppColors.surface,
             disabledForegroundColor: AppColors.textDisabled,
@@ -85,14 +98,14 @@ class PrimaryButton extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     if (icon != null) ...[
-                      Icon(icon, size: 20),
-                      const SizedBox(width: 8),
+                      Icon(icon, size: DesignTokens.iconSizeSm),
+                      const SizedBox(width: DesignTokens.spacingSm),
                     ],
                     Text(
                       label,
                       style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                        fontSize: DesignTokens.fontSizeMd,
+                        fontWeight: DesignTokens.fontWeightSemiBold,
                       ),
                     ),
                   ],
@@ -129,9 +142,106 @@ class LargePrimaryButton extends StatelessWidget {
       onPressed: onPressed,
       icon: icon,
       fullWidth: fullWidth,
-      height: 56,
+      height: DesignTokens.largeTouchTarget,
       isLoading: isLoading,
-      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: DesignTokens.spacingXxl,
+        vertical: DesignTokens.spacingLg,
+      ),
+    );
+  }
+}
+
+/// A small primary button for compact spaces.
+class SmallPrimaryButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool isLoading;
+
+  const SmallPrimaryButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PrimaryButton(
+      label: label,
+      onPressed: onPressed,
+      icon: icon,
+      fullWidth: false,
+      height: DesignTokens.smallTouchTarget,
+      isLoading: isLoading,
+      padding: const EdgeInsets.symmetric(
+        horizontal: DesignTokens.spacingLg,
+        vertical: DesignTokens.spacingSm,
+      ),
+    );
+  }
+}
+
+/// A danger/destructive button for actions like delete.
+class DangerButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool fullWidth;
+  final bool isLoading;
+
+  const DangerButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.fullWidth = true,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PrimaryButton(
+      label: label,
+      onPressed: onPressed,
+      icon: icon,
+      fullWidth: fullWidth,
+      isLoading: isLoading,
+      backgroundColor: AppColors.error,
+      textColor: AppColors.textPrimary,
+    );
+  }
+}
+
+/// A success button for positive actions.
+class SuccessButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData? icon;
+  final bool fullWidth;
+  final bool isLoading;
+
+  const SuccessButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon,
+    this.fullWidth = true,
+    this.isLoading = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PrimaryButton(
+      label: label,
+      onPressed: onPressed,
+      icon: icon,
+      fullWidth: fullWidth,
+      isLoading: isLoading,
+      backgroundColor: AppColors.success,
+      textColor: AppColors.textPrimary,
     );
   }
 }
