@@ -1,6 +1,6 @@
 /// Consent Service for RecallSentry
 ///
-/// Manages user consent preferences for GDPR/CCPA compliance.
+/// Manages user consent preferences for privacy compliance.
 /// Stores preferences locally and syncs to backend.
 ///
 /// Features:
@@ -197,7 +197,7 @@ class ConsentService {
     }
   }
 
-  /// Withdraw all optional consents (GDPR right to withdraw)
+  /// Withdraw all optional consents
   Future<void> withdrawAllOptionalConsent() async {
     final current = await getPreferences();
     final updated = current.copyWith(

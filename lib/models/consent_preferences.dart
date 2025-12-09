@@ -1,11 +1,11 @@
 /// User Consent Preferences Model
 ///
 /// Tracks user consent choices for various data processing activities.
-/// Required for GDPR Article 7 (Conditions for consent) compliance.
 ///
 /// Consent types:
-/// - Required: Terms of Service, Privacy Policy (cannot use app without)
-/// - Optional: Analytics, Crash Reporting, Gamification, Health Data
+/// - Required: Terms of Use, Privacy Policy (cannot use app without)
+/// - Optional: Analytics, Crash Reporting, Gamification, Push Notifications
+/// - Sensitive: Health Data (requires explicit consent when accessing feature)
 library;
 
 class ConsentPreferences {
@@ -30,7 +30,7 @@ class ConsentPreferences {
   /// Optional consent - Push notifications
   final bool pushNotificationsEnabled;
 
-  /// Special category consent - Health data (GDPR Article 9)
+  /// Sensitive data consent - Health data
   /// Required for allergy preferences feature
   /// This is sensitive data requiring explicit consent
   final bool healthDataConsentGiven;
@@ -65,9 +65,20 @@ class ConsentPreferences {
       pushNotificationsEnabled ||
       healthDataConsentGiven;
 
-  /// Create default preferences (all disabled)
+  /// Create default preferences for new users (opt-out model)
+  /// Optional consents are enabled by default; users can disable in settings
+  /// Health data consent remains false - requires explicit opt-in
   factory ConsentPreferences.defaults() {
-    return ConsentPreferences();
+    return ConsentPreferences(
+      termsOfServiceAccepted: true,
+      privacyPolicyAccepted: true,
+      analyticsEnabled: true,
+      crashReportingEnabled: true,
+      gamificationEnabled: true,
+      pushNotificationsEnabled: true,
+      healthDataConsentGiven: false,
+      consentTimestamp: DateTime.now(),
+    );
   }
 
   /// Create preferences with all optional consents enabled

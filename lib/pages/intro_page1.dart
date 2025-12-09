@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'consent_page.dart';
+import 'intro_page2.dart';
 import '../widgets/iphone_simulator.dart';
+import '../services/consent_service.dart';
+import '../models/consent_preferences.dart';
+import '../config/app_config.dart';
 
 class IntroPage1 extends StatelessWidget {
   const IntroPage1({super.key});
@@ -138,11 +141,20 @@ class IntroPage1 extends StatelessWidget {
                       text: 'By using this app, you agree to our ',
                     ),
                     TextSpan(
-                      text: 'Terms of Service',
+                      text: 'Terms of Use',
                       style: TextStyle(
                         color: Colors.lightBlue.shade300,
                         decoration: TextDecoration.underline,
                       ),
+                      recognizer: TapGestureRecognizer()
+                        ..onTap = () async {
+                          final Uri url = Uri.parse(
+                            'https://centerforrecallsafety.com/terms-of-use/',
+                          );
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url);
+                          }
+                        },
                     ),
                     const TextSpan(text: ' and '),
                     TextSpan(
@@ -167,18 +179,35 @@ class IntroPage1 extends StatelessWidget {
 
               const SizedBox(height: 20),
 
-              // Get Started Button - navigates to consent page
+              // Get Started Button - saves implicit consent and navigates to intro
               SizedBox(
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pushReplacement(
-                      MaterialPageRoute(
-                        builder: (context) =>
-                            const IPhoneSimulator(child: ConsentPage()),
-                      ),
+                  onPressed: () async {
+                    // Save implicit consent (user agrees by continuing)
+                    // Optional consents default to enabled (opt-out model)
+                    final preferences = ConsentPreferences(
+                      termsOfServiceAccepted: true,
+                      privacyPolicyAccepted: true,
+                      analyticsEnabled: true,
+                      crashReportingEnabled: true,
+                      gamificationEnabled: true,
+                      pushNotificationsEnabled: true,
+                      healthDataConsentGiven: false, // Health data requires explicit consent later
+                      consentTimestamp: DateTime.now(),
+                      appVersion: AppConfig.appVersion,
                     );
+                    await ConsentService().savePreferences(preferences);
+
+                    if (context.mounted) {
+                      Navigator.of(context).pushReplacement(
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              const IPhoneSimulator(child: IntroPage2()),
+                        ),
+                      );
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.white,
