@@ -43,20 +43,69 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> with HideOnScro
   // Allergy filter state
   final List<String> _selectedAllergens = [];
 
+  // Health consent state
+  bool _hasHealthConsent = false;
+
+  // Consent change listener
+  late final void Function(dynamic) _consentListener;
+
   @override
   void initState() {
     super.initState();
     initHideOnScroll();
     _loadSavedFilters();
     _loadSubscriptionTier();
+    _loadHealthConsentStatus();
+
+    // Set up consent change listener
+    _consentListener = (preferences) {
+      if (mounted) {
+        final newConsent = preferences.healthDataConsentGiven;
+        if (_hasHealthConsent && !newConsent) {
+          // Consent was withdrawn - clear allergen selections
+          setState(() {
+            _hasHealthConsent = false;
+            _selectedAllergens.clear();
+          });
+          // Also clear from persistent storage
+          _filterStateService.saveFilterState(
+            brandFilters: _selectedBrands,
+            productFilters: _selectedProductNames,
+            stateFilters: _selectedStates,
+            allergenFilters: [], // Clear allergens
+          );
+        } else {
+          setState(() {
+            _hasHealthConsent = newConsent;
+          });
+        }
+      }
+    };
+    ConsentService().addListener(_consentListener);
   }
 
   @override
   void dispose() {
+    ConsentService().removeListener(_consentListener);
     _brandController.dispose();
     _productController.dispose();
     disposeHideOnScroll();
     super.dispose();
+  }
+
+  Future<void> _loadHealthConsentStatus() async {
+    final hasConsent = await ConsentService().isHealthDataConsented();
+    if (mounted) {
+      setState(() {
+        _hasHealthConsent = hasConsent;
+      });
+      // If no consent, clear any existing allergen selections
+      if (!hasConsent && _selectedAllergens.isNotEmpty) {
+        setState(() {
+          _selectedAllergens.clear();
+        });
+      }
+    }
   }
 
   Future<void> _loadSubscriptionTier() async {
@@ -1072,16 +1121,16 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> with HideOnScro
             // Section Header
             Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.warning_amber,
-                  color: Colors.orange,
+                  color: _hasHealthConsent ? Colors.orange : Colors.grey,
                   size: 20,
                 ),
                 const SizedBox(width: 8),
-                const Text(
+                Text(
                   'Filter by Allergy',
                   style: TextStyle(
-                    color: Colors.white,
+                    color: _hasHealthConsent ? Colors.white : Colors.white54,
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
                   ),
@@ -1090,13 +1139,15 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> with HideOnScro
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: Colors.orange.withValues(alpha: 0.2),
+                    color: _hasHealthConsent
+                        ? Colors.orange.withValues(alpha: 0.2)
+                        : Colors.grey.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),
                   ),
-                  child: const Text(
+                  child: Text(
                     'FDA Big 9',
                     style: TextStyle(
-                      color: Colors.orange,
+                      color: _hasHealthConsent ? Colors.orange : Colors.grey,
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1107,14 +1158,54 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> with HideOnScro
 
             const SizedBox(height: 8),
 
-            // Description
-            const Text(
-              'Get notified about recalls involving common food allergens',
-              style: TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
+            // Description or consent required message
+            if (!_hasHealthConsent) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.lock_outline, color: Colors.amber, size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Health Data Consent Required',
+                            style: TextStyle(
+                              color: Colors.amber,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          const Text(
+                            'Enable Allergy Preferences in Settings > Privacy & Data to use this feature.',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
+            ] else ...[
+              const Text(
+                'Get notified about recalls involving common food allergens',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                ),
+              ),
+            ],
 
             const SizedBox(height: 12),
 
@@ -1123,17 +1214,23 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> with HideOnScro
               children: [
                 ElevatedButton.icon(
                   onPressed: _showAllergySelectionModal,
-                  icon: const Icon(Icons.checklist, size: 18, color: Colors.white),
-                  label: const Text(
-                    'Select',
+                  icon: Icon(
+                    _hasHealthConsent ? Icons.checklist : Icons.lock_outline,
+                    size: 18,
+                    color: _hasHealthConsent ? Colors.white : Colors.black54,
+                  ),
+                  label: Text(
+                    _hasHealthConsent ? 'Select' : 'Enable Consent',
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Colors.white,
+                      color: _hasHealthConsent ? Colors.white : Colors.black54,
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF64B5F6),
+                    backgroundColor: _hasHealthConsent
+                        ? const Color(0xFF64B5F6)
+                        : Colors.grey.shade400,
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
@@ -1141,7 +1238,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> with HideOnScro
                   ),
                 ),
                 const SizedBox(width: 12),
-                if (_selectedAllergens.isNotEmpty)
+                if (_selectedAllergens.isNotEmpty && _hasHealthConsent)
                   Expanded(
                     child: Text(
                       _selectedAllergens.contains('all')
@@ -1158,7 +1255,7 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> with HideOnScro
             ),
 
             // Selected Allergens Display
-            if (_selectedAllergens.isNotEmpty && !_selectedAllergens.contains('all')) ...[
+            if (_selectedAllergens.isNotEmpty && !_selectedAllergens.contains('all') && _hasHealthConsent) ...[
               const SizedBox(height: 12),
               Wrap(
                 spacing: 6,
@@ -1275,6 +1372,10 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> with HideOnScro
 
       if (confirmed == true && mounted) {
         await ConsentService().updatePreference(healthDataConsentGiven: true);
+        // Update local state immediately
+        setState(() {
+          _hasHealthConsent = true;
+        });
       } else {
         return; // User declined consent, don't show the modal
       }
