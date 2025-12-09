@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'main_navigation.dart';
 import '../widgets/animated_visibility_wrapper.dart';
+import '../widgets/subscription_paywall.dart';
+import '../widgets/recallmatch_paywall.dart';
 import '../mixins/hide_on_scroll_mixin.dart';
 import '../providers/data_providers.dart';
 import '../services/subscription_service.dart';
@@ -463,18 +465,13 @@ class _SubscribePageState extends ConsumerState<SubscribePage> with HideOnScroll
                                   width: double.infinity,
                                   height: 48,
                                   child: ElevatedButton(
-                                    onPressed: isSmartFilterPlan ? null : () {
-                                      // TODO: Handle SmartFiltering upgrade
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'SmartFilter upgrade coming soon!',
-                                          ),
-                                          backgroundColor: Colors.blue,
-                                        ),
-                                      );
+                                    onPressed: isSmartFilterPlan ? null : () async {
+                                      // Show subscription paywall with IAP integration
+                                      final result = await SubscriptionPaywall.show(context);
+                                      if (result == true && context.mounted) {
+                                        // Refresh subscription info after successful purchase
+                                        ref.invalidate(subscriptionInfoProvider);
+                                      }
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: isSmartFilterPlan
@@ -689,16 +686,9 @@ class _SubscribePageState extends ConsumerState<SubscribePage> with HideOnScroll
                                   width: double.infinity,
                                   height: 48,
                                   child: ElevatedButton(
-                                    onPressed: isRecallMatchPlan ? null : () {
-                                      // TODO: Handle RecallMatch upgrade
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text(
-                                            'RecallMatch upgrade coming soon in Rev2!',
-                                          ),
-                                          backgroundColor: Color(0xFFFFD700),
-                                        ),
-                                      );
+                                    onPressed: isRecallMatchPlan ? null : () async {
+                                      // Show RecallMatch paywall (Coming Soon with waitlist)
+                                      await RecallMatchPaywall.show(context);
                                     },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: isRecallMatchPlan
@@ -727,7 +717,17 @@ class _SubscribePageState extends ConsumerState<SubscribePage> with HideOnScroll
                       ),
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 40),
+
+                    // Quick Comparison Table
+                    _buildComparisonTable(),
+
+                    const SizedBox(height: 40),
+
+                    // FAQ Section
+                    _buildFaqSection(),
+
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
@@ -814,6 +814,161 @@ class _SubscribePageState extends ConsumerState<SubscribePage> with HideOnScroll
           ),
         ),
       ],
+    );
+  }
+
+  /// Build a quick comparison table for all tiers
+  Widget _buildComparisonTable() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A4A5C),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          const Padding(
+            padding: EdgeInsets.all(16),
+            child: Text(
+              'Quick Comparison',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          // Table
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: DataTable(
+              headingRowColor: WidgetStateProperty.all(const Color(0xFF1D3547)),
+              dataRowColor: WidgetStateProperty.all(const Color(0xFF2A4A5C)),
+              columnSpacing: 16,
+              horizontalMargin: 16,
+              columns: const [
+                DataColumn(
+                  label: Text('Feature', style: TextStyle(color: Colors.white70, fontWeight: FontWeight.bold)),
+                ),
+                DataColumn(
+                  label: Text('Free', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+                DataColumn(
+                  label: Text('SmartFilter', style: TextStyle(color: Color(0xFF64B5F6), fontWeight: FontWeight.bold)),
+                ),
+                DataColumn(
+                  label: Text('RecallMatch', style: TextStyle(color: Color(0xFFFFD700), fontWeight: FontWeight.bold)),
+                ),
+              ],
+              rows: [
+                _buildComparisonRow('Recall Sources', 'FDA, USDA', '+ CPSC', '+ NHTSA'),
+                _buildComparisonRow('History', '30 days', 'YTD', 'YTD'),
+                _buildComparisonRow('States', '1', '3', '3'),
+                _buildComparisonRow('Saved Recalls', '5', '15', '50'),
+                _buildComparisonRow('Saved Filters', '0', '10', 'Unlimited'),
+                _buildComparisonRow('Inventory Items', '-', '-', '75'),
+                _buildComparisonRow('RecallMatch Engine', '-', '-', '✓'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  DataRow _buildComparisonRow(String feature, String free, String smart, String match) {
+    return DataRow(
+      cells: [
+        DataCell(Text(feature, style: const TextStyle(color: Colors.white70, fontSize: 13))),
+        DataCell(Text(free, style: const TextStyle(color: Colors.white, fontSize: 13))),
+        DataCell(Text(smart, style: const TextStyle(color: Color(0xFF64B5F6), fontSize: 13))),
+        DataCell(Text(match, style: const TextStyle(color: Color(0xFFFFD700), fontSize: 13))),
+      ],
+    );
+  }
+
+  /// Build FAQ section with expandable questions
+  Widget _buildFaqSection() {
+    final faqs = [
+      (
+        'How do I cancel my subscription?',
+        'You can cancel anytime through your device\'s app store settings. Go to Settings > [Your Name] > Subscriptions on iOS, or Google Play Store > Menu > Subscriptions on Android.'
+      ),
+      (
+        'Will I lose my data if I downgrade?',
+        'No, your saved recalls and filters remain stored. However, you may lose access to premium features and excess items beyond your new tier\'s limits.'
+      ),
+      (
+        'What happens when RecallMatch launches?',
+        'If you\'re on our waitlist, you\'ll be notified first. RecallMatch subscribers will get immediate access to household inventory management and automated recall matching.'
+      ),
+      (
+        'Is there a free trial?',
+        'We don\'t currently offer a free trial, but our Free tier gives you access to FDA and USDA recalls with basic filtering. You can upgrade anytime to unlock more features.'
+      ),
+      (
+        'Do subscriptions auto-renew?',
+        'Yes, subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. You can manage this in your device\'s app store settings.'
+      ),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Frequently Asked Questions',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          ...faqs.map((faq) => _buildFaqItem(faq.$1, faq.$2)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFaqItem(String question, String answer) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2A4A5C),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+          childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          iconColor: Colors.white70,
+          collapsedIconColor: Colors.white70,
+          title: Text(
+            question,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          children: [
+            Text(
+              answer,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 13,
+                height: 1.5,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

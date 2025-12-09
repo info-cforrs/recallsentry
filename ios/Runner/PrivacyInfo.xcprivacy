@@ -107,7 +107,7 @@
         </dict>
 
         <!-- Health Data - Allergy preferences for allergen recall alerts -->
-        <!-- GDPR Article 9 - Special category data requiring explicit consent -->
+        <!-- Sensitive data requiring explicit consent -->
         <dict>
             <key>NSPrivacyCollectedDataType</key>
             <string>NSPrivacyCollectedDataTypeHealth</string>

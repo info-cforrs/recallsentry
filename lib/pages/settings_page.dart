@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,6 +16,7 @@ import 'privacy_data_settings_page.dart';
 import '../services/auth_service.dart';
 import '../services/subscription_service.dart';
 import '../services/data_saver_service.dart';
+import '../config/app_config.dart';
 import '../providers/data_providers.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -283,25 +285,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                     },
                   ),
                   const Divider(height: 1, color: Colors.white24),
-                  ListTile(
-                    leading: const Icon(Icons.star, color: Colors.white70),
-                    title: const Text(
-                      'Subscriptions',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                    trailing: const Icon(
-                      Icons.arrow_forward_ios,
-                      size: 16,
-                      color: Colors.white70,
-                    ),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => const SubscribePage(),
-                        ),
-                      );
-                    },
-                  ),
+                  _buildSubscriptionTile(context, ref),
                   const Divider(height: 1, color: Colors.white24),
                   ListTile(
                     leading: const Icon(Icons.login, color: Colors.white70),
@@ -846,6 +830,156 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         ),
       ),
     );
+  }
+
+  /// Build the subscription management tile with current tier info
+  Widget _buildSubscriptionTile(BuildContext context, WidgetRef ref) {
+    final subscriptionAsync = ref.watch(subscriptionInfoProvider);
+
+    return subscriptionAsync.when(
+      data: (subscriptionInfo) {
+        final tier = subscriptionInfo.tier;
+        final tierName = subscriptionInfo.getTierDisplayName();
+        final tierColor = Color(subscriptionInfo.getTierBadgeColor());
+
+        return Column(
+          children: [
+            ListTile(
+              leading: Icon(
+                tier == SubscriptionTier.recallMatch
+                    ? Icons.star
+                    : tier == SubscriptionTier.smartFiltering
+                        ? Icons.filter_list
+                        : Icons.person,
+                color: tierColor,
+              ),
+              title: const Text(
+                'Subscription',
+                style: TextStyle(color: Colors.white),
+              ),
+              subtitle: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: tierColor.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: tierColor, width: 1),
+                    ),
+                    child: Text(
+                      tierName,
+                      style: TextStyle(
+                        color: tierColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              trailing: const Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Colors.white70,
+              ),
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const SubscribePage(),
+                  ),
+                );
+              },
+            ),
+            // Show manage subscription option for premium users
+            if (tier != SubscriptionTier.free)
+              Padding(
+                padding: const EdgeInsets.only(left: 56, right: 16, bottom: 8),
+                child: Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: _openSubscriptionManagement,
+                      icon: const Icon(
+                        Icons.settings,
+                        size: 16,
+                        color: Color(0xFF64B5F6),
+                      ),
+                      label: const Text(
+                        'Manage Subscription',
+                        style: TextStyle(
+                          color: Color(0xFF64B5F6),
+                          fontSize: 13,
+                        ),
+                      ),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 4,
+                        ),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
+      loading: () => ListTile(
+        leading: const Icon(Icons.star, color: Colors.white70),
+        title: const Text(
+          'Subscription',
+          style: TextStyle(color: Colors.white),
+        ),
+        subtitle: const Text(
+          'Loading...',
+          style: TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+        trailing: const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      ),
+      error: (_, __) => ListTile(
+        leading: const Icon(Icons.star, color: Colors.white70),
+        title: const Text(
+          'Subscription',
+          style: TextStyle(color: Colors.white),
+        ),
+        subtitle: const Text(
+          'Free',
+          style: TextStyle(color: Colors.white54, fontSize: 12),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Colors.white70,
+        ),
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (context) => const SubscribePage(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// Open subscription management in device settings
+  Future<void> _openSubscriptionManagement() async {
+    final String url = Platform.isIOS
+        ? AppConfig.iosSubscriptionManagementUrl
+        : AppConfig.androidSubscriptionManagementUrl;
+
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
   }
 
   void _showSignOutDialog() {

@@ -1,12 +1,12 @@
 /// Privacy & Data Settings Page
 ///
 /// Allows users to manage their privacy consent preferences after onboarding.
-/// Implements GDPR Article 7(3) - right to withdraw consent at any time.
+/// Users can withdraw consent at any time.
 ///
 /// Features:
 /// - View and modify consent choices
-/// - Export personal data (GDPR Article 20)
-/// - Delete account (GDPR Article 17)
+/// - Export personal data
+/// - Delete account
 /// - View what data is collected
 library;
 
@@ -378,7 +378,7 @@ class _PrivacyDataSettingsPageState extends State<PrivacyDataSettingsPage> {
                       _buildConsentSwitch(
                         title: 'Allergy Preferences',
                         subtitle:
-                            'Store allergy data for allergen recall alerts. This is health-related data protected under GDPR Article 9.',
+                            'Store allergy data for allergen recall alerts. This is sensitive health-related data.',
                         icon: Icons.health_and_safety_outlined,
                         value: _preferences?.healthDataConsentGiven ?? false,
                         onChanged: (v) =>
@@ -414,7 +414,7 @@ class _PrivacyDataSettingsPageState extends State<PrivacyDataSettingsPage> {
                           style: TextStyle(color: Colors.white),
                         ),
                         subtitle: const Text(
-                          'Download all your personal data (GDPR Article 20)',
+                          'Download a copy of all your personal data',
                           style: TextStyle(color: Colors.white54, fontSize: 12),
                         ),
                         trailing: const Icon(Icons.arrow_forward_ios,
@@ -437,7 +437,7 @@ class _PrivacyDataSettingsPageState extends State<PrivacyDataSettingsPage> {
                           style: TextStyle(color: Colors.red),
                         ),
                         subtitle: const Text(
-                          'Permanently delete all your data (GDPR Article 17)',
+                          'Permanently delete all your data',
                           style: TextStyle(color: Colors.white54, fontSize: 12),
                         ),
                         trailing: const Icon(Icons.arrow_forward_ios,

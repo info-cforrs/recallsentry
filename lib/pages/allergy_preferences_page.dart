@@ -57,7 +57,7 @@ class _AllergyPreferencesPageState extends State<AllergyPreferencesPage> with Hi
         return;
       }
 
-      // Check health data consent (GDPR Article 9)
+      // Check health data consent
       final hasConsent = await _consentService.isHealthDataConsented();
 
       final prefs = await _allergyService.getPreferences();
@@ -88,7 +88,7 @@ class _AllergyPreferencesPageState extends State<AllergyPreferencesPage> with Hi
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Allergy preferences are considered health-related data under GDPR Article 9 (Special Category Data).',
+              'Allergy preferences are considered sensitive health-related data.',
               style: TextStyle(fontWeight: FontWeight.w500),
             ),
             SizedBox(height: 12),
@@ -312,7 +312,7 @@ class _AllergyPreferencesPageState extends State<AllergyPreferencesPage> with Hi
 
             const SizedBox(height: 16),
 
-            // Health Data Consent Banner (GDPR Article 9)
+            // Health Data Consent Banner
             if (!_hasHealthConsent)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -342,7 +342,7 @@ class _AllergyPreferencesPageState extends State<AllergyPreferencesPage> with Hi
                       ),
                       const SizedBox(height: 8),
                       const Text(
-                        'Allergy data is health-related information protected under GDPR. You must consent before using this feature.',
+                        'Allergy data is sensitive health-related information. You must consent before using this feature.',
                         style: TextStyle(color: Colors.white70, fontSize: 12),
                       ),
                       const SizedBox(height: 12),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/recall_data.dart';
 import '../pages/fda_recall_details_page.dart';
+import '../pages/subscribe_page.dart';
 import '../services/saved_recalls_service.dart';
 import '../providers/data_providers.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
@@ -408,15 +409,110 @@ class _FdaRecallCardState extends ConsumerState<FdaRecallCard> {
   Future<void> _toggleSaved() async {
     if (_isSaved) {
       await _savedRecallsService.removeSavedRecall(widget.recall.id);
+      if (mounted) {
+        setState(() {
+          _isSaved = false;
+        });
+        // Refresh provider so HomePage updates immediately
+        ref.invalidate(savedRecallsProvider);
+        ref.invalidate(safetyScoreProvider);
+      }
     } else {
-      await _savedRecallsService.saveRecall(widget.recall);
+      try {
+        await _savedRecallsService.saveRecall(widget.recall);
+        if (mounted) {
+          setState(() {
+            _isSaved = true;
+          });
+          // Refresh provider so HomePage updates immediately
+          ref.invalidate(savedRecallsProvider);
+          ref.invalidate(safetyScoreProvider);
+        }
+      } on SavedRecallsLimitException catch (e) {
+        // Show upgrade dialog when limit is reached
+        if (mounted) {
+          _showUpgradeDialog(e);
+        }
+      } catch (e) {
+        // Handle other errors
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error saving recall: $e'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+        }
+      }
     }
-    setState(() {
-      _isSaved = !_isSaved;
-    });
-    // Refresh provider so HomePage updates immediately
-    ref.refresh(savedRecallsProvider);
-    ref.refresh(safetyScoreProvider);
+  }
+
+  void _showUpgradeDialog(SavedRecallsLimitException exception) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: AppColors.secondary,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          title: const Row(
+            children: [
+              Icon(Icons.workspace_premium, color: Color(0xFF64B5F6), size: 24),
+              SizedBox(width: 8),
+              Text(
+                'Saved Recalls Limit',
+                style: TextStyle(color: Colors.white, fontSize: 18),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'You\'ve saved ${exception.currentCount} of ${exception.limit} recalls.',
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Upgrade to save more recalls:',
+                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                '• SmartFiltering: Save up to 15 recalls',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const Text(
+                '• RecallMatch: Save up to 50 recalls',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'Maybe Later',
+                style: TextStyle(color: Colors.white54),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (context) => const SubscribePage()),
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF64B5F6),
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Upgrade Now'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override

@@ -1,6 +1,6 @@
 /// Consent Page for RecallSentry
 ///
-/// GDPR Article 7 compliant consent collection with:
+/// Privacy-focused consent collection with:
 /// - Explicit opt-in checkboxes (not pre-ticked)
 /// - Separation of required vs optional consent
 /// - Clear descriptions of each data processing activity
@@ -26,7 +26,7 @@ class _ConsentPageState extends State<ConsentPage> {
   bool _termsAccepted = false;
   bool _privacyAccepted = false;
 
-  // Optional consents (not pre-ticked per GDPR)
+  // Optional consents (not pre-ticked for user choice)
   bool _analyticsEnabled = false;
   bool _crashReportingEnabled = false;
   bool _gamificationEnabled = false;
