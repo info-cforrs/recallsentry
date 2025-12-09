@@ -74,7 +74,9 @@ class UsageData {
     );
   }
 
-  bool get isUnlimited => tier == 'smart_filtering' || tier == 'recall_match';
+  /// Only RecallMatch tier has truly unlimited access
+  /// SmartFiltering has increased limits but is NOT unlimited
+  bool get isUnlimited => tier == 'recall_match' || tier == 'recallMatch';
 }
 
 class UsageService {

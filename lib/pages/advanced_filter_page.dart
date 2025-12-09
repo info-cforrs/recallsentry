@@ -4,6 +4,7 @@ import 'only_advanced_filtered_recalls_page.dart';
 import 'subscribe_page.dart';
 import '../services/filter_state_service.dart';
 import '../services/subscription_service.dart';
+import '../services/consent_service.dart';
 import '../models/saved_filter.dart';
 import '../models/allergy_preferences.dart';
 import 'widgets/save_filter_dialog.dart';
@@ -1229,7 +1230,58 @@ class _AdvancedFilterPageState extends State<AdvancedFilterPage> with HideOnScro
   }
 
   // Show allergy selection modal
-  void _showAllergySelectionModal() {
+  void _showAllergySelectionModal() async {
+    // Check for health data consent first
+    final hasConsent = await ConsentService().isHealthDataConsented();
+
+    if (!hasConsent) {
+      // Show consent dialog
+      if (!mounted) return;
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Health Data Consent Required'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Allergy preferences are considered sensitive health-related data.',
+                style: TextStyle(fontWeight: FontWeight.w500),
+              ),
+              SizedBox(height: 12),
+              Text(
+                'By enabling this feature, you consent to RecallSentry collecting and processing your allergy information to provide personalized allergen recall alerts.',
+              ),
+              SizedBox(height: 12),
+              Text(
+                'You can withdraw this consent at any time in Settings > Privacy & Data.',
+                style: TextStyle(fontSize: 12, color: Colors.grey),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('I Consent'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed == true && mounted) {
+        await ConsentService().updatePreference(healthDataConsentGiven: true);
+      } else {
+        return; // User declined consent, don't show the modal
+      }
+    }
+
+    if (!mounted) return;
+
     // Create a local copy of selected allergens for the modal
     List<String> tempSelected = List.from(_selectedAllergens);
     bool allSelected = tempSelected.contains('all');

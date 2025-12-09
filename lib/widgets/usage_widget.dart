@@ -34,7 +34,7 @@ class UsageWidget extends StatelessWidget {
           _buildHeader(),
           const SizedBox(height: 24),
 
-          // Usage Items
+          // Usage Items - Show actual tracked metrics
           _buildUsageItem(
             'Saved Recalls',
             usageData.recallsSaved,
@@ -45,16 +45,7 @@ class UsageWidget extends StatelessWidget {
           const SizedBox(height: 20),
 
           _buildUsageItem(
-            'Monthly Searches',
-            usageData.searchesPerformed,
-            usageData.searchesPerformedLimit,
-            usageData.searchesPerformedPercentage,
-            usageData.isUnlimited,
-          ),
-          const SizedBox(height: 20),
-
-          _buildUsageItem(
-            'Filters Applied',
+            'Saved Filters',
             usageData.filtersApplied,
             usageData.filtersAppliedLimit,
             usageData.filtersAppliedPercentage,
@@ -205,6 +196,9 @@ class UsageWidget extends StatelessWidget {
   }
 
   Widget _buildFooter(BuildContext context) {
+    // Determine if user is on SmartFiltering (not free, but not RecallMatch)
+    final isSmartFiltering = usageData.tier == 'smartFiltering' || usageData.tier == 'smart_filtering';
+
     return Container(
       padding: const EdgeInsets.only(top: 20),
       decoration: const BoxDecoration(
@@ -218,10 +212,12 @@ class UsageWidget extends StatelessWidget {
       child: Column(
         children: [
           Text(
-            'Usage resets in ${usageData.daysUntilReset} ${usageData.daysUntilReset == 1 ? 'day' : 'days'}',
+            isSmartFiltering
+                ? 'Upgrade to RecallMatch for higher limits'
+                : 'Upgrade to unlock more features',
             style: const TextStyle(
               fontSize: 13,
-              color: Colors.white,
+              color: Colors.white70,
             ),
             textAlign: TextAlign.center,
           ),
@@ -238,17 +234,23 @@ class UsageWidget extends StatelessWidget {
                   );
                 },
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF2A4A5C),
+                  backgroundColor: isSmartFiltering
+                      ? const Color(0xFFFFD700)
+                      : Colors.white,
+                  foregroundColor: isSmartFiltering
+                      ? Colors.black
+                      : const Color(0xFF2A4A5C),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                   elevation: 2,
                 ),
-                child: const Text(
-                  '✨ Upgrade to SmartFiltering',
-                  style: TextStyle(
+                child: Text(
+                  isSmartFiltering
+                      ? 'Upgrade to RecallMatch'
+                      : 'Upgrade to SmartFiltering',
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),

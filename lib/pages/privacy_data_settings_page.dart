@@ -352,15 +352,6 @@ class _PrivacyDataSettingsPageState extends State<PrivacyDataSettingsPage> {
                         onChanged: (v) =>
                             _updatePreference(gamificationEnabled: v),
                       ),
-                      const Divider(height: 1, color: Colors.white24),
-                      _buildConsentSwitch(
-                        title: 'Push Notifications',
-                        subtitle: 'Receive recall alerts via push notifications',
-                        icon: Icons.notifications_outlined,
-                        value: _preferences?.pushNotificationsEnabled ?? false,
-                        onChanged: (v) =>
-                            _updatePreference(pushNotificationsEnabled: v),
-                      ),
                     ],
                   ),
                 ),

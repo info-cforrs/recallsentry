@@ -40,7 +40,8 @@ class _AppUsagePageState extends ConsumerState<AppUsagePage> with HideOnScrollMi
     // Only RecallMatch tier has unlimited access
     final isUnlimited = tier == SubscriptionTier.recallMatch;
 
-    final recallsLimit = subscriptionInfo.savedRecallsLimit;
+    // Use getter methods to ensure fallback logic is applied
+    final recallsLimit = subscriptionInfo.getSavedRecallsLimit();
     final filtersLimit = subscriptionInfo.getSavedFilterLimit();
 
     return UsageData(
@@ -275,6 +276,10 @@ class _AppUsagePageState extends ConsumerState<AppUsagePage> with HideOnScrollMi
   }
 
   Widget _buildInfoSection(UsageData usageData) {
+    // Determine tier-specific messaging
+    final isFree = usageData.tier == 'free';
+    final isSmartFiltering = usageData.tier == 'smartFiltering';
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF2A4A5C),
@@ -297,26 +302,38 @@ class _AppUsagePageState extends ConsumerState<AppUsagePage> with HideOnScrollMi
             icon: Icons.bookmark,
             title: 'Saved Recalls',
             description: usageData.isUnlimited
-                ? 'Save unlimited recalls for quick access'
-                : 'Save up to ${usageData.recallsSavedLimit} recalls for quick access',
-          ),
-          const SizedBox(height: 12),
-          _buildInfoItem(
-            icon: Icons.search,
-            title: 'Monthly Searches',
-            description: usageData.isUnlimited
-                ? 'Unlimited searches per month'
-                : 'Search up to ${usageData.searchesPerformedLimit} times per month',
+                ? 'Save up to 50 recalls for quick access'
+                : isFree
+                    ? 'Save up to 5 recalls. Upgrade to SmartFiltering for 15, or RecallMatch for 50.'
+                    : 'Save up to ${usageData.recallsSavedLimit} recalls for quick access',
           ),
           const SizedBox(height: 12),
           _buildInfoItem(
             icon: Icons.filter_list,
-            title: 'Filters Applied',
+            title: 'Saved Filters',
             description: usageData.isUnlimited
-                ? 'Apply unlimited filters to refine your recall searches'
+                ? 'Create unlimited saved filters (SmartFilters)'
                 : usageData.filtersAppliedLimit == 0
-                    ? 'Upgrade to apply custom filters'
-                    : 'Apply up to ${usageData.filtersAppliedLimit} filters per month',
+                    ? 'Upgrade to SmartFiltering to save custom filters'
+                    : 'Save up to ${usageData.filtersAppliedLimit} custom filters',
+          ),
+          const SizedBox(height: 12),
+          _buildInfoItem(
+            icon: Icons.public,
+            title: 'Recall Sources',
+            description: usageData.isUnlimited
+                ? 'Access all agencies: FDA, USDA, CPSC, and NHTSA'
+                : isFree
+                    ? 'Access FDA and USDA recalls. Upgrade for CPSC and NHTSA.'
+                    : 'Access FDA, USDA, and CPSC recalls',
+          ),
+          const SizedBox(height: 12),
+          _buildInfoItem(
+            icon: Icons.history,
+            title: 'Recall History',
+            description: usageData.isUnlimited || isSmartFiltering
+                ? 'View recalls from January 1st of this year'
+                : 'View recalls from the last 30 days. Upgrade for full year access.',
           ),
           const SizedBox(height: 20),
           Container(
@@ -327,17 +344,21 @@ class _AppUsagePageState extends ConsumerState<AppUsagePage> with HideOnScrollMi
             ),
             child: Row(
               children: [
-                const Icon(
-                  Icons.info_outline,
-                  color: Color(0xFF64B5F6),
+                Icon(
+                  usageData.isUnlimited ? Icons.star : Icons.info_outline,
+                  color: usageData.isUnlimited
+                      ? const Color(0xFFFFD700)
+                      : const Color(0xFF64B5F6),
                   size: 20,
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     usageData.isUnlimited
-                        ? 'You have unlimited access to all features!'
-                        : 'Usage resets monthly. Upgrade for unlimited access.',
+                        ? 'You have RecallMatch premium access!'
+                        : isSmartFiltering
+                            ? 'You have SmartFiltering premium access.'
+                            : 'Upgrade to unlock more features and higher limits.',
                     style: const TextStyle(
                       color: Colors.white70,
                       fontSize: 13,
