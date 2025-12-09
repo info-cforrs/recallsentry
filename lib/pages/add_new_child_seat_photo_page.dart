@@ -53,6 +53,7 @@ class _AddNewChildSeatPhotoPageState extends State<AddNewChildSeatPhotoPage>
   // Scanned data from label
   String? _scannedUpc;
   LabelScanResult? _labelScanResult;
+  // ignore: unused_field - state tracking for potential future UI feedback
   bool _isScanning = false;
 
   @override

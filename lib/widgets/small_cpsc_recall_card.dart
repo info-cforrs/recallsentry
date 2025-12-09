@@ -43,8 +43,8 @@ class _SmallCpscRecallCardState extends ConsumerState<SmallCpscRecallCard> {
           _isSaved = false;
         });
         // Refresh provider so HomePage updates immediately
-        ref.refresh(savedRecallsProvider);
-        ref.refresh(safetyScoreProvider);
+        ref.invalidate(savedRecallsProvider);
+        ref.invalidate(safetyScoreProvider);
       }
     } else {
       try {
@@ -54,8 +54,8 @@ class _SmallCpscRecallCardState extends ConsumerState<SmallCpscRecallCard> {
             _isSaved = true;
           });
           // Refresh provider so HomePage updates immediately
-          ref.refresh(savedRecallsProvider);
-          ref.refresh(safetyScoreProvider);
+          ref.invalidate(savedRecallsProvider);
+          ref.invalidate(safetyScoreProvider);
         }
       } on SavedRecallsLimitException catch (e) {
         // Show upgrade dialog when limit is reached

@@ -55,8 +55,8 @@ class _SmallMainPageRecallCardState extends ConsumerState<SmallMainPageRecallCar
         _isSaved = !_isSaved;
       });
       // Refresh provider so HomePage updates immediately
-      ref.refresh(savedRecallsProvider);
-      ref.refresh(safetyScoreProvider);
+      ref.invalidate(savedRecallsProvider);
+      ref.invalidate(safetyScoreProvider);
     }
   }
 

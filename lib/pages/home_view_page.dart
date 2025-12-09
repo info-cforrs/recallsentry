@@ -69,7 +69,7 @@ class _HomeViewPageState extends ConsumerState<HomeViewPage> with WidgetsBinding
   Future<void> _loadItemRecallStatuses() async {
     final recallMatchService = ref.read(recallMatchServiceProvider);
     try {
-      final homeData = ref.read(homeViewDataProvider(widget.home.id)).valueOrNull;
+      final homeData = ref.read(homeViewDataProvider(widget.home.id)).asData?.value;
       if (homeData == null) return;
 
       final roomIds = homeData.rooms.map((room) => room.id).toList();
@@ -623,7 +623,7 @@ class _HomeViewPageState extends ConsumerState<HomeViewPage> with WidgetsBinding
   }
 
   Future<void> _handleDeleteRoom(UserRoom room) async {
-    final homeData = ref.read(homeViewDataProvider(widget.home.id)).valueOrNull;
+    final homeData = ref.read(homeViewDataProvider(widget.home.id)).asData?.value;
     final itemCount = homeData?.roomItemCounts[room.id] ?? 0;
 
     final confirmed = await showDialog<bool>(
@@ -1871,7 +1871,7 @@ class _HomeViewPageState extends ConsumerState<HomeViewPage> with WidgetsBinding
               fontWeight: FontWeight.bold,
             ),
           ),
-          error: (_, __) => const Text(
+          error: (_, _) => const Text(
             'Error',
             style: TextStyle(
               color: AppColors.textPrimary,

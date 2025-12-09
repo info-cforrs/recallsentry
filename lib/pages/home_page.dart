@@ -139,14 +139,14 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
 
   void didPopNext() {
     // Called when coming back to this page via navigation
-    // CRITICAL: Refresh (not invalidate) to force IMMEDIATE recomputation
-    ref.refresh(userProfileProvider);
-    ref.refresh(subscriptionInfoProvider);
-    ref.refresh(filteredRecallsProvider);
-    ref.refresh(savedRecallsProvider);
-    ref.refresh(rmcRecallsWithEnrollmentsProvider);
-    ref.refresh(smartFilterMatchedRecallsProvider);
-    ref.refresh(safetyScoreProvider);
+    // Invalidate providers to force recomputation on next read
+    ref.invalidate(userProfileProvider);
+    ref.invalidate(subscriptionInfoProvider);
+    ref.invalidate(filteredRecallsProvider);
+    ref.invalidate(savedRecallsProvider);
+    ref.invalidate(rmcRecallsWithEnrollmentsProvider);
+    ref.invalidate(smartFilterMatchedRecallsProvider);
+    ref.invalidate(safetyScoreProvider);
     // Also refresh local home portal data
     _loadAllHomeData();
   }

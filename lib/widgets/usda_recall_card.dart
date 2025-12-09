@@ -608,8 +608,8 @@ class _UsdaRecallCardState extends ConsumerState<UsdaRecallCard> {
       _isSaved = !_isSaved;
     });
     // Refresh provider so HomePage updates immediately
-    ref.refresh(savedRecallsProvider);
-    ref.refresh(safetyScoreProvider);
+    ref.invalidate(savedRecallsProvider);
+    ref.invalidate(safetyScoreProvider);
   }
 
   @override

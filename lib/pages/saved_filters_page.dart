@@ -41,13 +41,13 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> with HideOn
   }
 
   int get _maxFiltersForTier {
-    final subscriptionInfo = ref.watch(subscriptionInfoProvider).valueOrNull;
+    final subscriptionInfo = ref.watch(subscriptionInfoProvider).asData?.value;
     if (subscriptionInfo == null) return 0;
     return subscriptionInfo.getSavedFilterLimit();
   }
 
   String get _tierDisplayName {
-    final subscriptionInfo = ref.watch(subscriptionInfoProvider).valueOrNull;
+    final subscriptionInfo = ref.watch(subscriptionInfoProvider).asData?.value;
     return subscriptionInfo?.getTierDisplayName() ?? 'Guest';
   }
 
@@ -142,7 +142,7 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> with HideOn
   /// Navigate to Advanced Filters to create new filter
   void _createNewFilter() {
     final filtersAsync = ref.read(savedFiltersProvider);
-    final filters = filtersAsync.valueOrNull ?? [];
+    final filters = filtersAsync.asData?.value ?? [];
 
     if (filters.length >= _maxFiltersForTier) {
       _showUpgradeDialog();
@@ -163,7 +163,7 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> with HideOn
   }
 
   void _showUpgradeDialog() {
-    final subscriptionInfo = ref.read(subscriptionInfoProvider).valueOrNull;
+    final subscriptionInfo = ref.read(subscriptionInfoProvider).asData?.value;
     String message = subscriptionInfo?.tier == SubscriptionTier.free
         ? 'Saved SmartFilters is a premium feature. Upgrade to SmartFiltering to save up to 10 filters, or RecallMatch for unlimited filters.'
         : 'You\'ve reached the maximum of $_maxFiltersForTier saved filters for $_tierDisplayName. Upgrade to RecallMatch for unlimited filters.';
@@ -342,7 +342,7 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> with HideOn
             // Tier info banner
             subscriptionAsync.when(
               data: (subscription) {
-                final filters = filtersAsync.valueOrNull ?? [];
+                final filters = filtersAsync.asData?.value ?? [];
 
                 return Container(
                   margin: const EdgeInsets.symmetric(horizontal: 16),
@@ -368,7 +368,7 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> with HideOn
                 );
               },
               loading: () => const SizedBox.shrink(),
-              error: (_, __) => const SizedBox.shrink(),
+              error: (_, _) => const SizedBox.shrink(),
             ),
 
             const SizedBox(height: 16),
@@ -410,7 +410,7 @@ class _SavedFiltersPageState extends ConsumerState<SavedFiltersPage> with HideOn
           ),
         ),
         loading: () => null,
-        error: (_, __) => null,
+        error: (_, _) => null,
       ),
       bottomNavigationBar: AnimatedVisibilityWrapper(
         isVisible: isBottomNavVisible,

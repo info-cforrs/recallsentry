@@ -27,6 +27,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   // Hide-on-scroll state for bottom navigation
   bool _isBottomNavVisible = true;
+  // ignore: unused_field - assigned for potential future use
   double _lastScrollOffset = 0;
   double _accumulatedDelta = 0;
   static const double _scrollThreshold = 15.0;

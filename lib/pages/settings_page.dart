@@ -70,8 +70,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                     );
                     // Refresh providers to IMMEDIATELY force recomputation
-                    ref.refresh(userProfileProvider);
-                    ref.refresh(subscriptionInfoProvider);
+                    ref.invalidate(userProfileProvider);
+                    ref.invalidate(subscriptionInfoProvider);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF64B5F6),
@@ -103,8 +103,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                       ),
                     );
                     // Refresh providers to IMMEDIATELY force recomputation
-                    ref.refresh(userProfileProvider);
-                    ref.refresh(subscriptionInfoProvider);
+                    ref.invalidate(userProfileProvider);
+                    ref.invalidate(subscriptionInfoProvider);
                   },
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.white,
@@ -305,8 +305,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ),
                       );
                       // Refresh providers to IMMEDIATELY force recomputation
-                      ref.refresh(userProfileProvider);
-                      ref.refresh(subscriptionInfoProvider);
+                      ref.invalidate(userProfileProvider);
+                      ref.invalidate(subscriptionInfoProvider);
                     },
                   ),
                   const Divider(height: 1, color: Colors.white24),
@@ -328,8 +328,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                         ),
                       );
                       // Refresh providers to IMMEDIATELY force recomputation
-                      ref.refresh(userProfileProvider);
-                      ref.refresh(subscriptionInfoProvider);
+                      ref.invalidate(userProfileProvider);
+                      ref.invalidate(subscriptionInfoProvider);
                     },
                   ),
                   const Divider(height: 1, color: Colors.white24),
@@ -944,7 +944,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
           child: CircularProgressIndicator(strokeWidth: 2),
         ),
       ),
-      error: (_, __) => ListTile(
+      error: (_, _) => ListTile(
         leading: const Icon(Icons.star, color: Colors.white70),
         title: const Text(
           'Subscription',
@@ -1008,14 +1008,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
                 // Refresh ALL auth-dependent providers to IMMEDIATELY force recomputation
                 // This ensures HomePage and other pages clear stale data immediately
-                ref.refresh(userProfileProvider);
-                ref.refresh(subscriptionInfoProvider);
-                ref.refresh(savedRecallsProvider);
-                ref.refresh(savedFiltersProvider);
-                ref.refresh(smartFilterMatchedRecallsProvider);
-                ref.refresh(activeRmcEnrollmentsProvider);
-                ref.refresh(rmcRecallsWithEnrollmentsProvider);
-                ref.refresh(safetyScoreProvider);
+                ref.invalidate(userProfileProvider);
+                ref.invalidate(subscriptionInfoProvider);
+                ref.invalidate(savedRecallsProvider);
+                ref.invalidate(savedFiltersProvider);
+                ref.invalidate(smartFilterMatchedRecallsProvider);
+                ref.invalidate(activeRmcEnrollmentsProvider);
+                ref.invalidate(rmcRecallsWithEnrollmentsProvider);
+                ref.invalidate(safetyScoreProvider);
 
                 // Show success message
                 messenger.showSnackBar(

@@ -56,6 +56,7 @@ class ApiService {
   }
 
   /// Wraps HTTP requests with timeout and error logging
+  // ignore: unused_element - utility method for potential future use
   Future<T> _withTimeout<T>(
     Future<T> Function() operation, {
     Duration? timeout,
