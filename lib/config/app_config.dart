@@ -24,14 +24,28 @@ class AppConfig {
   // SSL Certificate: Let's Encrypt (valid until Feb 3, 2026)
   // Certificate Subject: api.centerforrecallsafety.com
 
-  // CURRENT: Using production domain (points to staging server 18.218.174.62)
+  // =========================================================================
+  // API VERSIONING
+  // =========================================================================
+  // All API endpoints now use versioned paths (/api/v1/)
+  // This enables backwards-compatible API evolution
+  static const String apiVersion = 'v1';
+
+  // CURRENT: Using production domain with API versioning
   // This ensures SSL certificate validation works correctly
-  static const String apiBaseUrl = 'https://api.centerforrecallsafety.com/api';
+  static const String apiBaseUrl = 'https://api.centerforrecallsafety.com/api/$apiVersion';
   static const String mediaBaseUrl = 'https://api.centerforrecallsafety.com';
+
+  // Legacy endpoint (deprecated - kept for reference only)
+  // static const String apiBaseUrlLegacy = 'https://api.centerforrecallsafety.com/api';
 
   // DEPRECATED: Direct IP access (causes SSL certificate mismatch)
   // static const String apiBaseUrl = 'https://18.218.174.62/api';
   // static const String mediaBaseUrl = 'https://18.218.174.62';
+
+  // =========================================================================
+  // API ENDPOINTS (relative to apiBaseUrl which includes version)
+  // =========================================================================
   static const String apiRecallsEndpoint = '/recalls/';
   static const String apiFdaEndpoint = '/recalls/fda/';
   static const String apiUsdaEndpoint = '/recalls/usda/';
@@ -41,6 +55,10 @@ class AppConfig {
   static const String apiNhtsaTiresEndpoint = '/recalls/tires/';
   static const String apiNhtsaChildSeatsEndpoint = '/recalls/child_seats/';
   static const String apiStatsEndpoint = '/recalls/stats/';
+
+  // API Documentation URLs
+  static const String apiDocsUrl = 'https://api.centerforrecallsafety.com/api/docs/';
+  static const String apiSchemaUrl = 'https://api.centerforrecallsafety.com/api/schema/';
 
   // Google Sheets Configuration (Legacy - for testing only)
   // To enable Google Sheets integration:
