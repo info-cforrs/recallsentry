@@ -167,8 +167,8 @@ class _AppUsagePageState extends ConsumerState<AppUsagePage> with HideOnScrollMi
             }
 
             // Get data from providers
-            final savedRecalls = savedRecallsAsync.valueOrNull ?? [];
-            final activeFilters = activeFiltersAsync.valueOrNull ?? [];
+            final savedRecalls = savedRecallsAsync.value ?? [];
+            final activeFilters = activeFiltersAsync.value ?? [];
             final subscriptionInfo = subscriptionInfoAsync.value;
 
             if (subscriptionInfo == null) {

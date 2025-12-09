@@ -1,12 +1,9 @@
-import 'google_sheets_service.dart';
 import 'api_service.dart';
 import '../models/recall_data.dart';
-import '../config/app_config.dart';
 import '../exceptions/api_exceptions.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
 class RecallDataService {
-  final GoogleSheetsService _sheetsService = GoogleSheetsService();
   final ApiService _apiService = ApiService();
   static final RecallDataService _instance = RecallDataService._internal();
   factory RecallDataService() => _instance;
@@ -26,124 +23,59 @@ class RecallDataService {
   DateTime? _lastNhtsaVehicleFetch;
   DateTime? _lastNhtsaTireFetch;
   DateTime? _lastNhtsaChildSeatFetch;
-  String? _currentSpreadsheetId;
-
-  // Default spreadsheet ID - users can override this
-  static String _defaultSpreadsheetId = 'your_default_spreadsheet_id_here';
-
-  // Method to configure the default spreadsheet ID
-  static void configureSpreadsheetId(String spreadsheetId) {
-    _defaultSpreadsheetId = spreadsheetId;
-  }
 
   Future<List<RecallData>> getRecalls({
     bool forceRefresh = false,
-    String? spreadsheetId,
+    String? spreadsheetId, // Deprecated - kept for backwards compatibility
   }) async {
-
-    // Use REST API if configured
-    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-
-      try {
-        // Check memory cache first (30 minutes)
-        if (!forceRefresh &&
-            _lastFetch != null &&
-            DateTime.now().difference(_lastFetch!).inMinutes < 30 &&
-            _cachedRecalls.isNotEmpty) {
-          return _cachedRecalls;
-        }
-
-        // Try persistent cache if memory cache expired (24 hours)
-        if (!forceRefresh) {
-          final persistentData = await _loadFromPersistentCache('all_recalls');
-          if (persistentData != null) {
-            _cachedRecalls = persistentData;
-            _lastFetch = DateTime.now();
-            return _cachedRecalls;
-          }
-        }
-
-        // Fetch from API
-        final apiRecalls = await _apiService.fetchAllRecalls();
-
-        // Save to both caches
-        _cachedRecalls = apiRecalls;
-        _lastFetch = DateTime.now();
-        await _saveToPersistentCache('all_recalls', apiRecalls);
-
+    try {
+      // Check memory cache first (30 minutes)
+      if (!forceRefresh &&
+          _lastFetch != null &&
+          DateTime.now().difference(_lastFetch!).inMinutes < 30 &&
+          _cachedRecalls.isNotEmpty) {
         return _cachedRecalls;
-      } on ApiException {
-        // On API error, try to return cached data
-        final cachedData = await _loadFromPersistentCache('all_recalls');
-        if (cachedData != null && cachedData.isNotEmpty) {
-          return cachedData;
-        }
-        // If no cache available, rethrow the API exception
-        rethrow;
-      } catch (e, stack) {
-        // On other errors, try to return cached data
-        final cachedData = await _loadFromPersistentCache('all_recalls');
-        if (cachedData != null && cachedData.isNotEmpty) {
-          return cachedData;
-        }
-        // Wrap in ApiException
-        throw ApiException(
-          'Failed to fetch recalls',
-          originalException: e,
-          stackTrace: stack,
-        );
       }
-    }
 
-    // Fall back to Google Sheets
-
-    // Use provided spreadsheet ID, or app config, or default
-    final targetSpreadsheetId =
-        spreadsheetId ??
-        (AppConfig.isGoogleSheetsConfigured
-            ? AppConfig.googleSheetsSpreadsheetId
-            : _defaultSpreadsheetId);
-
-
-    if (targetSpreadsheetId != 'your_default_spreadsheet_id_here' &&
-        AppConfig.isGoogleSheetsConfigured) {
-
-      try {
-        // Initialize service if spreadsheet ID is provided and different
-        if (targetSpreadsheetId != _currentSpreadsheetId) {
-          await _sheetsService.init(targetSpreadsheetId);
-          _currentSpreadsheetId = targetSpreadsheetId;
-          forceRefresh = true;
-        }
-
-        // Cache for 30 minutes
-        if (!forceRefresh &&
-            _lastFetch != null &&
-            DateTime.now().difference(_lastFetch!).inMinutes < 30) {
-          return _cachedRecalls;
-        }
-
-        if (!_sheetsService.isInitialized) {
-          throw Exception(
-            'Google Sheets service not initialized. Please provide a spreadsheet ID.',
-          );
-        }
-
-        final sheetsRecalls = await _sheetsService.fetchRecalls();
-
-        if (sheetsRecalls.isNotEmpty) {
-          _cachedRecalls = sheetsRecalls;
+      // Try persistent cache if memory cache expired (24 hours)
+      if (!forceRefresh) {
+        final persistentData = await _loadFromPersistentCache('all_recalls');
+        if (persistentData != null) {
+          _cachedRecalls = persistentData;
           _lastFetch = DateTime.now();
           return _cachedRecalls;
-        } else {
-          return [];
         }
-      } catch (e) {
-        return [];
       }
-    } else {
-      // No valid spreadsheet ID configured
-      return [];
+
+      // Fetch from API
+      final apiRecalls = await _apiService.fetchAllRecalls();
+
+      // Save to both caches
+      _cachedRecalls = apiRecalls;
+      _lastFetch = DateTime.now();
+      await _saveToPersistentCache('all_recalls', apiRecalls);
+
+      return _cachedRecalls;
+    } on ApiException {
+      // On API error, try to return cached data
+      final cachedData = await _loadFromPersistentCache('all_recalls');
+      if (cachedData != null && cachedData.isNotEmpty) {
+        return cachedData;
+      }
+      // If no cache available, rethrow the API exception
+      rethrow;
+    } catch (e, stack) {
+      // On other errors, try to return cached data
+      final cachedData = await _loadFromPersistentCache('all_recalls');
+      if (cachedData != null && cachedData.isNotEmpty) {
+        return cachedData;
+      }
+      // Wrap in ApiException
+      throw ApiException(
+        'Failed to fetch recalls',
+        originalException: e,
+        stackTrace: stack,
+      );
     }
   }
 
@@ -154,71 +86,39 @@ class RecallDataService {
     int? limit,
     int? offset,
   }) async {
-
-    // Use REST API if configured
-    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-
-      try {
-        // If pagination is requested, skip cache and fetch from API
-        if (limit != null || offset != null) {
-          final fdaRecalls = await _apiService.fetchFdaRecalls(
-            limit: limit,
-            offset: offset,
-          );
-          return fdaRecalls;
-        }
-
-        // Cache for 30 minutes (only for non-paginated requests)
-        if (!forceRefresh &&
-            _lastFdaFetch != null &&
-            DateTime.now().difference(_lastFdaFetch!).inMinutes < 30) {
-          return _cachedFdaRecalls;
-        }
-
-        final fdaRecalls = await _apiService.fetchFdaRecalls();
-
-        _cachedFdaRecalls = fdaRecalls;
-        _lastFdaFetch = DateTime.now();
-        // Save to persistent cache
-        await _saveToPersistentCache('fda_recalls', fdaRecalls);
-        return _cachedFdaRecalls;
-      } catch (e) {
-        // Try persistent cache as fallback
-        final cachedData = await _loadFromPersistentCache('fda_recalls');
-        if (cachedData != null && cachedData.isNotEmpty) {
-          _cachedFdaRecalls = cachedData;
-          _lastFdaFetch = DateTime.now();
-          return cachedData;
-        }
-
-        return [];
-      }
-    }
-
-    // Fall back to Google Sheets
-    if (!AppConfig.isFdaSpreadsheetConfigured) {
-      return [];
-    }
-
     try {
-      // Cache for 30 minutes
+      // If pagination is requested, skip cache and fetch from API
+      if (limit != null || offset != null) {
+        final fdaRecalls = await _apiService.fetchFdaRecalls(
+          limit: limit,
+          offset: offset,
+        );
+        return fdaRecalls;
+      }
+
+      // Cache for 30 minutes (only for non-paginated requests)
       if (!forceRefresh &&
           _lastFdaFetch != null &&
           DateTime.now().difference(_lastFdaFetch!).inMinutes < 30) {
         return _cachedFdaRecalls;
       }
 
-      await _sheetsService.init(AppConfig.fdaRecallsSpreadsheetId);
-      final fdaRecalls = await _sheetsService.fetchRecalls();
+      final fdaRecalls = await _apiService.fetchFdaRecalls();
 
-      if (fdaRecalls.isNotEmpty) {
-        _cachedFdaRecalls = fdaRecalls;
-        _lastFdaFetch = DateTime.now();
-        return _cachedFdaRecalls;
-      } else {
-        return [];
-      }
+      _cachedFdaRecalls = fdaRecalls;
+      _lastFdaFetch = DateTime.now();
+      // Save to persistent cache
+      await _saveToPersistentCache('fda_recalls', fdaRecalls);
+      return _cachedFdaRecalls;
     } catch (e) {
+      // Try persistent cache as fallback
+      final cachedData = await _loadFromPersistentCache('fda_recalls');
+      if (cachedData != null && cachedData.isNotEmpty) {
+        _cachedFdaRecalls = cachedData;
+        _lastFdaFetch = DateTime.now();
+        return cachedData;
+      }
+
       return [];
     }
   }
@@ -230,71 +130,39 @@ class RecallDataService {
     int? limit,
     int? offset,
   }) async {
-
-    // Use REST API if configured
-    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-
-      try {
-        // If pagination is requested, skip cache and fetch from API
-        if (limit != null || offset != null) {
-          final usdaRecalls = await _apiService.fetchUsdaRecalls(
-            limit: limit,
-            offset: offset,
-          );
-          return usdaRecalls;
-        }
-
-        // Cache for 30 minutes (only for non-paginated requests)
-        if (!forceRefresh &&
-            _lastUsdaFetch != null &&
-            DateTime.now().difference(_lastUsdaFetch!).inMinutes < 30) {
-          return _cachedUsdaRecalls;
-        }
-
-        final usdaRecalls = await _apiService.fetchUsdaRecalls();
-
-        _cachedUsdaRecalls = usdaRecalls;
-        _lastUsdaFetch = DateTime.now();
-        // Save to persistent cache
-        await _saveToPersistentCache('usda_recalls', usdaRecalls);
-        return _cachedUsdaRecalls;
-      } catch (e) {
-        // Try persistent cache as fallback
-        final cachedData = await _loadFromPersistentCache('usda_recalls');
-        if (cachedData != null && cachedData.isNotEmpty) {
-          _cachedUsdaRecalls = cachedData;
-          _lastUsdaFetch = DateTime.now();
-          return cachedData;
-        }
-
-        return [];
-      }
-    }
-
-    // Fall back to Google Sheets
-    if (!AppConfig.isUsdaSpreadsheetConfigured) {
-      return [];
-    }
-
     try {
-      // Cache for 30 minutes
+      // If pagination is requested, skip cache and fetch from API
+      if (limit != null || offset != null) {
+        final usdaRecalls = await _apiService.fetchUsdaRecalls(
+          limit: limit,
+          offset: offset,
+        );
+        return usdaRecalls;
+      }
+
+      // Cache for 30 minutes (only for non-paginated requests)
       if (!forceRefresh &&
           _lastUsdaFetch != null &&
           DateTime.now().difference(_lastUsdaFetch!).inMinutes < 30) {
         return _cachedUsdaRecalls;
       }
 
-      await _sheetsService.init(AppConfig.usdaRecallsSpreadsheetId);
-      final usdaRecalls = await _sheetsService.fetchRecalls();
+      final usdaRecalls = await _apiService.fetchUsdaRecalls();
 
-      if (usdaRecalls.isNotEmpty) {
-        _cachedUsdaRecalls = usdaRecalls;
-        _lastUsdaFetch = DateTime.now();
-        return _cachedUsdaRecalls;
-      } else {
-        return [];
-      }
+      _cachedUsdaRecalls = usdaRecalls;
+      _lastUsdaFetch = DateTime.now();
+      // Save to persistent cache
+      await _saveToPersistentCache('usda_recalls', usdaRecalls);
+      return _cachedUsdaRecalls;
     } catch (e) {
+      // Try persistent cache as fallback
+      final cachedData = await _loadFromPersistentCache('usda_recalls');
+      if (cachedData != null && cachedData.isNotEmpty) {
+        _cachedUsdaRecalls = cachedData;
+        _lastUsdaFetch = DateTime.now();
+        return cachedData;
+      }
+
       return [];
     }
   }
@@ -306,49 +174,41 @@ class RecallDataService {
     int? limit,
     int? offset,
   }) async {
-
-    // Use REST API if configured
-    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-
-      try {
-        // If pagination is requested, skip cache and fetch from API
-        if (limit != null || offset != null) {
-          final cpscRecalls = await _apiService.fetchCpscRecalls(
-            limit: limit,
-            offset: offset,
-          );
-          return cpscRecalls;
-        }
-
-        // Cache for 30 minutes (only for non-paginated requests)
-        if (!forceRefresh &&
-            _lastCpscFetch != null &&
-            DateTime.now().difference(_lastCpscFetch!).inMinutes < 30) {
-          return _cachedCpscRecalls;
-        }
-
-        final cpscRecalls = await _apiService.fetchCpscRecalls();
-
-        _cachedCpscRecalls = cpscRecalls;
-        _lastCpscFetch = DateTime.now();
-        // Save to persistent cache
-        await _saveToPersistentCache('cpsc_recalls', cpscRecalls);
-        return _cachedCpscRecalls;
-      } catch (e) {
-        // Try persistent cache as fallback
-        final cachedData = await _loadFromPersistentCache('cpsc_recalls');
-        if (cachedData != null && cachedData.isNotEmpty) {
-          _cachedCpscRecalls = cachedData;
-          _lastCpscFetch = DateTime.now();
-          return cachedData;
-        }
-
-        return [];
+    try {
+      // If pagination is requested, skip cache and fetch from API
+      if (limit != null || offset != null) {
+        final cpscRecalls = await _apiService.fetchCpscRecalls(
+          limit: limit,
+          offset: offset,
+        );
+        return cpscRecalls;
       }
-    }
 
-    // No Google Sheets fallback for CPSC
-    return [];
+      // Cache for 30 minutes (only for non-paginated requests)
+      if (!forceRefresh &&
+          _lastCpscFetch != null &&
+          DateTime.now().difference(_lastCpscFetch!).inMinutes < 30) {
+        return _cachedCpscRecalls;
+      }
+
+      final cpscRecalls = await _apiService.fetchCpscRecalls();
+
+      _cachedCpscRecalls = cpscRecalls;
+      _lastCpscFetch = DateTime.now();
+      // Save to persistent cache
+      await _saveToPersistentCache('cpsc_recalls', cpscRecalls);
+      return _cachedCpscRecalls;
+    } catch (e) {
+      // Try persistent cache as fallback
+      final cachedData = await _loadFromPersistentCache('cpsc_recalls');
+      if (cachedData != null && cachedData.isNotEmpty) {
+        _cachedCpscRecalls = cachedData;
+        _lastCpscFetch = DateTime.now();
+        return cachedData;
+      }
+
+      return [];
+    }
   }
 
   // Get NHTSA Vehicle recalls
@@ -358,49 +218,41 @@ class RecallDataService {
     int? limit,
     int? offset,
   }) async {
-
-    // Use REST API if configured
-    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-
-      try {
-        // If pagination is requested, skip cache and fetch from API
-        if (limit != null || offset != null) {
-          final recalls = await _apiService.fetchNhtsaVehicleRecalls(
-            limit: limit,
-            offset: offset,
-          );
-          return recalls;
-        }
-
-        // Cache for 30 minutes (only for non-paginated requests)
-        if (!forceRefresh &&
-            _lastNhtsaVehicleFetch != null &&
-            DateTime.now().difference(_lastNhtsaVehicleFetch!).inMinutes < 30) {
-          return _cachedNhtsaVehicleRecalls;
-        }
-
-        final recalls = await _apiService.fetchNhtsaVehicleRecalls();
-
-        _cachedNhtsaVehicleRecalls = recalls;
-        _lastNhtsaVehicleFetch = DateTime.now();
-        // Save to persistent cache
-        await _saveToPersistentCache('nhtsa_vehicle_recalls', recalls);
-        return _cachedNhtsaVehicleRecalls;
-      } catch (e) {
-        // Try persistent cache as fallback
-        final cachedData = await _loadFromPersistentCache('nhtsa_vehicle_recalls');
-        if (cachedData != null && cachedData.isNotEmpty) {
-          _cachedNhtsaVehicleRecalls = cachedData;
-          _lastNhtsaVehicleFetch = DateTime.now();
-          return cachedData;
-        }
-
-        return [];
+    try {
+      // If pagination is requested, skip cache and fetch from API
+      if (limit != null || offset != null) {
+        final recalls = await _apiService.fetchNhtsaVehicleRecalls(
+          limit: limit,
+          offset: offset,
+        );
+        return recalls;
       }
-    }
 
-    // No Google Sheets fallback for NHTSA
-    return [];
+      // Cache for 30 minutes (only for non-paginated requests)
+      if (!forceRefresh &&
+          _lastNhtsaVehicleFetch != null &&
+          DateTime.now().difference(_lastNhtsaVehicleFetch!).inMinutes < 30) {
+        return _cachedNhtsaVehicleRecalls;
+      }
+
+      final recalls = await _apiService.fetchNhtsaVehicleRecalls();
+
+      _cachedNhtsaVehicleRecalls = recalls;
+      _lastNhtsaVehicleFetch = DateTime.now();
+      // Save to persistent cache
+      await _saveToPersistentCache('nhtsa_vehicle_recalls', recalls);
+      return _cachedNhtsaVehicleRecalls;
+    } catch (e) {
+      // Try persistent cache as fallback
+      final cachedData = await _loadFromPersistentCache('nhtsa_vehicle_recalls');
+      if (cachedData != null && cachedData.isNotEmpty) {
+        _cachedNhtsaVehicleRecalls = cachedData;
+        _lastNhtsaVehicleFetch = DateTime.now();
+        return cachedData;
+      }
+
+      return [];
+    }
   }
 
   // Get NHTSA Tire recalls
@@ -410,49 +262,41 @@ class RecallDataService {
     int? limit,
     int? offset,
   }) async {
-
-    // Use REST API if configured
-    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-
-      try {
-        // If pagination is requested, skip cache and fetch from API
-        if (limit != null || offset != null) {
-          final recalls = await _apiService.fetchNhtsaTireRecalls(
-            limit: limit,
-            offset: offset,
-          );
-          return recalls;
-        }
-
-        // Cache for 30 minutes (only for non-paginated requests)
-        if (!forceRefresh &&
-            _lastNhtsaTireFetch != null &&
-            DateTime.now().difference(_lastNhtsaTireFetch!).inMinutes < 30) {
-          return _cachedNhtsaTireRecalls;
-        }
-
-        final recalls = await _apiService.fetchNhtsaTireRecalls();
-
-        _cachedNhtsaTireRecalls = recalls;
-        _lastNhtsaTireFetch = DateTime.now();
-        // Save to persistent cache
-        await _saveToPersistentCache('nhtsa_tire_recalls', recalls);
-        return _cachedNhtsaTireRecalls;
-      } catch (e) {
-        // Try persistent cache as fallback
-        final cachedData = await _loadFromPersistentCache('nhtsa_tire_recalls');
-        if (cachedData != null && cachedData.isNotEmpty) {
-          _cachedNhtsaTireRecalls = cachedData;
-          _lastNhtsaTireFetch = DateTime.now();
-          return cachedData;
-        }
-
-        return [];
+    try {
+      // If pagination is requested, skip cache and fetch from API
+      if (limit != null || offset != null) {
+        final recalls = await _apiService.fetchNhtsaTireRecalls(
+          limit: limit,
+          offset: offset,
+        );
+        return recalls;
       }
-    }
 
-    // No Google Sheets fallback for NHTSA
-    return [];
+      // Cache for 30 minutes (only for non-paginated requests)
+      if (!forceRefresh &&
+          _lastNhtsaTireFetch != null &&
+          DateTime.now().difference(_lastNhtsaTireFetch!).inMinutes < 30) {
+        return _cachedNhtsaTireRecalls;
+      }
+
+      final recalls = await _apiService.fetchNhtsaTireRecalls();
+
+      _cachedNhtsaTireRecalls = recalls;
+      _lastNhtsaTireFetch = DateTime.now();
+      // Save to persistent cache
+      await _saveToPersistentCache('nhtsa_tire_recalls', recalls);
+      return _cachedNhtsaTireRecalls;
+    } catch (e) {
+      // Try persistent cache as fallback
+      final cachedData = await _loadFromPersistentCache('nhtsa_tire_recalls');
+      if (cachedData != null && cachedData.isNotEmpty) {
+        _cachedNhtsaTireRecalls = cachedData;
+        _lastNhtsaTireFetch = DateTime.now();
+        return cachedData;
+      }
+
+      return [];
+    }
   }
 
   // Get NHTSA Child Seat recalls
@@ -462,49 +306,41 @@ class RecallDataService {
     int? limit,
     int? offset,
   }) async {
-
-    // Use REST API if configured
-    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-
-      try {
-        // If pagination is requested, skip cache and fetch from API
-        if (limit != null || offset != null) {
-          final recalls = await _apiService.fetchNhtsaChildSeatRecalls(
-            limit: limit,
-            offset: offset,
-          );
-          return recalls;
-        }
-
-        // Cache for 30 minutes (only for non-paginated requests)
-        if (!forceRefresh &&
-            _lastNhtsaChildSeatFetch != null &&
-            DateTime.now().difference(_lastNhtsaChildSeatFetch!).inMinutes < 30) {
-          return _cachedNhtsaChildSeatRecalls;
-        }
-
-        final recalls = await _apiService.fetchNhtsaChildSeatRecalls();
-
-        _cachedNhtsaChildSeatRecalls = recalls;
-        _lastNhtsaChildSeatFetch = DateTime.now();
-        // Save to persistent cache
-        await _saveToPersistentCache('nhtsa_child_seat_recalls', recalls);
-        return _cachedNhtsaChildSeatRecalls;
-      } catch (e) {
-        // Try persistent cache as fallback
-        final cachedData = await _loadFromPersistentCache('nhtsa_child_seat_recalls');
-        if (cachedData != null && cachedData.isNotEmpty) {
-          _cachedNhtsaChildSeatRecalls = cachedData;
-          _lastNhtsaChildSeatFetch = DateTime.now();
-          return cachedData;
-        }
-
-        return [];
+    try {
+      // If pagination is requested, skip cache and fetch from API
+      if (limit != null || offset != null) {
+        final recalls = await _apiService.fetchNhtsaChildSeatRecalls(
+          limit: limit,
+          offset: offset,
+        );
+        return recalls;
       }
-    }
 
-    // No Google Sheets fallback for NHTSA
-    return [];
+      // Cache for 30 minutes (only for non-paginated requests)
+      if (!forceRefresh &&
+          _lastNhtsaChildSeatFetch != null &&
+          DateTime.now().difference(_lastNhtsaChildSeatFetch!).inMinutes < 30) {
+        return _cachedNhtsaChildSeatRecalls;
+      }
+
+      final recalls = await _apiService.fetchNhtsaChildSeatRecalls();
+
+      _cachedNhtsaChildSeatRecalls = recalls;
+      _lastNhtsaChildSeatFetch = DateTime.now();
+      // Save to persistent cache
+      await _saveToPersistentCache('nhtsa_child_seat_recalls', recalls);
+      return _cachedNhtsaChildSeatRecalls;
+    } catch (e) {
+      // Try persistent cache as fallback
+      final cachedData = await _loadFromPersistentCache('nhtsa_child_seat_recalls');
+      if (cachedData != null && cachedData.isNotEmpty) {
+        _cachedNhtsaChildSeatRecalls = cachedData;
+        _lastNhtsaChildSeatFetch = DateTime.now();
+        return cachedData;
+      }
+
+      return [];
+    }
   }
 
   Future<List<RecallData>> getFilteredRecalls({
@@ -512,7 +348,7 @@ class RecallDataService {
     List<String>? productNames,
     String? agency,
     String? riskLevel,
-    String? spreadsheetId,
+    String? spreadsheetId, // Deprecated - kept for backwards compatibility
   }) async {
     List<RecallData> allRecalls = [];
 
@@ -530,11 +366,11 @@ class RecallDataService {
           break;
         default:
           // Fall back to main endpoint for other agencies
-          allRecalls = await getRecalls(spreadsheetId: spreadsheetId);
+          allRecalls = await getRecalls();
       }
     } else {
       // No specific agency requested, get all recalls
-      allRecalls = await getRecalls(spreadsheetId: spreadsheetId);
+      allRecalls = await getRecalls();
     }
 
     final filteredRecalls = allRecalls.where((recall) {
@@ -574,50 +410,28 @@ class RecallDataService {
     return filteredRecalls;
   }
 
-  // Add a recall to the spreadsheet
-  Future<void> addRecall(RecallData recall) async {
-    if (!_sheetsService.isInitialized) {
-      throw Exception('Google Sheets service not initialized.');
-    }
-    await _sheetsService.addRecall(recall);
-    // Invalidate cache to force refresh on next fetch
-    _lastFetch = null;
-  }
-
   // Get a single recall by ID
   Future<RecallData?> getRecallById(String recallId) async {
-
     // Try to parse as integer for API call
     final id = int.tryParse(recallId);
     if (id == null) {
       return null;
     }
 
-    // Use REST API if configured
-    if (AppConfig.dataSource == DataSource.restApi && AppConfig.isRestApiConfigured) {
-
+    try {
+      final recall = await _apiService.fetchRecallById(id);
+      return recall;
+    } catch (e) {
+      // Fall back to searching in cached recalls
+      final allRecalls = await getRecalls();
       try {
-        final recall = await _apiService.fetchRecallById(id);
+        final recall = allRecalls.firstWhere((r) => r.id == recallId);
         return recall;
       } catch (e) {
         return null;
       }
     }
-
-    // Fall back to searching in cached recalls
-
-    // First try to get from cached recalls
-    final allRecalls = await getRecalls();
-    try {
-      final recall = allRecalls.firstWhere((r) => r.id == recallId);
-      return recall;
-    } catch (e) {
-      return null;
-    }
   }
-
-  // Check if service is ready
-  bool get isInitialized => _sheetsService.isInitialized;
 
   /// Save recalls to persistent cache using Hive
   /// PERFORMANCE: Provides offline support and faster app restarts

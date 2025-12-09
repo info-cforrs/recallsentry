@@ -446,12 +446,12 @@ class _HomePageState extends ConsumerState<HomePage> with WidgetsBindingObserver
     final hasCriticalError = filteredRecallsAsync.hasError;
 
     // Extract data from async providers
-    final safetyScore = safetyScoreAsync.valueOrNull;
-    final categoryCounts = categoryCountsAsync.valueOrNull ?? {};
-    final filteredRecalls = filteredRecallsAsync.valueOrNull ?? [];
-    final savedRecallsList = savedRecallsAsync.valueOrNull ?? [];
-    final smartFilterMatched = smartFilterMatchedAsync.valueOrNull ?? [];
-    final rmcRecalls = rmcRecallsAsync.valueOrNull ?? [];
+    final safetyScore = safetyScoreAsync.value;
+    final categoryCounts = categoryCountsAsync.value ?? {};
+    final filteredRecalls = filteredRecallsAsync.value ?? [];
+    final savedRecallsList = savedRecallsAsync.value ?? [];
+    final smartFilterMatched = smartFilterMatchedAsync.value ?? [];
+    final rmcRecalls = rmcRecallsAsync.value ?? [];
 
     // Calculate counts - FDA, USDA, CPSC from filteredRecalls
     final fdaRecalls = filteredRecalls.where((r) => r.agency.toUpperCase() == 'FDA').length;
