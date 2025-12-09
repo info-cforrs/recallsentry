@@ -15,7 +15,7 @@ class RmcSyncService {
   final _apiService = ApiService();
   final _connectivity = Connectivity();
 
-  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isSyncing = false;
   DateTime? _lastSyncTime;
 
@@ -38,16 +38,16 @@ class RmcSyncService {
     );
 
     // Check initial connectivity and sync if online
-    final connectivityResult = await _connectivity.checkConnectivity();
-    if (_isOnline(connectivityResult)) {
+    final connectivityResults = await _connectivity.checkConnectivity();
+    if (_isOnline(connectivityResults)) {
       await syncAll();
     } else {
     }
   }
 
   /// Handle connectivity changes
-  void _handleConnectivityChange(ConnectivityResult result) async {
-    if (_isOnline(result)) {
+  void _handleConnectivityChange(List<ConnectivityResult> results) async {
+    if (_isOnline(results)) {
       _syncStatusController.add(SyncStatus.syncing);
       await syncAll();
     } else {
@@ -55,17 +55,18 @@ class RmcSyncService {
     }
   }
 
-  /// Check if device is online
-  bool _isOnline(ConnectivityResult result) {
-    return result == ConnectivityResult.mobile ||
+  /// Check if device is online (connectivity_plus v7.x returns List)
+  bool _isOnline(List<ConnectivityResult> results) {
+    return results.any((result) =>
+        result == ConnectivityResult.mobile ||
         result == ConnectivityResult.wifi ||
-        result == ConnectivityResult.ethernet;
+        result == ConnectivityResult.ethernet);
   }
 
   /// Get current connectivity status
   Future<bool> isOnline() async {
-    final result = await _connectivity.checkConnectivity();
-    return _isOnline(result);
+    final results = await _connectivity.checkConnectivity();
+    return _isOnline(results);
   }
 
   // ============================================================================

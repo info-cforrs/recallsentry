@@ -34,34 +34,34 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
-  intl: ^0.19.0
+  intl: ^0.20.2  # Updated for latest locale support
   window_manager: ^0.5.1  # Updated from 0.3.9 for desktop stability improvements
-  shared_preferences: ^2.2.2
+  shared_preferences: ^2.5.4
   flutter_secure_storage: ^9.0.0
 
   # Google Sheets integration (fallback data source)
   gsheets: ^0.5.0  # Updated from 0.4.2
-  http: ^1.2.2  # Updated from 0.13.5 - required for flutter_cache_manager 3.4.1
+  http: ^1.6.0  # Updated for latest features
 
   # UI & Icons
-  url_launcher: ^6.2.5
-  flutter_svg: ^2.2.2  # Updated from 2.0.0 for better SVG rendering
+  url_launcher: ^6.3.2
+  flutter_svg: ^2.2.3  # Updated for better SVG rendering
 
-  # Firebase for push notifications and crash reporting
-  firebase_core: ^3.6.0
-  firebase_messaging: ^15.1.3
-  firebase_crashlytics: ^4.1.3
-  flutter_local_notifications: ^18.0.1
+  # Firebase for push notifications and crash reporting (v4.x with security patches)
+  firebase_core: ^4.2.1  # Major update with security patches
+  firebase_messaging: ^16.0.4  # Major update with security patches
+  firebase_crashlytics: ^5.0.5  # Major update with security patches
+  flutter_local_notifications: ^19.5.0  # Major update
 
   # Deep Links for email notifications
-  app_links: ^6.3.3
+  app_links: ^6.4.1  # Pinned - v7.0 requires Dart 3.10+
 
   # Offline support for Recall Match Companion
-  sqflite: ^2.3.0
+  sqflite: ^2.4.2
   sqflite_common_ffi: ^2.3.6  # For Windows/Linux/macOS desktop support (2.4.0 requires Dart 3.10+)
-  path: ^1.8.3
-  path_provider: ^2.1.1
-  connectivity_plus: ^5.0.2
+  path: ^1.9.1
+  path_provider: ^2.1.5
+  connectivity_plus: ^7.0.0  # Major update
 
   # Security - SSL Certificate Pinning
   crypto: ^3.0.7  # Updated from 3.0.3 for security improvements
@@ -75,28 +75,30 @@ dependencies:
   hive_flutter: ^1.1.0
 
   # State Management
-  flutter_riverpod: ^2.5.1
+  # NOTE: flutter_riverpod 3.x has breaking changes (StateProvider moved to legacy)
+  # Migration planned separately - keeping 2.x for now for stability
+  flutter_riverpod: ^2.6.1
 
   # In-App Purchases & Subscriptions (Google Play Billing / StoreKit)
-  in_app_purchase: ^3.2.0
+  in_app_purchase: ^3.2.3
 
   # Image picker for proof photos
-  image_picker: ^1.0.7
+  image_picker: ^1.2.1
 
   # Camera for live preview and capture
-  camera: ^0.11.0+2
+  camera: ^0.11.3
 
   # Permission handling for camera access
-  permission_handler: ^11.3.1
+  permission_handler: ^12.0.1  # Major update
 
   # Image processing and compression
-  image: ^4.1.7
+  image: ^4.5.4
 
   # Email sender with attachment support
-  flutter_email_sender: ^6.0.3
+  flutter_email_sender: ^8.0.0  # Major update
 
   # Barcode/UPC scanning with Google ML Kit
-  google_mlkit_barcode_scanning: ^0.12.0
+  google_mlkit_barcode_scanning: ^0.14.1  # Major update
 
 dev_dependencies:
   flutter_test:
@@ -107,8 +109,18 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0  # Major update
   flutter_launcher_icons: ^0.14.4
+
+  # Testing dependencies
+  mockito: ^5.4.4              # Mock generation for unit tests
+  build_runner: ^2.4.8         # Code generation for mocks
+  fake_async: ^1.3.1           # Testing async code with controlled time
+  clock: ^1.1.1                # Mockable clock for time-dependent tests
+
+  # Integration testing
+  integration_test:
+    sdk: flutter
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

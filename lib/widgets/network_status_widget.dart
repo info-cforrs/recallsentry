@@ -32,7 +32,7 @@ class NetworkStatusWidget extends StatefulWidget {
 
 class _NetworkStatusWidgetState extends State<NetworkStatusWidget> {
   final Connectivity _connectivity = Connectivity();
-  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isOnline = true;
   bool _showBanner = false;
 
@@ -51,10 +51,10 @@ class _NetworkStatusWidgetState extends State<NetworkStatusWidget> {
 
   Future<void> _checkInitialConnectivity() async {
     try {
-      final result = await _connectivity.checkConnectivity();
+      final results = await _connectivity.checkConnectivity();
       if (mounted) {
         setState(() {
-          _isOnline = _isConnectivityOnline(result);
+          _isOnline = _isConnectivityOnline(results);
           _showBanner = !_isOnline;
         });
       }
@@ -71,8 +71,8 @@ class _NetworkStatusWidgetState extends State<NetworkStatusWidget> {
 
   void _setupConnectivityListener() {
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
-      (ConnectivityResult result) {
-        final isOnline = _isConnectivityOnline(result);
+      (List<ConnectivityResult> results) {
+        final isOnline = _isConnectivityOnline(results);
         if (mounted && isOnline != _isOnline) {
           setState(() {
             _isOnline = isOnline;
@@ -94,10 +94,12 @@ class _NetworkStatusWidgetState extends State<NetworkStatusWidget> {
     );
   }
 
-  bool _isConnectivityOnline(ConnectivityResult result) {
-    return result == ConnectivityResult.mobile ||
+  /// Check if device is online (connectivity_plus v7.x returns List)
+  bool _isConnectivityOnline(List<ConnectivityResult> results) {
+    return results.any((result) =>
+        result == ConnectivityResult.mobile ||
         result == ConnectivityResult.wifi ||
-        result == ConnectivityResult.ethernet;
+        result == ConnectivityResult.ethernet);
   }
 
   @override
@@ -154,7 +156,7 @@ class OfflineIndicatorBadge extends StatefulWidget {
 
 class _OfflineIndicatorBadgeState extends State<OfflineIndicatorBadge> {
   final Connectivity _connectivity = Connectivity();
-  StreamSubscription<ConnectivityResult>? _connectivitySubscription;
+  StreamSubscription<List<ConnectivityResult>>? _connectivitySubscription;
   bool _isOnline = true;
 
   @override
@@ -172,10 +174,10 @@ class _OfflineIndicatorBadgeState extends State<OfflineIndicatorBadge> {
 
   Future<void> _checkConnectivity() async {
     try {
-      final result = await _connectivity.checkConnectivity();
+      final results = await _connectivity.checkConnectivity();
       if (mounted) {
         setState(() {
-          _isOnline = _isConnectivityOnline(result);
+          _isOnline = _isConnectivityOnline(results);
         });
       }
     } catch (e) {
@@ -190,8 +192,8 @@ class _OfflineIndicatorBadgeState extends State<OfflineIndicatorBadge> {
 
   void _setupListener() {
     _connectivitySubscription = _connectivity.onConnectivityChanged.listen(
-      (ConnectivityResult result) {
-        final isOnline = _isConnectivityOnline(result);
+      (List<ConnectivityResult> results) {
+        final isOnline = _isConnectivityOnline(results);
         if (mounted && isOnline != _isOnline) {
           setState(() {
             _isOnline = isOnline;
@@ -201,10 +203,12 @@ class _OfflineIndicatorBadgeState extends State<OfflineIndicatorBadge> {
     );
   }
 
-  bool _isConnectivityOnline(ConnectivityResult result) {
-    return result == ConnectivityResult.mobile ||
+  /// Check if device is online (connectivity_plus v7.x returns List)
+  bool _isConnectivityOnline(List<ConnectivityResult> results) {
+    return results.any((result) =>
+        result == ConnectivityResult.mobile ||
         result == ConnectivityResult.wifi ||
-        result == ConnectivityResult.ethernet;
+        result == ConnectivityResult.ethernet);
   }
 
   @override
