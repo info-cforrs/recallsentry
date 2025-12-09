@@ -72,10 +72,8 @@ void main() async {
       debugPrint('⚠️ Error applying consent preferences: $e');
     }
 
-    // Initialize FCM (Firebase Cloud Messaging)
-    debugPrint('🔔 Starting FCM initialization...');
-    await FCMService().initialize();
-    debugPrint('✅ FCM Service initialization completed');
+    // NOTE: FCM initialization moved to post-frame callback for faster startup
+    // See _initServices() in _MyAppState
   } catch (e, stackTrace) {
     debugPrint('⚠️ Firebase initialization error: $e');
     debugPrint('Stack trace: $stackTrace');
@@ -89,18 +87,21 @@ void main() async {
   // SubscriptionService().clearCache();
   // print('✅ DEBUG: Auth tokens cleared - app will run as guest');
 
-  // Cleanup old saved recalls (older than 6 months)
-  try {
-    debugPrint('🧹 Cleaning up old saved recalls...');
-    final removedCount = await SavedRecallsService().cleanupOldSavedRecalls();
-    if (removedCount > 0) {
-      debugPrint('✅ Removed $removedCount old saved recall(s)');
-    } else {
-      debugPrint('✅ No old recalls to clean up');
+  // Cleanup old saved recalls (deferred to background - non-blocking)
+  // This runs after a delay to not block startup
+  Future.delayed(const Duration(seconds: 3), () async {
+    try {
+      debugPrint('🧹 Cleaning up old saved recalls (background)...');
+      final removedCount = await SavedRecallsService().cleanupOldSavedRecalls();
+      if (removedCount > 0) {
+        debugPrint('✅ Removed $removedCount old saved recall(s)');
+      } else {
+        debugPrint('✅ No old recalls to clean up');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error cleaning up old recalls: $e');
     }
-  } catch (e) {
-    debugPrint('⚠️ Error cleaning up old recalls: $e');
-  }
+  });
 
   // Initialize window manager ONLY on desktop platforms (Windows, macOS, Linux)
   // Skip on mobile (iOS, Android) and web
@@ -152,19 +153,26 @@ class _MyAppState extends State<MyApp> {
   @override
   void initState() {
     super.initState();
-    // Initialize deep links after the first frame (when navigator is ready)
-    // Only on mobile platforms where deep links are used
-    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _initDeepLinks();
-      });
-    }
+    // Initialize services after the first frame for faster startup
+    // This defers heavy operations until the UI is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initServices();
+    });
   }
 
-  Future<void> _initDeepLinks() async {
-    debugPrint('🔗 Initializing Deep Link Service...');
-    await DeepLinkService().initialize(navigatorKey);
-    debugPrint('✅ Deep Link Service initialized');
+  Future<void> _initServices() async {
+    // Initialize FCM (deferred from main() for faster startup - saves 1-3 seconds)
+    // Only on mobile platforms where FCM is used
+    if (!kIsWeb && (Platform.isIOS || Platform.isAndroid)) {
+      debugPrint('🔔 Starting FCM initialization (deferred)...');
+      await FCMService().initialize();
+      debugPrint('✅ FCM Service initialization completed');
+
+      // Initialize deep links after FCM
+      debugPrint('🔗 Initializing Deep Link Service...');
+      await DeepLinkService().initialize(navigatorKey);
+      debugPrint('✅ Deep Link Service initialized');
+    }
   }
 
   @override

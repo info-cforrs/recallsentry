@@ -14,6 +14,7 @@ import '../widgets/custom_back_button.dart';
 import '../widgets/animated_visibility_wrapper.dart';
 import '../widgets/custom_loading_indicator.dart';
 import '../mixins/hide_on_scroll_mixin.dart';
+import '../utils/debouncer.dart';
 import 'subscribe_page.dart';
 
 class AllRecallsPage extends StatefulWidget {
@@ -32,6 +33,8 @@ class _AllRecallsPageState extends State<AllRecallsPage> with HideOnScrollMixin 
   final SubscriptionService _subscriptionService = SubscriptionService();
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  // PERFORMANCE FIX: Debounce search to avoid filtering on every keystroke
+  final Debouncer _searchDebouncer = Debouncer(milliseconds: 300);
   List<RecallData> _allRecalls = [];
   List<RecallData> _filteredRecalls = [];
   List<Article> _articles = [];
@@ -50,6 +53,9 @@ class _AllRecallsPageState extends State<AllRecallsPage> with HideOnScrollMixin 
   bool _isSearchFieldFocused = false; // Track if search field is currently focused
   bool _keepButtonVisible = false; // Keep button visible even when focus is lost (during save)
 
+  // PERFORMANCE FIX: Cache subscription info to avoid FutureBuilder in list items
+  SubscriptionInfo? _cachedSubscriptionInfo;
+
   @override
   void initState() {
     super.initState();
@@ -62,6 +68,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> with HideOnScrollMixin 
     }
 
     _loadAllRecalls();
+    _loadSubscriptionInfo(); // PERFORMANCE FIX: Load once, cache for list items
     hideOnScrollController.addListener(_onScroll);
 
     // Listen to focus changes
@@ -70,6 +77,16 @@ class _AllRecallsPageState extends State<AllRecallsPage> with HideOnScrollMixin 
         _isSearchFieldFocused = _searchFocusNode.hasFocus;
       });
     });
+  }
+
+  /// Load subscription info once and cache it to avoid FutureBuilder in list items
+  Future<void> _loadSubscriptionInfo() async {
+    final info = await _subscriptionService.getSubscriptionInfo();
+    if (mounted) {
+      setState(() {
+        _cachedSubscriptionInfo = info;
+      });
+    }
   }
 
   void _onScroll() {
@@ -89,6 +106,7 @@ class _AllRecallsPageState extends State<AllRecallsPage> with HideOnScrollMixin 
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _searchDebouncer.dispose();
     disposeHideOnScroll();
     super.dispose();
   }
@@ -1056,98 +1074,92 @@ class _AllRecallsPageState extends State<AllRecallsPage> with HideOnScrollMixin 
       itemCount: totalItems,
       itemBuilder: (context, index) {
         // Last item is the upgrade banner
+        // PERFORMANCE FIX: Use cached subscription info instead of FutureBuilder
         if (index == totalItems - 1) {
-          return FutureBuilder<SubscriptionInfo>(
-            future: _subscriptionService.getSubscriptionInfo(),
-            builder: (context, snapshot) {
-              final subscriptionInfo = snapshot.data;
+          // Only show to free users (use cached value)
+          if (_cachedSubscriptionInfo == null || _cachedSubscriptionInfo!.hasPremiumAccess) {
+            return const SizedBox.shrink();
+          }
 
-              // Only show to free users
-              if (subscriptionInfo == null || subscriptionInfo.hasPremiumAccess) {
-                return const SizedBox.shrink();
-              }
-
-              return Container(
-                margin: const EdgeInsets.only(top: 24, bottom: 16),
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2A4A5C),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF64B5F6).withValues(alpha: 0.3),
-                    width: 2,
+          return Container(
+            margin: const EdgeInsets.only(top: 24, bottom: 16),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: const Color(0xFF2A4A5C),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: const Color(0xFF64B5F6).withValues(alpha: 0.3),
+                width: 2,
+              ),
+            ),
+            child: Column(
+              children: [
+                const Icon(
+                  Icons.lock_outline,
+                  size: 48,
+                  color: Color(0xFFFFD700),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  '30-Day Recall Limit Reached',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Upgrade to SmartFiltering or RecallMatch Plans to access older recalls and unlock other great features.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white70,
+                    height: 1.4,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const SubscribePage(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF64B5F6),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 4,
+                    ),
+                    child: const Text(
+                      'Upgrade Now',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
                 ),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.lock_outline,
-                      size: 48,
-                      color: Color(0xFFFFD700),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      '30-Day Recall Limit Reached',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Upgrade to SmartFiltering or RecallMatch Plans to access older recalls and unlock other great features.',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.white70,
-                        height: 1.4,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 20),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (context) => const SubscribePage(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF64B5F6),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          elevation: 4,
-                        ),
-                        child: const Text(
-                          'Upgrade Now',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const Text(
-                      'Free users can view recalls from the last 30 days',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white54,
-                        fontStyle: FontStyle.italic,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
+                const SizedBox(height: 12),
+                const Text(
+                  'Free users can view recalls from the last 30 days',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white54,
+                    fontStyle: FontStyle.italic,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              );
-            },
+              ],
+            ),
           );
         }
 
@@ -1290,9 +1302,15 @@ class _AllRecallsPageState extends State<AllRecallsPage> with HideOnScrollMixin 
                     focusNode: _searchFocusNode,
                     maxLength: 100, // SECURITY: Limit input length to prevent abuse
                     onChanged: (value) {
+                      // Update the visual state immediately for responsive feel
                       setState(() {
                         _searchQuery = value.trim();
-                        _applyFiltersAndSort();
+                      });
+                      // PERFORMANCE FIX: Debounce the actual filtering operation
+                      _searchDebouncer.run(() {
+                        if (mounted) {
+                          _applyFiltersAndSort();
+                        }
                       });
                     },
                     style: const TextStyle(color: Colors.white),
@@ -1370,12 +1388,12 @@ class _AllRecallsPageState extends State<AllRecallsPage> with HideOnScrollMixin 
                   const SizedBox(height: 12),
 
                   // Save as SmartFilter Button
+                  // PERFORMANCE FIX: Use cached subscription info instead of FutureBuilder
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: FutureBuilder<SubscriptionInfo>(
-                      future: _subscriptionService.getSubscriptionInfo(),
-                      builder: (context, snapshot) {
-                        final hasPremiumAccess = snapshot.data?.hasPremiumAccess ?? false;
+                    child: Builder(
+                      builder: (context) {
+                        final hasPremiumAccess = _cachedSubscriptionInfo?.hasPremiumAccess ?? false;
 
                         return Listener(
                           onPointerDown: (_) {
@@ -1387,18 +1405,9 @@ class _AllRecallsPageState extends State<AllRecallsPage> with HideOnScrollMixin 
                           child: SizedBox(
                             width: double.infinity,
                             child: ElevatedButton.icon(
-                              onPressed: hasPremiumAccess ? () {
+                              onPressed: () {
                                 _showSaveSmartFilterDialog();
                                 // Reset after a delay to allow dialog to open
-                                Future.delayed(const Duration(milliseconds: 500), () {
-                                  if (mounted) {
-                                    setState(() {
-                                      _keepButtonVisible = false;
-                                    });
-                                  }
-                                });
-                              } : () {
-                                _showSaveSmartFilterDialog();
                                 Future.delayed(const Duration(milliseconds: 500), () {
                                   if (mounted) {
                                     setState(() {
