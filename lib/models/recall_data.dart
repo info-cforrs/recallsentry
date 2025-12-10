@@ -784,13 +784,9 @@ class RecallData {
       return url;
     }
 
-    // Convert relative path to absolute URL
+    // Convert relative path to absolute URL using mediaBaseUrl
     // Media files are served from the domain root, not from /api/
-    // So we need to extract the base domain from apiBaseUrl
-    final apiBaseUrl = AppConfig.apiBaseUrl;
-    final baseUrl = apiBaseUrl.endsWith('/api')
-        ? apiBaseUrl.substring(0, apiBaseUrl.length - 4)
-        : apiBaseUrl;
+    final baseUrl = AppConfig.mediaBaseUrl;
 
     if (url.startsWith('/')) {
       return '$baseUrl$url';

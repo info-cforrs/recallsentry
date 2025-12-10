@@ -228,6 +228,14 @@ class _ManufacturerRetailerPageState extends State<ManufacturerRetailerPage> wit
                       if (widget.recall.retailer1.isNotEmpty)
                         _buildRow('Name:', widget.recall.retailer1),
 
+                      // Retailer Sale Date Start
+                      if (widget.recall.retailer1SaleDateStart.isNotEmpty)
+                        _buildRow('Sale Date Start:', widget.recall.retailer1SaleDateStart),
+
+                      // Retailer Sale Date End
+                      if (widget.recall.retailer1SaleDateEnd.isNotEmpty)
+                        _buildRow('Sale Date End:', widget.recall.retailer1SaleDateEnd),
+
                       // Retailer Contact
                       if (widget.recall.retailer1ContactName.isNotEmpty)
                         _buildRow('Contact:', widget.recall.retailer1ContactName),
@@ -264,6 +272,10 @@ class _ManufacturerRetailerPageState extends State<ManufacturerRetailerPage> wit
                               ? widget.recall.retailer1ContactWebSite
                               : 'https://${widget.recall.retailer1ContactWebSite}',
                         ),
+
+                      // Retailer Website Info
+                      if (widget.recall.retailer1WebSiteInfo.isNotEmpty)
+                        _buildRow('Website Info:', widget.recall.retailer1WebSiteInfo),
                     ],
 
                     // No data message
@@ -283,11 +295,14 @@ class _ManufacturerRetailerPageState extends State<ManufacturerRetailerPage> wit
                             widget.recall.establishmentManufacturerContactEmail.isEmpty &&
                             widget.recall.establishmentManufacturerWebsite.isEmpty &&
                             widget.recall.retailer1.isEmpty &&
+                            widget.recall.retailer1SaleDateStart.isEmpty &&
+                            widget.recall.retailer1SaleDateEnd.isEmpty &&
                             widget.recall.retailer1ContactName.isEmpty &&
                             widget.recall.retailer1ContactPhone.isEmpty &&
                             widget.recall.retailer1ContactBusinessHoursDays.isEmpty &&
                             widget.recall.retailer1ContactEmail.isEmpty &&
-                            widget.recall.retailer1ContactWebSite.isEmpty))
+                            widget.recall.retailer1ContactWebSite.isEmpty &&
+                            widget.recall.retailer1WebSiteInfo.isEmpty))
                       Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,

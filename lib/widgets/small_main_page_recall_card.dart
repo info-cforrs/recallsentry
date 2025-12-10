@@ -4,6 +4,8 @@ import '../models/recall_data.dart';
 import '../services/saved_recalls_service.dart';
 import '../pages/fda_recall_details_page.dart';
 import '../pages/usda_recall_details_page.dart';
+import '../pages/cpsc_recall_details_page.dart';
+import '../pages/nhtsa_recall_details_page.dart';
 import '../providers/data_providers.dart';
 import 'package:rs_flutter/constants/app_colors.dart';
 
@@ -80,14 +82,28 @@ class _SmallMainPageRecallCardState extends ConsumerState<SmallMainPageRecallCar
   }
 
   String _getRecallId() {
-    if (widget.recall.agency.toUpperCase() == 'USDA') {
-      return widget.recall.usdaRecallId.isNotEmpty
-          ? widget.recall.usdaRecallId
-          : 'N/A';
-    } else {
-      return widget.recall.fdaRecallId.isNotEmpty
-          ? widget.recall.fdaRecallId
-          : 'N/A';
+    final agency = widget.recall.agency.toUpperCase();
+
+    switch (agency) {
+      case 'USDA':
+        return widget.recall.usdaRecallId.isNotEmpty
+            ? widget.recall.usdaRecallId
+            : 'N/A';
+      case 'CPSC':
+        return widget.recall.fieldRecallNumber.isNotEmpty
+            ? widget.recall.fieldRecallNumber
+            : widget.recall.id.isNotEmpty ? widget.recall.id : 'N/A';
+      case 'NHTSA':
+        return widget.recall.nhtsaCampaignNumber.isNotEmpty
+            ? widget.recall.nhtsaCampaignNumber
+            : widget.recall.nhtsaRecallId.isNotEmpty
+                ? widget.recall.nhtsaRecallId
+                : 'N/A';
+      case 'FDA':
+      default:
+        return widget.recall.fdaRecallId.isNotEmpty
+            ? widget.recall.fdaRecallId
+            : 'N/A';
     }
   }
 
@@ -96,21 +112,29 @@ class _SmallMainPageRecallCardState extends ConsumerState<SmallMainPageRecallCar
     return GestureDetector(
       onTap: widget.onTap ?? () {
         // Navigate to appropriate details page based on agency
-        if (widget.recall.agency.toUpperCase() == 'USDA') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UsdaRecallDetailsPage(recall: widget.recall),
-            ),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => FdaRecallDetailsPage(recall: widget.recall),
-            ),
-          );
+        final agency = widget.recall.agency.toUpperCase();
+        Widget detailsPage;
+
+        switch (agency) {
+          case 'USDA':
+            detailsPage = UsdaRecallDetailsPage(recall: widget.recall);
+            break;
+          case 'CPSC':
+            detailsPage = CpscRecallDetailsPage(recall: widget.recall);
+            break;
+          case 'NHTSA':
+            detailsPage = NhtsaRecallDetailsPage(recall: widget.recall);
+            break;
+          case 'FDA':
+          default:
+            detailsPage = FdaRecallDetailsPage(recall: widget.recall);
+            break;
         }
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => detailsPage),
+        );
       },
       child: Container(
         decoration: BoxDecoration(
