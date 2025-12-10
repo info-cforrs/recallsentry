@@ -23,6 +23,8 @@ import 'package:rs_flutter/pages/all_vehicle_recalls_page.dart';
 import 'package:rs_flutter/pages/all_tire_recalls_page.dart';
 import 'package:rs_flutter/pages/all_child_seat_recalls_page.dart';
 import 'package:rs_flutter/pages/nhtsa_recall_details_page.dart';
+import 'package:rs_flutter/pages/recall_updates_page.dart';
+import 'package:rs_flutter/pages/recall_notification_preferences_page.dart';
 
 /// Centralized route configuration for the app.
 ///
@@ -51,6 +53,8 @@ class AppRoutes {
   static const String savedFilters = '/filter/saved';
   static const String emailNotifications = '/notifications/email';
   static const String pushNotifications = '/notifications/push';
+  static const String recallUpdates = '/notifications/recall-updates';
+  static const String notificationPreferences = '/notification-preferences';
   static const String rmc = '/rmc';
   static const String allVehicleRecalls = '/recalls/vehicles';
   static const String allTireRecalls = '/recalls/tires';
@@ -121,6 +125,16 @@ class AppRoutes {
       case '/notifications/push':
         return MaterialPageRoute(
           builder: (_) => const PushNotificationsPage(),
+        );
+
+      case '/notifications/recall-updates':
+        return MaterialPageRoute(
+          builder: (_) => const RecallUpdatesPage(),
+        );
+
+      case '/notification-preferences':
+        return MaterialPageRoute(
+          builder: (_) => const RecallNotificationPreferencesPage(),
         );
 
       case '/rmc':

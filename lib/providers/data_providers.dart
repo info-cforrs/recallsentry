@@ -16,6 +16,7 @@ import '../models/user_home.dart';
 import '../models/user_room.dart';
 import '../models/user_item.dart';
 import '../models/rmc_enrollment.dart';
+import '../models/recall_update.dart';
 
 // ============================================================================
 // SUBSCRIPTION & USER DATA PROVIDERS
@@ -556,3 +557,41 @@ class HomeViewData {
     required this.garageChildSeats,
   });
 }
+
+// ============================================================================
+// RECALL UPDATE NOTIFICATION PROVIDERS
+// ============================================================================
+
+/// Recall Update Notifications Provider - User's unread recall update notifications
+final recallUpdateNotificationsProvider = FutureProvider<List<RecallUpdateNotification>>((ref) async {
+  await ref.watch(userProfileProvider.future);
+  final updateService = ref.watch(recallUpdateServiceProvider);
+  return updateService.getUserNotifications(status: 'pending');
+});
+
+/// Unread Notification Count Provider - Count of unread recall update notifications
+final unreadNotificationCountProvider = FutureProvider<int>((ref) async {
+  await ref.watch(userProfileProvider.future);
+  final updateService = ref.watch(recallUpdateServiceProvider);
+  return updateService.getUnreadCount();
+});
+
+/// Recalls With Updates Provider - Recalls the user is tracking that have recent updates
+final recallsWithUpdatesProvider = FutureProvider<List<RecallWithUpdates>>((ref) async {
+  await ref.watch(userProfileProvider.future);
+  final updateService = ref.watch(recallUpdateServiceProvider);
+  return updateService.getRecallsWithUpdates(days: 30);
+});
+
+/// Notification Preferences Provider - User's notification preferences
+final notificationPreferencesProvider = FutureProvider<NotificationPreferences>((ref) async {
+  await ref.watch(userProfileProvider.future);
+  final updateService = ref.watch(recallUpdateServiceProvider);
+  return updateService.getNotificationPreferences();
+});
+
+/// Recall Updates Provider - Get updates for a specific recall
+final recallUpdatesProvider = FutureProvider.family<List<RecallUpdate>, int>((ref, recallId) async {
+  final updateService = ref.watch(recallUpdateServiceProvider);
+  return updateService.getRecallUpdates(recallId);
+});

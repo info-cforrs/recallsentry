@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recall_data.dart';
 import '../widgets/shared/shared_image_carousel.dart';
 import '../widgets/shared/shared_recommendations_accordion.dart';
@@ -21,16 +22,17 @@ import '../services/subscription_service.dart';
 import '../widgets/animated_visibility_wrapper.dart';
 import '../mixins/hide_on_scroll_mixin.dart';
 import 'subscribe_page.dart';
+import '../widgets/recall_whats_new_section.dart';
 
-class NhtsaRecallDetailsPage extends StatefulWidget {
+class NhtsaRecallDetailsPage extends ConsumerStatefulWidget {
   final RecallData recall;
   const NhtsaRecallDetailsPage({super.key, required this.recall});
 
   @override
-  State<NhtsaRecallDetailsPage> createState() => _NhtsaRecallDetailsPageState();
+  ConsumerState<NhtsaRecallDetailsPage> createState() => _NhtsaRecallDetailsPageState();
 }
 
-class _NhtsaRecallDetailsPageState extends State<NhtsaRecallDetailsPage> with HideOnScrollMixin {
+class _NhtsaRecallDetailsPageState extends ConsumerState<NhtsaRecallDetailsPage> with HideOnScrollMixin {
   RecallData? _freshRecall;
   bool _isLoading = true;
   String? _error;
@@ -199,6 +201,10 @@ class _NhtsaRecallDetailsPageState extends State<NhtsaRecallDetailsPage> with Hi
               // NHTSA Recall Details Card (type-specific)
               _buildDetailsCard(recall),
               const SizedBox(height: 24),
+
+              // What's New Section (shows recent updates)
+              if (recall.databaseId != null)
+                RecallWhatsNewSection(recallId: recall.databaseId!),
 
               // Corrective Action / Remedy
               if (recall.remedy.trim().isNotEmpty)

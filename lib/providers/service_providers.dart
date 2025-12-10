@@ -16,6 +16,7 @@ import '../services/auth_service.dart';
 import '../services/user_profile_service.dart';
 import '../services/article_service.dart';
 import '../services/recallmatch_service.dart';
+import '../services/recall_update_service.dart';
 
 // ============================================================================
 // SERVICE PROVIDERS (Singletons)
@@ -69,4 +70,9 @@ final articleServiceProvider = Provider<ArticleService>((ref) {
 /// RecallMatch Service - Manages user homes, rooms, and items for recall matching
 final recallMatchServiceProvider = Provider<RecallMatchService>((ref) {
   return RecallMatchService();
+});
+
+/// Recall Update Service - Manages recall update notifications and preferences
+final recallUpdateServiceProvider = Provider<RecallUpdateService>((ref) {
+  return RecallUpdateService();
 });
