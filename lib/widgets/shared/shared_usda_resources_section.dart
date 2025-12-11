@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 import '../../pages/resource_card_button.dart';
-import '../../models/recall_data.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-class SharedUsdaResourcesSection extends StatelessWidget {
-  final RecallData? recall;
+/// USDA contact information - hardcoded standard values
+class UsdaContactInfo {
+  static const String hotlineDescription =
+      'USDA Meat and Poultry Hotline: 1-888-MPHotline (1-888-674-6854)';
+  static const String hotlinePhone = '1-888-674-6854';
+  static const String hotlineEmail = 'MPHotline@usda.gov';
+  static const String complaintPortalUrl =
+      'https://foodcomplaint.fsis.usda.gov/eCCF';
+}
 
-  const SharedUsdaResourcesSection({super.key, this.recall});
+class SharedUsdaResourcesSection extends StatelessWidget {
+  const SharedUsdaResourcesSection({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // Use recall data if available, otherwise use default hardcoded values
-    final reportProblemUrl = recall?.usdaToReportAProblem.isNotEmpty == true
-        ? recall!.usdaToReportAProblem
-        : 'https://foodcomplaint.fsis.usda.gov/eCCF';
-    final hotlinePhone = recall?.usdaFoodSafetyQuestionsPhone.isNotEmpty == true
-        ? recall!.usdaFoodSafetyQuestionsPhone
-        : '1-888-674-6854';
-    final hotlineEmail = recall?.usdaFoodSafetyQuestionsEmail.isNotEmpty == true
-        ? recall!.usdaFoodSafetyQuestionsEmail
-        : 'MPHotline@usda.gov';
+    // Use hardcoded USDA contact values
+    const reportProblemUrl = UsdaContactInfo.complaintPortalUrl;
+    const hotlinePhone = UsdaContactInfo.hotlinePhone;
+    const hotlineEmail = UsdaContactInfo.hotlineEmail;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(

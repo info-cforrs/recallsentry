@@ -358,8 +358,8 @@ class _UsdaRecallDetailsPageState extends State<UsdaRecallDetailsPage> with Hide
                 premiumContent: SharedRecommendedProductsAccordion(recall: recall),
               ),
 
-              // USDA Resources Section (from original page)
-              SharedUsdaResourcesSection(recall: recall),
+              // USDA Resources Section (hardcoded contact info)
+              const SharedUsdaResourcesSection(),
               const SizedBox(height: 24),
               // --- Bottom Big Button Section ---
               Column(
