@@ -25,6 +25,7 @@ import 'package:rs_flutter/pages/all_child_seat_recalls_page.dart';
 import 'package:rs_flutter/pages/nhtsa_recall_details_page.dart';
 import 'package:rs_flutter/pages/recall_updates_page.dart';
 import 'package:rs_flutter/pages/recall_notification_preferences_page.dart';
+import 'package:rs_flutter/pages/vehicle_recall_alerts_page.dart';
 
 /// Centralized route configuration for the app.
 ///
@@ -59,6 +60,7 @@ class AppRoutes {
   static const String allVehicleRecalls = '/recalls/vehicles';
   static const String allTireRecalls = '/recalls/tires';
   static const String allChildSeatRecalls = '/recalls/child-seats';
+  static const String vehicleRecallAlerts = '/vehicle-alerts';
 
   // Detail page routes (accept arguments)
   static const String fdaRecallDetails = '/recalls/fda/details';
@@ -148,6 +150,9 @@ class AppRoutes {
 
       case '/recalls/child-seats':
         return MaterialPageRoute(builder: (_) => const AllChildSeatRecallsPage());
+
+      case '/vehicle-alerts':
+        return MaterialPageRoute(builder: (_) => const VehicleRecallAlertsPage());
 
       case '/recalls/nhtsa/details':
         final args = settings.arguments as Map<String, dynamic>?;
