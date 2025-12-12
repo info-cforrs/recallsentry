@@ -96,6 +96,7 @@ class RecallData {
   final DateTime? productionDateEnd;
   final String bestUsedByDate;
   // --- FDA-only fields ---
+  final String ndc; // National Drug Code (FDA Drug recalls)
   final String recallReasonShort;
   final String pressReleaseLink;
   final String productTypeDetail;
@@ -202,6 +203,7 @@ class RecallData {
     this.firmContactForm = '',
     this.establishmentManufacturerContactForm = '',
     this.distributor = '',
+    this.ndc = '',
     this.recallReasonShort = '',
     this.pressReleaseLink = '',
     this.productTypeDetail = '',
@@ -346,6 +348,7 @@ class RecallData {
     return RecallData(
       fdaRecallId: fdaId,
       usdaRecallId: usdaId,
+      ndc: json['ndc'] ?? '',
       recallReasonShort: json['recall_reason_short'] ?? '',
       pressReleaseLink: json['press_release_link'] ?? '',
       productTypeDetail: json['product_type_detail'] ?? '',
@@ -597,6 +600,7 @@ class RecallData {
   Map<String, dynamic> toJson() {
     return {
       'FDARecallID': fdaRecallId,
+      'ndc': ndc,
       'recall_reason_short': recallReasonShort,
       'press_release_link': pressReleaseLink,
       'product_type_detail': productTypeDetail,

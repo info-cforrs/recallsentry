@@ -94,6 +94,10 @@ class AboutItemDetailsPage extends StatelessWidget {
             if (recall.upc.isNotEmpty && recall.upc != 'N/A')
               _buildRow('UPC:', recall.upc),
 
+            // NDC (National Drug Code)
+            if (recall.ndc.isNotEmpty)
+              _buildRow('NDC:', recall.ndc),
+
             // SKU
             if (recall.sku.isNotEmpty)
               _buildRow('SKU:', recall.sku),
@@ -127,6 +131,7 @@ class AboutItemDetailsPage extends StatelessWidget {
             // No data message
             if ((recall.productionDateStart == null && recall.productionDateEnd == null) &&
                 (recall.upc.isEmpty || recall.upc == 'N/A') &&
+                recall.ndc.isEmpty &&
                 recall.sku.isEmpty &&
                 recall.batchLotCode.isEmpty &&
                 recall.sellByDate.isEmpty &&
