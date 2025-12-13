@@ -54,6 +54,8 @@ class RecallData {
   final String recallPhaReason;
   final String recallReason;
   final String sellByDate;
+  final DateTime? sellByDateStart; // Start date for sell by range (FDA/USDA)
+  final DateTime? sellByDateEnd; // End date for sell by range (FDA/USDA)
   final String sku;
   final String adverseReactions;
   final String adverseReactionDetails;
@@ -192,6 +194,8 @@ class RecallData {
     this.recallPhaReason = '',
     this.recallReason = '',
     this.sellByDate = '',
+    this.sellByDateStart,
+    this.sellByDateEnd,
     this.sku = '',
     this.adverseReactions = '',
     this.adverseReactionDetails = '',
@@ -470,6 +474,14 @@ class RecallData {
       recallReason: json['Recall_Reason'] ?? json['recall_reason'] ?? '',
       // --- New USDA fields ---
       sellByDate: json['sell_by_date'] ?? '',
+      sellByDateStart:
+          json['sell_by_date_start'] != null && json['sell_by_date_start'] != ''
+              ? DateTime.tryParse(json['sell_by_date_start'])
+              : null,
+      sellByDateEnd:
+          json['sell_by_date_end'] != null && json['sell_by_date_end'] != ''
+              ? DateTime.tryParse(json['sell_by_date_end'])
+              : null,
       sku: json['sku'] ?? '',
       adverseReactions: json['adverse_reactions'] ?? '',
       adverseReactionDetails: json['adverse_reaction_details'] ?? '',
@@ -665,6 +677,8 @@ class RecallData {
       'Recall_Reason': recallReason,
       // --- New USDA fields ---
       'sell_by_date': sellByDate,
+      'sell_by_date_start': sellByDateStart?.toIso8601String() ?? '',
+      'sell_by_date_end': sellByDateEnd?.toIso8601String() ?? '',
       'sku': sku,
       'adverse_reactions': adverseReactions,
       'adverse_reaction_details': adverseReactionDetails,
